@@ -1,0 +1,15 @@
+{
+  "name": "@newfold-labs/wp-module-staging",
+  "description": "Newfold module for staging functionality in brand plugins",
+  "license": "GPL-2.0-or-later",
+  "private": true,
+  "author": {
+    "name": "Evan Mullins",
+    "url": "https://evanmullins.com"
+  },
+  "devDependencies": {
+    "@testing-library/cypress": "^9.0.0",
+    "cypress": "^12.9.0",
+    "cypress-axe": "^1.4.0"
+  }
+}
