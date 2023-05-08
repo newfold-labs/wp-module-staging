@@ -35,6 +35,17 @@ class Staging {
 				$instance->register_routes();
 			}
 		);
+		add_action( 'wp_loaded', array( StagingMenu::class, 'init' ), 100 );
+
+		// add isStaging as computed value to container
+		$this->container->set(
+			'isStaging',
+			$this->container->computed(
+				function () {
+					return $this->isStaging();
+				}
+			)
+		);
 	}
 
 	/**
