@@ -7,11 +7,13 @@
  * @param {*} props 
  * @returns 
  */
- const Staging = ({methods, constants, Components, ...props}) => {
-	const apiRootPath = '/newfold-staging/v1/staging';
+const Staging = ({methods, constants, Components, ...props}) => {
+	const apiNamespace = '/newfold-staging/v1/';
 	const unknownErrorMsg = 'An unknown error has occurred.';
 	const [ isLoading, setIsLoading ] = methods.useState( true );
 	const [ isError, setIsError ] = methods.useState( false );
+	const [ notice, setNotice ] = methods.useState( '' );
+	const [ showManageStaging, setShowManageStaging ] = methods.useState( false );
 	const [ errorMessage, setErrorMessage ] = methods.useState( null );
 	const [ isCreatingStaging, setIsCreatingStaging ] = methods.useState( false );
 	const [ hasStaging, setHasStaging ] = methods.useState( null );
@@ -38,6 +40,7 @@
 
 	// Setup values from response
 	const setup = ( response ) => {
+
 		if ( response.hasOwnProperty( 'stagingExists' ) ) {
 			setHasStaging( response.stagingExists );
 		}
@@ -59,66 +62,224 @@
 		if ( response.hasOwnProperty( 'creationDate' ) ) {
 			setCreationDate( response.creationDate );
 		}
+
+	};
+
+	const setError = ( error ) => {
+		console.log(error);
+		setIsLoading( false );
+		setIsError(true);
+		setErrorMessage(error);
 	};
 
 	/**
-	 * on mount load all staging data from module api
+	 * on mount load staging data from module api
 	 */
 	methods.useEffect(() => {
-		console.log('Loading Staging Data');
-		callApi();
-
+		init();
 	}, [] );
+
+	const init = () => {
+		console.log('Init - Loading Staging Data');
+		stagingApiFetch(
+			'staging/', 
+			'GET', 
+			(response) => {
+				console.log('Init callback', response);
+				// validate response data
+				if ( response.hasOwnProperty('currentEnvironment') ) {
+					//setup with fresh data
+					setup( response );
+				} else if ( response.hasOwnProperty('code') && response.code === 'error_response' ) {
+					// report error received
+					setError( response.message );
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+				setIsLoading( false );
+			}
+		);
+	}
 
 	const createStaging = () => {
 		console.log('create staging');
-		callApi( '', 'POST' );
+		setIsCreatingStaging(true);
+		stagingApiFetch(
+			'staging/', 
+			'POST', 
+			(response) => {
+				console.log('Create Staging Callback', response);
+				// validate response data
+				if ( response.hasOwnProperty('currentEnvironment') ) {
+					//setup with fresh data
+					setup( response );
+				} else if ( response.hasOwnProperty('status') ) {
+					//setup with fresh data
+					if ( response.status === 'success' ){
+						setup( response );
+						setNotice( response.message );
+					} else {
+						setError( response.message );
+					}
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+				setIsLoading( false );
+				setIsCreatingStaging(false);
+			}
+		);
 	};
 
-	const cloneEnv = () => {
+	const deleteStaging = () => {
+		console.log('delete staging');
+		stagingApiFetch(
+			'staging/', 
+			'DELETE', 
+			(response) => {
+				console.log('Delete staging callback', response);
+				// validate response data
+				if ( response.hasOwnProperty('status') ) {
+					// setup with fresh data
+					if ( response.status === 'success' ){
+						setHasStaging( false );
+						setNotice( response.message );
+					} else {
+						setError( response.message );
+					}
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+				setIsLoading( false );
+			}
+		);
+	};
+
+	const clone = () => {
 		console.log('clone production to staging');
-		callApi( '/clone', 'POST' );
+		stagingApiFetch(
+			'staging/clone/', 
+			'POST', 
+			(response) => {
+				console.log('Clone Callback', response);
+				// validate response data
+				if ( response.hasOwnProperty('status') ) {
+					// setup with fresh data
+					if ( response.status === 'success' ){
+						setHasStaging( true );
+						setNotice( response.message );
+					} else {
+						setErrorMessage( response.message );
+					}
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+				setIsLoading( false );
+			}
+		);
 	};
 
-	const callApi = (path = '', method = 'GET') => {
-		let url = `${constants.resturl}${apiRootPath}${path}`;
-		let options = {
-			url,
+	const switchToEnv = ( env ) => {
+		console.log('switching to', env, `/switch-to?env=${ env }`);
+		setSwitchingTo( env );
+		stagingApiFetch(
+			`staging/switch-to?env=${env}`, 
+			'GET', 
+			(response) => {
+				console.log('Switch Callback', response);
+				// validate response data
+				if ( response && response.hasOwnProperty( 'load_page' ) ) {
+					// window.location.href = response.load_page;
+					navigate(response.load_page);
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+			}
+		);
+	};
+
+	/**
+	 * 
+	 * @param {string} type One of 'all', 'files', or 'db'
+	 */
+	const deploy = ( type ) => {
+		console.log('Deploy', type);
+		stagingApiFetch(
+			`staging/deploy?type=${type}`, 
+			'GET', 
+			(response) => {
+				console.log('Deploy Callback', response);
+				// validate response data
+				if ( response.hasOwnProperty('status') ) {
+					// setup with fresh data
+					if ( response.status === 'success' ){
+						setHasStaging( false );
+						setNotice( response.message );
+					} else {
+						setError( response.message );
+					}
+				} else {
+					// report unknown error
+					setError( unknownErrorMsg );
+				}
+			}
+		);
+	};
+
+/**
+ * Wrapper method to interface with staging endpoints
+ *
+ * @param path append to the end of the apiNamespace
+ * @param method GET or POST, default GET
+ * @param thenCallback method to call in promise then
+ * @param passError setter for the error in component
+ * @return apiFetch promise
+ */
+	const stagingApiFetch = (path = '', method = 'GET', thenCallback, errorCallback = setError) => {
+		// setIsError( false );
+		setIsLoading( true );
+		return methods.apiFetch({
+			url: constants.resturl + apiNamespace + path,
 			method,
 			beforeSend: (xhr) => {
 				xhr.setRequestHeader( 'X-WP-Nonce', constants.restnonce );
 			},
-		}
-		
-		setIsError( false );
-		setIsLoading( true );
-		// setNotice( null );
-
-		methods.apiFetch(
-			options
-		).then( (response ) => {
-			console.log(response);
-			setIsLoading( false );
-			if ( 
-				! response.hasOwnProperty('stagingExists') ||
-				response.hasOwnProperty('code') && response.code === 'error_response'
-			) {
-				setIsError( true );
-				setErrorMessage( response.message );
-			} else {
-				//set data
-				setup( response );
-			}
+		}).then( (response) => {
+			thenCallback( response );
 		}).catch( (error) => {
-			console.log(error);
-		});
+			errorCallback( error );
+		})
+	};
 
+	const toggleManageStaging = () => {
+		setShowManageStaging( !showManageStaging );
 	};
 
 	const renderProductionCard = () => {
 		return <Components.Card>
 			<Components.CardHeader>
 				<h3>Production Site</h3>
+				{ isProduction && 
+					<Components.Button 
+						variant="secondary"
+						disabled
+						icon="yes"
+						className="is-disabled"
+					>You are here</Components.Button>
+				}
+				{ !isProduction && 
+					<Components.Button 
+						icon="external"
+						variant="primary"
+						onClick={ () => { switchToEnv( 'production' ) }}
+						showTooltip
+						label="Load the production site in the browser"
+					>Go here</Components.Button>
+				}
 			</Components.CardHeader>
 			<Components.CardBody>
 				<div>
@@ -126,14 +287,21 @@
 					{ productionUrl &&
 						<p>Your site is available at: <strong>{ productionUrl }</strong>.</p>
 					}
-					<Components.Button onClick={ () => cloneEnv() } className="button-primary">
+					<Components.Button
+						icon="migrate"
+						onClick={ clone }
+						variant="primary"
+						showTooltip
+						disabled={ !isProduction ? true : false }
+						label="Copies all Production (data and files) to Staging"
+					>
 						{ constants.cloneButtonText }
 					</Components.Button>
 				</div>
 			</Components.CardBody>
 			<Components.CardFooter>
 				{ productionDir &&
-					<p>Production Directory: <code>{ productionDir }</code></p>
+					<p>Production Directory<code>{ productionDir }</code></p>
 				}
 			</Components.CardFooter>
 		</Components.Card>;
@@ -143,24 +311,99 @@
 		return <Components.Card>
 			<Components.CardHeader>
 				<h3>Staging Site</h3>
+				{ hasStaging && !isProduction && 
+					<Components.Button 
+						variant="secondary"
+						icon="yes"
+						disabled
+						className="is-disabled"
+					>You are here</Components.Button>
+				}
+				{ hasStaging && isProduction && 
+					<Components.Button 
+						variant="primary"
+						icon="external"
+						onClick={ () => { switchToEnv( 'staging' ) }}
+						showTooltip
+						label="Load this Staging Site in the browser"
+					>Go here</Components.Button>
+				}
 			</Components.CardHeader>
 			<Components.CardBody>
 				{ hasStaging && 
 					<div>
 						<p>{ constants.stagingDescription }</p>
 						<p>Your stating site is available at: { stagingUrl }.</p>
-						<Components.Button>
+						<Components.Button
+							icon={ showManageStaging ? 'arrow-up' : 'arrow-down' }
+							onClick={ toggleManageStaging }
+							variant="secondary"
+							showTooltip
+							label="Migrate changes back to Production from Staging"
+						>
 							Manage
 						</Components.Button>
-						<Components.Button>
-							Delete
-						</Components.Button>
+						{ showManageStaging &&
+							<div className="manage-staging">
+								<p>Once you have finished edits on your staging site, you can copy from Staging back to your Production site (files and/or data)!</p>
+								{ isProduction &&
+									<p>Some operations must be done from the staging site. You are currenlty on production. You must go to the staging site to deploy changes.</p>
+								}
+								<Components.Button
+									disabled={ isProduction ? true : false }
+									icon="cloud-upload"
+									onClick={ () => { deploy( 'files' ) }}
+									variant="secondary"
+									showTooltip
+									label="Copy files only from Staging to Production"
+								>
+									Deploy Only Files
+								</Components.Button>
+								<Components.Button
+									disabled={ isProduction ? true : false }
+									icon="database-export"
+									onClick={ () => { deploy( 'db' ) }}
+									variant="secondary"
+									showTooltip
+									label="Copy database only from Staging to Production"
+								>
+									Deploy Only Database
+								</Components.Button>
+								<Components.Button
+									disabled={ isProduction ? true : false }
+									icon="cloud-upload"
+									onClick={ () => { deploy( 'all' ) }}
+									variant="secondary"
+									showTooltip
+									label="Copy files and database from Staging to Production"
+								>
+									<Components.Icon icon="database-export" />
+									Deploy Both Files and Database
+								</Components.Button>
+								<Components.Button
+									isDestructive
+									icon="trash"
+									onClick={ deleteStaging }
+									variant="secondary"
+									showTooltip
+									label="Delete this Staging environment!"
+								>
+									Delete
+								</Components.Button>
+							</div>
+						}
 					</div>
 				}
 				{ !hasStaging &&
 					<div>
 						<p>{ constants.stagingLongDescription }</p>
-						<Components.Button onClick={ () => createStaging() } className="button-primary">
+						<Components.Button 
+							onClick={ createStaging }
+							className="button-primary"
+							icon="migrate"
+							showTooltip
+							label="Create a new Stating site from Production"
+						>
 							Create Staging Site
 						</Components.Button>
 					</div>
@@ -174,11 +417,60 @@
 		</Components.Card>;
 	};
 
+	const renderInfoCard = () => {
+		return <Components.Card>
+			<Components.CardHeader>
+				<h3>Info</h3>
+			</Components.CardHeader>
+			<Components.CardBody>
+			<dl>
+				<dt>Creation Date</dt>
+				<dd><code>{ creationDate }</code></dd>
+				<dt>Current Environment</dt>
+				<dd><code>{ isProduction ? 'production' : 'staging' }</code></dd>
+				<dt>Production Directory</dt>
+				<dd><code>{ productionDir }</code></dd>
+				<dt>Production Url</dt>
+				<dd><code>{ productionUrl }</code></dd>
+				<dt>Staging Exists</dt>
+				<dd><code>{ hasStaging ? 'true' : 'false' }</code></dd>
+				<dt>Staging Directory</dt>
+				<dd><code>{ stagingDir }</code></dd>
+				<dt>Staging Url</dt>
+				<dd><code>{ stagingUrl }</code></dd>
+			</dl>
+			</Components.CardBody>
+			<Components.CardFooter>
+
+			</Components.CardFooter>
+		</Components.Card>;
+	};
+
+	const renderErrorCard = () => {
+		return <Components.Card>
+			<Components.CardHeader>
+				<h3>Error</h3>
+			</Components.CardHeader>
+			<Components.CardBody>
+				<p>Oops, there was an error loading the staging data, please try again later or contact support.</p>
+			</Components.CardBody>
+			<Components.CardFooter>
+				{ errorMessage && 
+					<p>{errorMessage}</p>
+				}
+			</Components.CardFooter>
+		</Components.Card>;
+	};
+
 	const renderCards = () => {
 		return (
 			<div className="staging-cards grid col2">
 				{ renderProductionCard() }
 				{ renderStagingCard() }
+				{ renderInfoCard() }
+				{ switchingTo && 
+					<p>Switching to: { switchingTo }</p>
+				}
 			</div>
 		);
 
@@ -190,10 +482,13 @@
 				renderSkeleton()
 			}
 			{ isError && 
-				<h3>Oops, there was an error loading the staging data, please try again later or contact support.</h3>
+				renderErrorCard()
 			}
 			{ !isLoading && !isError &&
 				renderCards()
+			}
+			{
+				notice
 			}
 		</div>
 	);
