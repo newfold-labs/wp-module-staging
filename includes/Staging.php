@@ -394,7 +394,7 @@ class Staging {
 			}
 		}
 
-		$script = container()->plugin()->file . '/vendor/newfold-labs/wp-module-staging/lib/.staging';
+		$script = container()->plugin()->dir . 'vendor/newfold-labs/wp-module-staging/lib/.staging';
 
 		$disabled_functions = explode( ',', ini_get( 'disable_functions' ) );
 		if ( is_array( $disabled_functions ) && in_array( 'exec', array_map( 'trim', $disabled_functions ), true ) ) {
