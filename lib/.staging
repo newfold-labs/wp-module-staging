@@ -183,7 +183,7 @@ function error {
 }
 
 function lock_check {
-	LOCK=$(wp transient get mm_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+	LOCK=$(wp transient get nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 	if [ -n "$LOCK" ]
 		then
 		error 'Staging action is locked by another command'
@@ -229,11 +229,11 @@ lock_check
 
 CONFIG=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 
-wp transient set mm_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
+wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 $1 "$8"
 
-wp transient delete mm_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
+wp transient delete nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 # $1 is function
 # $2 is auth TOKEN
