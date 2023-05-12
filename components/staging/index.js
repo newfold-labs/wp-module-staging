@@ -215,7 +215,6 @@ const Staging = ({methods, constants, Components, ...props}) => {
 					// report unknown error
 					setError( unknownErrorMsg );
 				}
-				setIsLoading( false );
 			}
 		);
 	};
