@@ -26,7 +26,7 @@ class StagingApi extends \WP_REST_Controller {
 
 	/**
 	 * Bluehost_Staging_Controller constructor.
-	 * 
+	 *
 	 * @param Container $container An instance of the Container class.
 	 */
 	public function __construct( Container $container ) {
