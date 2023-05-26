@@ -56,13 +56,13 @@ class Staging {
 					array(
 						'shortdesc' => 'Operations for Newfold staging.',
 						'longdesc'  => 'Internal commands to handle staging environment.' .
-							   PHP_EOL . 'Subcommands: create, clone, destroy, sso_staging, deploy, deploy_files,' .
-							   ' deploy_db, deploy_files_db, save_state, restore_state, sso_production',
+										PHP_EOL . 'Subcommands: create, clone, destroy, sso_staging, deploy, deploy_files,' .
+										' deploy_db, deploy_files_db, save_state, restore_state, sso_production',
 					)
 				);
 			}
 		);
-		
+
 	}
 
 	/**

@@ -5,7 +5,7 @@ namespace NewFoldLabs\WP\Module\Staging;
  * Class for Staging CLI commands
  */
 class StagingCLI extends \WP_CLI_Command {
-/**
+    /**
 	 * Used internally to create staging environment.
 	 *
 	 * @param array $args       Command arguments
@@ -143,7 +143,7 @@ class StagingCLI extends \WP_CLI_Command {
 	}
 
 
-    /**
+	/**
 	 * Helper to format data into tables.
 	 *
 	 * By default, the method creates simple $key => $value tables.
