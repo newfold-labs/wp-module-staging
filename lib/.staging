@@ -163,8 +163,8 @@ function sso_staging {
 		error 'No user provided.'
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
-	LINK=$(wp bluehost sso --url-only --id=$1 --path=$STAGING_DIR)
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=bluehost#\/tools\/staging\"\}
+	LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
 }
 
 function sso_production {
@@ -173,8 +173,8 @@ function sso_production {
 		error 'No user provided.'
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
-	LINK=$(wp bluehost sso --url-only --id=$1 --path=$PRODUCTION_DIR)
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=bluehost#\/tools\/staging\"\}
+	LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
 }
 
 function error {
