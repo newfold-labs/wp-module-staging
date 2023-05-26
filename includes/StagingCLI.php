@@ -225,7 +225,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * @param bool   $halt    should stop on error
 	 * @param int    $code    error code to be supplied
 	 *
-	 * @throws \WP_CLI\ExitException throws exit exception
+	 * @throws \WP_CLI\ExitException Throws exit exception.
 	 */
 	protected function error( $message, $silent = false, $halt = true, $code = 400 ) {
 		$pre_ = $silent ? '' : 'Error: ';
@@ -287,7 +287,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * @param string $question the question
 	 * @param string $type     type of confirm dialog
 	 *
-	 * @throws \WP_CLI\ExitException throws exit exception
+	 * @throws \WP_CLI\ExitException Throws exit exception.
 	 */
 	protected function confirm( $question, $type = 'normal' ) {
 		switch ( $type ) {
