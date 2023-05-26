@@ -5,7 +5,7 @@ namespace NewFoldLabs\WP\Module\Staging;
  * Class for Staging CLI commands
  */
 class StagingCLI extends \WP_CLI_Command {
-    /**
+	/**
 	 * Used internally to create staging environment.
 	 *
 	 * @param array $args       Command arguments
@@ -150,12 +150,12 @@ class StagingCLI extends \WP_CLI_Command {
 	 * Set $type to 'adv' and the table inherits keys from $data. DATA MUST BE UNIFORM & MATCH FIRST ROW.
 	 *
 	 * 1. Provide $data as an array or object
-	 * 2. Provide $keys as two strings -- by default 'DETAIL' and 'VALUE' are used.
+	 * 2. Provide $keys as two strings -y default 'DETAIL' and 'VALUE' are used.
 	 * 3. Prints ASCII Table
 	 *
-	 * @param array  $data
-	 * @param array  $keys
-	 * @param string $type
+	 * @param array  $data the data
+	 * @param array  $keys key values
+	 * @param string $type formating
 	 */
 	protected function table( $data, $keys = array( 'DETAIL', 'VALUE' ), $type = 'simple' ) {
 		if ( empty( $data ) ) {
@@ -181,8 +181,8 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Creates Heading with Blue background and Grey text.
 	 *
-	 * @param string $message
-	 * @param string $emoji
+	 * @param string $message the message
+	 * @param string $emoji   an emoji to include
 	 */
 	protected function bold_heading( $message, $emoji = '' ) {
 		$this->colorize_log( $message, '4', 'W', $emoji );
@@ -191,7 +191,8 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatted Success message.
 	 *
-	 * @param string $message
+	 * @param string $message the message
+	 * @param bool   $slient  no feedback
 	 */
 	protected function success( $message, $silent = false ) {
 		$pre_ = $silent ? '' : 'Success: ';
@@ -201,7 +202,7 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatted Info message.
 	 *
-	 * @param string $message
+	 * @param string $message the message
 	 */
 	protected function info( $message ) {
 		$this->colorize_log( $message, '4', 'W', 'ℹ️' );
@@ -210,7 +211,7 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatted Warning message.
 	 *
-	 * @param string $message
+	 * @param string $message the message
 	 */
 	protected function warning( $message ) {
 		$this->colorize_log( $message, '3', 'k', '⚠️' );
@@ -219,10 +220,10 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatted Error message. Halts by default.
 	 *
-	 * @param string $message
-	 * @param bool   $silent
-	 * @param bool   $halt
-	 * @param int    $code
+	 * @param string $message the message
+	 * @param bool   $silent  no feedback
+	 * @param bool   $halt    should stop on error
+	 * @param int    $code    error code to be supplied
 	 *
 	 * @throws \WP_CLI\ExitException
 	 */
@@ -237,10 +238,10 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatting helper for colorized messages.
 	 *
-	 * @param string $message
-	 * @param string $background
-	 * @param string $text_color
-	 * @param string $emoji_prefix
+	 * @param string $message      the message
+	 * @param string $background   bg color
+	 * @param string $text_color   text color
+	 * @param string $emoji_prefix an emoji to prefix
 	 */
 	protected function colorize_log( $message = '', $background = '', $text_color = '%_', $emoji_prefix = '' ) {
 		if ( ! empty( $background ) ) {
@@ -268,7 +269,7 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Helper function for returning clean JSON response.
 	 *
-	 * @param array|string $data - Provide well-formed array or existing JSON string.
+	 * @param array|string $data Provide well-formed array or existing JSON string.
 	 */
 	protected function log_to_json( $data ) {
 		if ( is_array( $data ) ) {
@@ -283,8 +284,8 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Formatted Confirm Dialog. A 'n' response breaks the thread.
 	 *
-	 * @param string $question
-	 * @param string $type
+	 * @param string $question the question
+	 * @param string $type     type of confirm dialog
 	 *
 	 * @throws \WP_CLI\ExitException
 	 */
