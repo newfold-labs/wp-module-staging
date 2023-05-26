@@ -52,7 +52,7 @@ class Staging {
 			function() {
 				\WP_CLI::add_command(
 					'newfold staging',
-					'NewFoldLabs\WP\Module\Staging\StagingCLI',
+					'NewfoldLabs\WP\Module\Staging\StagingCLI',
 					array(
 						'shortdesc' => 'Operations for Newfold staging.',
 						'longdesc'  => 'Internal commands to handle staging environment.' .

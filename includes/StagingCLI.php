@@ -1,5 +1,5 @@
 <?php
-namespace NewFoldLabs\WP\Module\Staging;
+namespace NewfoldLabs\WP\Module\Staging;
 
 /**
  * Class for Staging CLI commands
@@ -107,7 +107,7 @@ class StagingCLI extends \WP_CLI_Command {
 				break;
 			case 'object':
 				if ( is_wp_error( $data ) ) {
-					$response['message'] = $data->message;
+					$response['message'] = $data->get_error_message();
 				}
 				break;
 		}
@@ -231,7 +231,7 @@ class StagingCLI extends \WP_CLI_Command {
 		$pre_ = $silent ? '' : 'Error: ';
 		$this->colorize_log( $pre_ . $message, '1', 'W', '🛑️' );
 		if ( $halt ) {
-			WP_CLI::halt( $code );
+			\WP_CLI::halt( $code );
 		}
 	}
 
