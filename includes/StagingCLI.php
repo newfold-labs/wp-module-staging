@@ -192,7 +192,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * Formatted Success message.
 	 *
 	 * @param string $message the message
-	 * @param bool   $slient  no feedback
+	 * @param bool   $silent  no feedback
 	 */
 	protected function success( $message, $silent = false ) {
 		$pre_ = $silent ? '' : 'Success: ';
@@ -225,7 +225,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * @param bool   $halt    should stop on error
 	 * @param int    $code    error code to be supplied
 	 *
-	 * @throws \WP_CLI\ExitException
+	 * @throws \WP_CLI\ExitException throws exit exception
 	 */
 	protected function error( $message, $silent = false, $halt = true, $code = 400 ) {
 		$pre_ = $silent ? '' : 'Error: ';
@@ -273,7 +273,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 */
 	protected function log_to_json( $data ) {
 		if ( is_array( $data ) ) {
-			\WP_CLI::log( json_encode( $data ) );
+			\WP_CLI::log( wp_json_encode( $data ) );
 		} elseif ( is_array( json_decode( $data, true ) ) ) {
 			\WP_CLI::log( $data );
 		} else {
@@ -287,7 +287,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * @param string $question the question
 	 * @param string $type     type of confirm dialog
 	 *
-	 * @throws \WP_CLI\ExitException
+	 * @throws \WP_CLI\ExitException throws exit exception
 	 */
 	protected function confirm( $question, $type = 'normal' ) {
 		switch ( $type ) {
