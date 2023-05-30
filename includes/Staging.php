@@ -45,6 +45,24 @@ class Staging {
 				}
 			)
 		);
+
+		// add CLI commands
+		add_action(
+			'cli_init',
+			function() {
+				\WP_CLI::add_command(
+					'newfold staging',
+					'NewfoldLabs\WP\Module\Staging\StagingCLI',
+					array(
+						'shortdesc' => 'Operations for Newfold staging.',
+						'longdesc'  => 'Internal commands to handle staging environment.' .
+										PHP_EOL . 'Subcommands: create, clone, destroy, sso_staging, deploy, deploy_files,' .
+										' deploy_db, deploy_files_db, save_state, restore_state, sso_production',
+					)
+				);
+			}
+		);
+
 	}
 
 	/**
