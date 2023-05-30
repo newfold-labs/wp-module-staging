@@ -62,7 +62,6 @@ class Staging {
 				);
 			}
 		);
-
 	}
 
 	/**
@@ -71,7 +70,7 @@ class Staging {
 	 * @return Staging
 	 */
 	public static function getInstance() {
-		return new self();
+		return new self( container() );
 	}
 
 	/**
@@ -239,7 +238,7 @@ class Staging {
 		if ( ! $this->isProduction() ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'Cloning can only be done from the production environment.', 'bluehost-wordpress-plugin' )
+				__( 'Cloning can only be done from the production environment.', 'newfold-staging-module' )
 			);
 		}
 
@@ -264,7 +263,7 @@ class Staging {
 		if ( $this->stagingExists() ) {
 			return new \WP_Error(
 				'environment_exists',
-				__( 'Staging environment already exists!', 'bluehost-wordpress-plugin' )
+				__( 'Staging environment already exists!', 'newfold-staging-module' )
 			);
 		}
 
@@ -298,7 +297,7 @@ class Staging {
 		if ( ! $this->isProduction() ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'You must switch to the production environment before destroying staging.', 'bluehost-wordpress-plugin' )
+				__( 'You must switch to the production environment before destroying staging.', 'newfold-staging-module' )
 			);
 		}
 
@@ -320,7 +319,7 @@ class Staging {
 		if ( $this->isEnvironment( $env ) ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'Switch to an environment you are already in, you cannot.', 'bluehost-wordpress-plugin' )
+				__( 'Switch to an environment you are already in, you cannot.', 'newfold-staging-module' )
 			);
 		}
 
@@ -357,7 +356,7 @@ class Staging {
 		if ( ! array_key_exists( $command, $allowedCommands ) ) {
 			return new \WP_Error(
 				'invalid_command',
-				__( 'Invalid staging CLI command.', 'bluehost-wordpress-plugin' )
+				__( 'Invalid staging CLI command.', 'newfold-staging-module' )
 			);
 		}
 
@@ -406,7 +405,7 @@ class Staging {
 				return new \WP_Error(
 					'invalid_character',
 					// translators: Invalid character that was entered
-					sprintf( __( 'Invalid character (%s) in command.', 'bluehost-wordpress-plugin' ), $char )
+					sprintf( __( 'Invalid character (%s) in command.', 'newfold-staging-module' ), $char )
 				);
 			}
 		}
@@ -415,7 +414,7 @@ class Staging {
 
 		$disabled_functions = explode( ',', ini_get( 'disable_functions' ) );
 		if ( is_array( $disabled_functions ) && in_array( 'exec', array_map( 'trim', $disabled_functions ), true ) ) {
-			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'bluehost-wordpress-plugin' ) );
+			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'newfold-staging-module' ) );
 		}
 
 		// Verify staging script file permissions
@@ -423,7 +422,7 @@ class Staging {
 			if ( is_writable( $script ) ) {
 				chmod( $script, 0755 );
 			} else {
-				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'bluehost-wordpress-plugin' ) );
+				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'newfold-staging-module' ) );
 			}
 		}
 
@@ -436,7 +435,7 @@ class Staging {
 		// Check if we can properly decode the JSON
 		$response = json_decode( $json, true );
 		if ( ! $response ) {
-			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'bluehost-wordpress-plugin' ) );
+			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'newfold-staging-module' ) );
 		}
 
 		// Check if response is an error response.
