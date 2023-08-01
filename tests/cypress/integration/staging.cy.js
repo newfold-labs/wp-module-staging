@@ -14,7 +14,7 @@ describe('Staging Page', function () {
 			method: 'GET',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
 		}, stagingInit ).as('stagingInit');
-		cy.visit('/wp-admin/admin.php?page=bluehost#/staging');
+		cy.visit('/wp-admin/admin.php?page=' + Cypress.env('pluginId') + '#/staging');
 		cy.wait('@stagingInit');
 	});
 
@@ -230,7 +230,7 @@ describe('Staging Page - Staging environmant', function () {
 			method: 'GET',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
 		}, stagingStaging ).as('stagingStaging');
-		cy.visit('/wp-admin/admin.php?page=bluehost#/staging');
+		cy.visit('/wp-admin/admin.php?page=' + Cypress.env('pluginId') + '#/staging');
 		cy.wait('@stagingStaging');
 	});
 
