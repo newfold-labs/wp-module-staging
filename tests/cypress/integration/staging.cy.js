@@ -8,6 +8,7 @@ const stagingStaging = require('../fixtures/stagingStaging.json');
 const stagingDeploy = require('../fixtures/stagingDeploy.json');
 
 describe('Staging Page', function () {
+	let appClass = '.' + Cypress.env('appId');
 
 	before(() => {
 		cy.intercept({
@@ -21,35 +22,35 @@ describe('Staging Page', function () {
 	it('Is Accessible', () => {
 		cy.injectAxe();
 		cy.wait(500);
-		cy.checkA11y('.wppbh-app-body');
+		cy.checkA11y( appClass + '-app-body');
 	});
 
 	it('Displays in Production Environment Properly', () => {
-		cy.get('.wppbh-app-staging-prod')
+		cy.get( appClass + '-app-staging-prod')
 			.scrollIntoView()
 			.should('be.visible');
 
 
-        cy.get('#wppbh-production-toggle')
+        cy.get('#' + Cypress.env('appId') + '-production-toggle')
             .should('be.checked');
-        cy.get('.wppbh-app-staging-prod')
+        cy.get( appClass + '-app-staging-prod')
             .contains('h3', 'Production site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-prod')
-            .contains('label[for="wppbh-production-toggle"]', 'Currently editing')
+        cy.get( appClass + '-app-staging-prod')
+            .contains('label[for="' + Cypress.env('appId') + '-production-toggle"]', 'Currently editing')
             .should('be.visible');
         
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('h3', 'Staging site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
-            .contains('label[for="wppbh-staging-toggle"]', 'Not currently editing')
+        cy.get( appClass + '-app-staging-staging')
+            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
             .should('be.visible');
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .should('not.be.checked');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234').should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', 'May 30, 2023').should('be.visible');
         
         
@@ -118,16 +119,16 @@ describe('Staging Page', function () {
             .contains('p', 'Deleted Staging')
             .should('be.visible');
         
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('h3', 'Staging site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
-            .contains('label[for="wppbh-staging-toggle"]', 'Not currently editing')
+        cy.get( appClass + '-app-staging-staging')
+            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
             .should('not.exist');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234')
             .should('not.exist');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', "You don't have a staging site yet")
             .should('be.visible');
         cy.get('#staging-create-button')
@@ -145,7 +146,7 @@ describe('Staging Page', function () {
             delay: 1000,
 		}).as('stagingCreate');
 
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', "You don't have a staging site yet")
             .should('be.visible');
 
@@ -154,20 +155,20 @@ describe('Staging Page', function () {
             .click();
         cy.wait(100);
         
-        cy.get('.wppbh-page')
+        cy.get( appClass + '-page')
             .should('have.class', 'is-thinking');
         cy.wait('@stagingCreate');
 
-        cy.get('.wppbh-page')
+        cy.get( appClass + '-page')
             .should('not.have.class', 'is-thinking');
 
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('h3', 'Staging site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
-            .contains('label[for="wppbh-staging-toggle"]', 'Not currently editing')
+        cy.get( appClass + '-app-staging-staging')
+            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234')
             .should('be.visible');
 
@@ -182,11 +183,11 @@ describe('Staging Page', function () {
             delay: 500,
 		}).as('stagingSwitch');
         
-        cy.get('#wppbh-production-toggle')
+        cy.get('#' + Cypress.env('appId') + '-production-toggle')
             .should('be.checked');
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .should('not.be.checked');
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .click();
         cy.get('.yst-modal')
             .contains('h1', 'Switch to Staging')
@@ -197,12 +198,12 @@ describe('Staging Page', function () {
             .click();
         cy.get('.yst-modal h1')
             .should('not.exist');
-        cy.get('#wppbh-production-toggle')
+        cy.get('#' + Cypress.env('appId') + '-production-toggle')
             .should('be.checked');
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .should('not.be.checked');
         
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .click();
         cy.get('.yst-modal .yst-button--primary')
             .contains('Switch')
@@ -236,22 +237,22 @@ describe('Staging Page - Staging environmant', function () {
 
     it('Displays staging environemnt properly', () => {
 
-        cy.get('#wppbh-production-toggle')
+        cy.get('#' + Cypress.env('appId') + '-production-toggle')
             .should('not.be.checked');
-        cy.get('.wppbh-app-staging-prod')
+        cy.get( appClass + '-app-staging-prod')
             .contains('h3', 'Production site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-prod')
-            .contains('label[for="wppbh-production-toggle"]', 'Not currently editing')
+        cy.get( appClass + '-app-staging-prod')
+            .contains('label[for="' + Cypress.env('appId') + '-production-toggle"]', 'Not currently editing')
             .should('be.visible');
         
-        cy.get('#wppbh-staging-toggle')
+        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .should('be.checked');
-        cy.get('.wppbh-app-staging-staging')
+        cy.get( appClass + '-app-staging-staging')
             .contains('h3', 'Staging site')
             .should('be.visible');
-        cy.get('.wppbh-app-staging-staging')
-            .contains('label[for="wppbh-staging-toggle"]', 'Currently editing')
+        cy.get( appClass + '-app-staging-staging')
+            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Currently editing')
             .should('be.visible');
         
         cy.get('#staging-clone-button')
