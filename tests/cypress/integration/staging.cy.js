@@ -64,15 +64,15 @@ describe('Staging Page', function () {
 
     it('Errors as expected', () => {
         cy.get('#staging-clone-button').click();
-        cy.get('.yst-modal')
+        cy.get('.nfd-modal')
             .contains('h1', 'Confirm Clone Action')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--primary')
+        cy.get('.nfd-modal .nfd-button--primary')
             .contains('Clone')
             .should('be.visible').click();
         cy.wait(100);
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Error')
             .should('be.visible');
     });
@@ -84,17 +84,17 @@ describe('Staging Page', function () {
 		}, stagingClone ).as('stagingClone');
 
         cy.get('#staging-clone-button').click();
-        cy.get('.yst-modal')
+        cy.get('.nfd-modal')
             .contains('h1', 'Confirm Clone Action')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--primary')
+        cy.get('.nfd-modal .nfd-button--primary')
             .contains('Clone')
             .should('be.visible')
             .click();
 
         cy.wait('@stagingClone');
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Cloned to Staging')
             .should('be.visible');
     });
@@ -105,17 +105,17 @@ describe('Staging Page', function () {
 		}, stagingDelete ).as('stagingDelete');
 
         cy.get('#staging-delete-button').click();
-        cy.get('.yst-modal')
+        cy.get('.nfd-modal')
             .contains('h1', 'Confirm Delete')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--primary')
+        cy.get('.nfd-modal .nfd-button--primary')
             .contains('Delete')
             .should('be.visible')
             .click();
 
         cy.wait('@stagingDelete');
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Deleted Staging')
             .should('be.visible');
         
@@ -189,14 +189,14 @@ describe('Staging Page', function () {
             .should('not.be.checked');
         cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .click();
-        cy.get('.yst-modal')
+        cy.get('.nfd-modal')
             .contains('h1', 'Switch to Staging')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--error')
+        cy.get('.nfd-modal .nfd-button--error')
             .contains('Cancel')
             .should('be.visible')
             .click();
-        cy.get('.yst-modal h1')
+        cy.get('.nfd-modal h1')
             .should('not.exist');
         cy.get('#' + Cypress.env('appId') + '-production-toggle')
             .should('be.checked');
@@ -205,18 +205,18 @@ describe('Staging Page', function () {
         
         cy.get('#' + Cypress.env('appId') + '-staging-toggle')
             .click();
-        cy.get('.yst-modal .yst-button--primary')
+        cy.get('.nfd-modal .nfd-button--primary')
             .contains('Switch')
             .should('be.visible')
             .click();
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Working...')
             .should('be.visible');
 
         cy.wait('@stagingSwitch');
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Reloading')
             .should('be.visible');
 
@@ -273,25 +273,25 @@ describe('Staging Page - Staging environmant', function () {
 		}).as('stagingDeploy');
 
         cy.get('#staging-deploy-button').click();
-        cy.get('.yst-modal')
+        cy.get('.nfd-modal')
             .contains('h1', 'Confirm Deployment')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--error')
+        cy.get('.nfd-modal .nfd-button--error')
             .contains('Cancel')
             .should('be.visible');
-        cy.get('.yst-modal .yst-button--primary')
+        cy.get('.nfd-modal .nfd-button--primary')
             .contains('Deploy')
             .should('be.visible')
             .click();
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Working...')
             .should('be.visible');
 
         cy.wait('@stagingDeploy');
 
 
-        cy.get('.yst-notifications')
+        cy.get('.nfd-notifications')
             .contains('p', 'Deployed')
             .should('be.visible');
 
