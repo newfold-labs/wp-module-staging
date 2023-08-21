@@ -225,6 +225,7 @@ describe('Staging Page', function () {
 });
 
 describe('Staging Page - Staging environmant', function () {
+	let appClass = '.' + Cypress.env('appId');
 
 	before(() => {
 		cy.intercept({
