@@ -1,4 +1,8 @@
-// import { default as StagingIsLoading } from '../stagingIsLoading/';
+import { Button, Modal } from '@newfold/ui-component-library';
+import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { default as StagingSite } from '../stagingSite/';
+import { default as ProductionSite } from '../productionSite/';
+import { default as defaultText } from './defaultText';
 
 /**
  * Staging Module
@@ -9,33 +13,24 @@
  */
 const Staging = ({methods, constants, Components, ...props}) => {
 	const apiNamespace = '/newfold-staging/v1/';
-	const unknownErrorMsg = constants.unknownErrorMsg ? constants.unknownErrorMsg : 'An unknown error has occurred.';
 	const [ isLoading, setIsLoading ] = methods.useState( true );
+	const [ isThinking, setIsThinking ] = methods.useState( false );
 	const [ isError, setIsError ] = methods.useState( false );
-	const [ notice, setNotice ] = methods.useState( '' );
-	const [ showManageStaging, setShowManageStaging ] = methods.useState( false );
-	const [ errorMessage, setErrorMessage ] = methods.useState( null );
-	const [ isCreatingStaging, setIsCreatingStaging ] = methods.useState( false );
 	const [ hasStaging, setHasStaging ] = methods.useState( null );
-	const [ isProduction, setIsProduction ] = methods.useState( null );
+	const [ isProduction, setIsProduction ] = methods.useState( true );
 	const [ creationDate, setCreationDate ] = methods.useState( null );
 	const [ productionDir, setProductionDir ] = methods.useState( null );
 	const [ productionUrl, setProductionUrl ] = methods.useState( null );
 	const [ stagingDir, setStagingDir ] = methods.useState( null );
 	const [ stagingUrl, setStagingUrl ] = methods.useState( null );
-	const [ switchingTo, setSwitchingTo ] = methods.useState( '' );
+    const [ modalChildren, setModalChildren ] = methods.useState( <div /> );
+    const [ modalOpen, setModalOpen ] = methods.useState( false );
+	let notify = methods.useNotification();
 
-	/**
-	 * render staging preloader
-	 * 
-	 * @returns React Component
-	 */
-	 const renderSkeleton = () => {
-		// render default skeleton
-		return <Components.Spinner />;
-	}
+	// set defaults if not provided
+	constants.text = Object.assign(defaultText, constants.text);
 
-	// Setup values from response
+    // Setup values from response
 	const setup = ( response ) => {
 
 		if ( response.hasOwnProperty( 'stagingExists' ) ) {
@@ -63,10 +58,11 @@ const Staging = ({methods, constants, Components, ...props}) => {
 	};
 
 	const setError = ( error ) => {
-		console.log('setError', error);
+		// console.log('setError', error);
 		setIsLoading( false );
+        setIsThinking( false );
 		setIsError(true);
-		setErrorMessage(error);
+        makeNotice( 'error', constants.text.error, error, 'error' );
 	};
 
 	const catchError = (error) => {
@@ -79,10 +75,23 @@ const Staging = ({methods, constants, Components, ...props}) => {
 		} else if ( error.hasOwnProperty( 'data' ) && error.data.hasOwnProperty('status') ) {
 			setError(error.data.status);
 		} else {
-			setError(unknownErrorMsg);
+			setError(constants.text.unknownErrorMessage);
 		}
 
 	};
+
+    const makeNotice = (id, title, description, variant="success", duration=false) => {
+        notify.push(`staging-notice-${id}`, {
+            title,
+            description: (
+                <span>
+                    {description}
+                </span>
+            ),
+            variant,
+            autoDismiss: duration,
+        });
+    };
 
 	/**
 	 * on mount load staging data from module api
@@ -92,128 +101,166 @@ const Staging = ({methods, constants, Components, ...props}) => {
 	}, [] );
 
 	const init = () => {
-		console.log('Init - Loading Staging Data');
+		// console.log('Init - Loading Staging Data');
 		setIsError(false);
 		setIsLoading(true);
 		stagingApiFetch(
-			'staging/', 
+			'staging',
+            null,
 			'GET', 
 			(response) => {
-				console.log('Init callback', response);
+				// console.log('Init Staging Data:', response);
 				// validate response data
 				if ( response.hasOwnProperty('currentEnvironment') ) {
 					//setup with fresh data
 					setup( response );
 				} else if ( response.hasOwnProperty('code') && response.code === 'error_response' ) {
-					// report error received
-					setError( response.message );
+					setError( response.message ); // report known error
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
-				setIsLoading( false );
+				setIsThinking( false );
+                setIsLoading( false );
 			}
 		);
 	}
 
 	const createStaging = () => {
-		console.log('create staging');
-		setIsCreatingStaging(true);
+		// console.log('create staging');
+        makeNotice( 'creating', constants.text.working, constants.text.createNoticeStartText, 'info', 8000 );
+		// setIsCreatingStaging(true);
 		stagingApiFetch(
-			'staging/', 
-			'POST', 
+			'staging',
+            null,
+			'POST',
 			(response) => {
-				console.log('Create Staging Callback', response);
-				// validate response data
-				if ( response.hasOwnProperty('currentEnvironment') ) {
-					//setup with fresh data
-					setup( response );
-				} else if ( response.hasOwnProperty('status') ) {
-					//setup with fresh data
-					if ( response.status === 'success' ){
-						setup( response );
-						setNotice( response.message );
-					} else {
-						setError( response.message );
-					}
+				// console.log('Create Staging Callback', response);
+				if ( response.hasOwnProperty('status') ) {
+                    if ( response.status === 'success' ){
+                        //setup with fresh data
+                        setup( response );
+                        makeNotice( 'created', constants.text.createNoticeCompleteText, response.message );
+				    } else {
+                        setError( response.message ); // report known error
+                    }
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
-				setIsLoading( false );
-				setIsCreatingStaging(false);
+				setIsThinking( false );
+				// setIsCreatingStaging(false);
 			}
 		);
 	};
 
 	const deleteStaging = () => {
-		console.log('delete staging');
+		// console.log('delete staging');
+        makeNotice( 'deleting', constants.text.working, constants.text.deleteNoticeStartText, 'info', 8000 );
 		stagingApiFetch(
-			'staging/', 
+			'staging',
+            null, 
 			'DELETE', 
 			(response) => {
-				console.log('Delete staging callback', response);
+				// console.log('Delete staging callback', response);
 				// validate response data
 				if ( response.hasOwnProperty('status') ) {
-					// setup with fresh data
-					if ( response.status === 'success' ){
+                    if ( response.status === 'success' ){
+                        // setup with fresh data
 						setHasStaging( false );
-						setNotice( response.message );
+                        makeNotice( 'deleted', constants.text.deleteNoticeCompleteText, response.message );
 					} else {
 						setError( response.message );
 					}
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
-				setIsLoading( false );
+				setIsThinking( false );
 			}
 		);
 	};
 
 	const clone = () => {
-		console.log('clone production to staging');
+		// console.log('clone production to staging');
+        makeNotice( 'cloning', constants.text.working, constants.text.cloneNoticeStartText, 'info', 8000 );
 		stagingApiFetch(
-			'staging/clone/', 
+			'staging/clone',
+            null,
 			'POST', 
 			(response) => {
-				console.log('Clone Callback', response);
+				// console.log('Clone Callback', response);
 				// validate response data
 				if ( response.hasOwnProperty('status') ) {
 					// setup with fresh data
 					if ( response.status === 'success' ){
 						setHasStaging( true );
-						setNotice( response.message );
+                        makeNotice( 'cloned', constants.text.cloneNoticeCompleteText, response.message );
 					} else {
 						setError( response.message );
 					}
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
-				setIsLoading( false );
+				setIsThinking( false );
 			}
 		);
 	};
 
+    const switchToStaging = () => {
+        if ( !isProduction ) {
+            // console.log('Already on staging.');
+        } else {
+            setModal(
+                constants.text.switchToStaging,
+                constants.text.switchToStagingDescription,
+                switchToEnv,
+                'staging',
+                constants.text.switch
+            );
+        }
+    };
+
+    const switchToProduction = () => {
+        if ( isProduction ) {
+            // console.log('Already on production.');
+        } else {
+            setModal(
+                constants.text.switchToProduction,
+                constants.text.switchToProductionDescription,
+                switchToEnv,
+                'production',
+                constants.text.switch
+            );
+        }
+    };
+
+	/**
+	 * 
+	 * @param {string} env One of 'staging' or 'production'
+	 */
 	const switchToEnv = ( env ) => {
-		console.log('switching to', env, `/switch-to?env=${ env }`);
-		setSwitchingTo( env );
-		setNotice('Switching to '+env);
+		// console.log('switching to', env, `/switch-to?env=${ env }`);
+		// setSwitchingTo( env );
+        setIsThinking( true );
+		if ( env === 'production' ) {
+			makeNotice( 'switching', constants.text.working, constants.text.switchToProductionNoticeStartText, 'info', 8000 );
+		} else {
+			makeNotice( 'switching', constants.text.working, constants.text.switchToStagingNoticeStartText, 'info', 8000 );
+		}
+
 		stagingApiFetch(
-			`staging/switch-to&env=${env}`, 
+			'staging/switch-to',
+            {'env': env}, 
 			'GET', 
 			(response) => {
-				console.log('Switch Callback', response);
+				// console.log('Switch Callback', response);
 				// validate response data
 				if ( response.hasOwnProperty( 'load_page' ) ) {
 					window.location.href = response.load_page;
 					// navigate(response.load_page);
+					makeNotice( 'redirecting', constants.text.switching, constants.text.switchToProductionNoticeCompleteText, 'success', 8000 );
 				} else if ( response.hasOwnProperty('status') && response.status === 'error' ) {
 					setError(response.message);
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
 			}
 		);
@@ -223,26 +270,27 @@ const Staging = ({methods, constants, Components, ...props}) => {
 	 * 
 	 * @param {string} type One of 'all', 'files', or 'db'
 	 */
-	const deploy = ( type ) => {
-		console.log('Deploy', type);
+	const deployStaging = ( type ) => {
+		// console.log('Deploy', type);
+        makeNotice( 'deploying', constants.text.working, constants.text.deployNoticeStartText, 'info', 8000 );
 		stagingApiFetch(
-			`staging/deploy&type=${type}`, 
+			'staging/deploy',
+            {'type': type}, 
 			'POST', 
 			(response) => {
-				console.log('Deploy Callback', response);
+				// console.log('Deploy Callback', response);
 				// validate response data
 				if ( response.hasOwnProperty('status') ) {
 					// setup with fresh data
 					if ( response.status === 'success' ){
-						setNotice( response.message );
+                        makeNotice( 'deployed', constants.text.deployNoticeCompleteText, response.message );
 					} else {
 						setError( response.message );
 					}
 				} else {
-					// report unknown error
-					setError( unknownErrorMsg );
+					setError( unknownErrorMsg ); // report unknown error
 				}
-				setIsLoading( false );
+				setIsThinking( false );
 			}
 		);
 	};
@@ -256,262 +304,113 @@ const Staging = ({methods, constants, Components, ...props}) => {
 	 * @param passError setter for the error in component
 	 * @return apiFetch promise
 	 */
-	const stagingApiFetch = (path = '', method = 'GET', thenCallback, errorCallback = catchError) => {
-		// setIsError( false );
-		setIsLoading( true );
+	const stagingApiFetch = (
+        path = '', 
+        qs = {}, 
+        method = 'GET', 
+        thenCallback, 
+        errorCallback = catchError
+    ) => {
+        setIsThinking( true );
 		return methods.apiFetch({
-			url: constants.resturl + apiNamespace + path,
+			url: methods.NewfoldRuntime.createApiUrl( apiNamespace + path, qs),
 			method,
-			beforeSend: (xhr) => {
-				xhr.setRequestHeader( 'X-WP-Nonce', constants.restnonce );
-			},
 		}).then( (response) => {
 			thenCallback( response );
 		}).catch( (error) => {
 			errorCallback( error );
 		})
 	};
+    const modalClose = () => {
+        setModalOpen(false);
+    }
+    const setModal = (title, description, callback, callbackParams=null, ctaText=constants.text.proceed) => {
+        setModalChildren(
+            <Modal.Panel>
+                <Modal.Title className="nfd-text-2xl nfd-font-medium nfd-text-title">{title}</Modal.Title>
+                <Modal.Description className="nfd-mt-8 nfd-mb-8">{description}</Modal.Description>
+                <div className="nfd-flex nfd-justify-between nfd-items-center nfd-flex-wrap nfd-gap-3">
+                    <Button
+                        variant="error"
+                        onClick={ () => { setModalOpen(false); }}
+                        >
+                        <XMarkIcon /> {constants.text.cancel}
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={ () => { 
+                            setModalOpen(false);
+                            callback(callbackParams);
+                        }}
+                        >
+                        <CheckIcon /> {ctaText}
+                    </Button>
+                </div>
+            </Modal.Panel>
+        );
+        setModalOpen(true);
+    };
 
-	const renderProductionCard = () => {
-		return <Components.Card>
-			<Components.CardHeader>
-				<h3>Production Site</h3>
-				<Components.Icon icon="admin-site" />
-			</Components.CardHeader>
-			<Components.CardBody>
-				<p>{ constants.productionDescription }</p>
-				{ productionUrl &&
-					<p>Your site is available at: <strong>{ productionUrl }</strong></p>
-				}
-				<p>Manage your staging site from production.</p>
-				{ !isProduction || !hasStaging &&
-					<p>Some operations must be done from the production site. You must be on the production site to clone to staging or delete staging.</p>
-				}
-				<Components.ButtonGroup>
-					<Components.Button
-						disabled={ !isProduction && hasStaging ? true : false }
-						icon="cloud-saved"
-						label="Copies all Production (data and files) to Staging"
-						onClick={ clone }
-						showTooltip
-						variant={ isProduction ? "primary" : "secondary" }
-						>
-						<Components.Icon icon="database-view" />
-						{ constants.cloneButtonText }
-					</Components.Button>
-					<Components.Button
-						disabled={ !isProduction && hasStaging ? true : false }
-						icon="trash"
-						isDestructive
-						label="Delete this Staging environment!"
-						onClick={ deleteStaging }
-						showTooltip
-						variant="secondary"
-						>
-						Delete Staging
-					</Components.Button>
-				</Components.ButtonGroup>
-			</Components.CardBody>
-			<Components.CardFooter justify="center">
-				{ isProduction && 
-					<Components.Button 
-						variant="secondary"
-						showTooltip
-						label="You are here"
-						>
-						<div style={{color: 'green'}}>
-							<Components.Icon icon="yes" />
-						</div>
-						Production Site Loaded
-					</Components.Button>
-				}
-				{ !isProduction && 
-					<Components.Button 
-						icon="external"
-						variant="primary"
-						onClick={ () => { switchToEnv( 'production' ) }}
-						showTooltip
-						label="Load the production site in the browser"
-					>Load Production Environment</Components.Button>
-				}
-			</Components.CardFooter>
-		</Components.Card>;
-	};
-
-	const renderStagingCard = () => {
-		return <Components.Card>
-			<Components.CardHeader>
-				<h3>Staging Site</h3>
-				<Components.Icon icon="hammer" />
-			</Components.CardHeader>
-			<Components.CardBody>
-				{ hasStaging && 
-					<div>
-						<p>{ constants.stagingDescription }</p>
-						<p>Your stating site is available at: <strong>{ stagingUrl }</strong></p>
-						<p>Once you have finished edits on your staging site, you can copy from Staging back to your Production site (files and/or data)!</p>
-						{ isProduction &&
-							<p>Some operations must be done from the staging site. You are currenlty on production. You must go to the staging site to deploy changes.</p>
-						}
-						<Components.ButtonGroup>
-						<Components.Button
-							disabled={ isProduction ? true : false }
-							icon="cloud-upload"
-							onClick={ () => { deploy( 'files' ) }}
-							variant="secondary"
-							showTooltip
-							label="Copy files only from Staging to Production"
-						>
-							Deploy Only Files
-						</Components.Button>
-						<Components.Button
-							disabled={ isProduction ? true : false }
-							icon="database-export"
-							onClick={ () => { deploy( 'db' ) }}
-							variant="secondary"
-							showTooltip
-							label="Copy database only from Staging to Production"
-						>
-							Deploy Only Database
-						</Components.Button>
-						<Components.Button
-							disabled={ isProduction ? true : false }
-							icon="cloud-upload"
-							onClick={ () => { deploy( 'all' ) }}
-							variant="secondary"
-							showTooltip
-							label="Copy files and database from Staging to Production"
-						>
-							<Components.Icon icon="database-export" />
-							Deploy Both Files and Database
-						</Components.Button>
-						</Components.ButtonGroup>
-
-					</div>
-				}
-				{ !hasStaging &&
-					<div>
-						<p>{ constants.stagingLongDescription }</p>
-						<Components.Button 
-							onClick={ createStaging }
-							className="button-primary"
-							icon="migrate"
-							showTooltip
-							label="Create a new Stating site from Production"
-						>
-							Create Staging Site
-						</Components.Button>
-					</div>
-				}
-			</Components.CardBody>
-			<Components.CardFooter justify="center">
-				{ hasStaging && !isProduction && 
-					<Components.Button 
-						variant="secondary"
-						showTooltip
-						label="You are here"
-						>
-						<div style={{color: 'green'}}>
-							<Components.Icon icon="yes" />
-						</div>
-						Staging Site Loaded
-					</Components.Button>
-				}
-				{ hasStaging && isProduction && 
-					<Components.Button 
-						variant="primary"
-						icon="external"
-						onClick={ () => { switchToEnv( 'staging' ) }}
-						showTooltip
-						label="Load this Staging Site in the browser"
-					>Load Staging Site</Components.Button>
-				}
-			</Components.CardFooter>
-		</Components.Card>;
-	};
-
-	const renderInfoCard = () => {
-		return <Components.Card>
-			<Components.CardHeader>
-				<h3>Staging Data</h3>
-				<Components.Icon icon="info" />
-			</Components.CardHeader>
-			<Components.CardBody>
-			<dl>
-				<dt>Status</dt>
-				<dd><code>{ notice }</code></dd>
-				<dt>Current Environment</dt>
-				<dd><code>{ isProduction ? 'production' : 'staging' }</code></dd>
-				<dt>Production Url</dt>
-				<dd><code>{ productionUrl }</code></dd>
-				<dt>Production Directory</dt>
-				<dd><code>{ productionDir }</code></dd>
-				<dt>Staging Exists</dt>
-				<dd><code>{ hasStaging ? 'true' : 'false' }</code></dd>
-				<dt>Creation Date</dt>
-				<dd><code>{ creationDate }</code></dd>
-				<dt>Staging Url</dt>
-				<dd><code>{ stagingUrl }</code></dd>
-				<dt>Staging Directory</dt>
-				<dd><code>{ stagingDir }</code></dd>
-			</dl>
-			</Components.CardBody>
-			<Components.CardFooter>
-
-			</Components.CardFooter>
-		</Components.Card>;
-	};
-
-	const renderErrorCard = () => {
-		return <Components.Card>
-			<Components.CardHeader>
-				<h3>Error</h3>
-			</Components.CardHeader>
-			<Components.CardBody>
-				<p>Oops, there was an error loading the staging data, please try again later or contact support.</p>
-				<Components.Button
-					onClick={ init }
-					icon="update"
-					variant="primary"
-				>
-					Refresh
-				</Components.Button>
-			</Components.CardBody>
-			<Components.CardFooter>
-				{ errorMessage && 
-					<p>{errorMessage}</p>
-				}
-			</Components.CardFooter>
-		</Components.Card>;
-	};
-
-	const renderCards = () => {
-		return (
-			<div className="staging-cards grid col2">
-				{ renderProductionCard() }
-				{ renderStagingCard() }
-				{ renderInfoCard() }
-				{ switchingTo && 
-					<p>Switching to: { switchingTo }</p>
-				}
-			</div>
-		);
-
-	};
+    const getClasses = () => {
+		let theclasses = '';
+        if ( isLoading ) {
+            theclasses = 'is-loading';
+        } else if ( isThinking ) {
+            theclasses = 'is-thinking';
+        } else if ( isError ) {
+			theclasses = 'is-error';
+		}
+		return theclasses;
+    };
 
 	return (
-		<div className={methods.classnames('newfold-staging-wrapper')}>
-			{ notice }
-			{ isLoading && 
-				renderSkeleton()
-			}
-			{ isError && 
-				renderErrorCard()
-			}
-			{ !isLoading && !isError &&
-				renderCards()
-			}
-		</div>
+		<Components.Page title={__('Staging', 'wp-plugin-bluehost')} className={methods.classnames('newfold-staging-page',  getClasses())}>
+            <Components.SectionContainer className={'wppbh-app-staging-container'}>
+				<div className={methods.classnames('newfold-staging-wrapper')}>
+					<Components.SectionHeader
+							title={constants.text.title}
+							subTitle={constants.text.subTitle}
+							className={'newfold-staging-header'}
+						/>
+
+						<Components.SectionContent separator={true} className={'newfold-staging-prod'}>
+							<ProductionSite
+								methods={methods}
+								constants={constants}
+								Components={Components}
+								isProduction={isProduction}
+								hasStaging={hasStaging}
+								productionUrl={productionUrl}
+								cloneMe={clone}
+								switchToMe={switchToProduction}
+								setModal={setModal}
+							/>
+						</Components.SectionContent>
+						<Components.SectionContent className={'newfold-staging-staging'}>
+							<StagingSite
+								methods={methods}
+								constants={constants}
+								Components={Components}
+								isProduction={isProduction}
+								hasStaging={hasStaging}
+								setHasStaging={setHasStaging}
+								createMe={createStaging}
+								deleteMe={deleteStaging}
+								deployMe={deployStaging}
+								switchToMe={switchToStaging}
+								stagingUrl={stagingUrl}
+								creationDate={creationDate}
+								setModal={setModal}
+							/>
+						</Components.SectionContent>
+						<Modal 
+							isOpen={ modalOpen }
+							onClose={ modalClose }
+							children={ modalChildren }
+						/>
+				</div>
+			</Components.SectionContainer>
+		</Components.Page>
 	);
 
 };

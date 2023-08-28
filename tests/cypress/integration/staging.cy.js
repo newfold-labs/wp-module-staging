@@ -26,31 +26,31 @@ describe('Staging Page', function () {
 	});
 
 	it('Displays in Production Environment Properly', () => {
-		cy.get( appClass + '-app-staging-prod')
+		cy.get('.newfold-staging-prod')
 			.scrollIntoView()
 			.should('be.visible');
 
 
-        cy.get('#' + Cypress.env('appId') + '-production-toggle')
+        cy.get('#newfold-production-toggle')
             .should('be.checked');
-        cy.get( appClass + '-app-staging-prod')
-            .contains('h3', 'Production site')
+        cy.get('.newfold-staging-prod')
+            .contains('h3', 'Production Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-prod')
-            .contains('label[for="' + Cypress.env('appId') + '-production-toggle"]', 'Currently editing')
+        cy.get('.newfold-staging-prod')
+            .contains('label[for="newfold-production-toggle"]', 'Currently editing')
             .should('be.visible');
         
-        cy.get( appClass + '-app-staging-staging')
-            .contains('h3', 'Staging site')
+        cy.get('.newfold-staging-staging')
+            .contains('h3', 'Staging Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
-            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
+        cy.get('.newfold-staging-staging')
+            .contains('label[for="newfold-staging-toggle"]', 'Not currently editing')
             .should('be.visible');
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .should('not.be.checked');
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234').should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', 'May 30, 2023').should('be.visible');
         
         
@@ -119,16 +119,16 @@ describe('Staging Page', function () {
             .contains('p', 'Deleted Staging')
             .should('be.visible');
         
-        cy.get( appClass + '-app-staging-staging')
-            .contains('h3', 'Staging site')
+        cy.get('.newfold-staging-staging')
+            .contains('h3', 'Staging Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
-            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
+        cy.get('.newfold-staging-staging')
+            .contains('label[for="newfold-staging-toggle"]', 'Not currently editing')
             .should('not.exist');
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234')
             .should('not.exist');
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', "You don't have a staging site yet")
             .should('be.visible');
         cy.get('#staging-create-button')
@@ -146,7 +146,7 @@ describe('Staging Page', function () {
             delay: 1000,
 		}).as('stagingCreate');
 
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', "You don't have a staging site yet")
             .should('be.visible');
 
@@ -162,13 +162,13 @@ describe('Staging Page', function () {
         cy.get( appClass + '-page')
             .should('not.have.class', 'is-thinking');
 
-        cy.get( appClass + '-app-staging-staging')
-            .contains('h3', 'Staging site')
+        cy.get('.newfold-staging-staging')
+            .contains('h3', 'Staging Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
-            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Not currently editing')
+        cy.get('.newfold-staging-staging')
+            .contains('label[for="newfold-staging-toggle"]', 'Not currently editing')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
+        cy.get('.newfold-staging-staging')
             .contains('div', 'https://localhost:8882/staging/1234')
             .should('be.visible');
 
@@ -183,11 +183,11 @@ describe('Staging Page', function () {
             delay: 500,
 		}).as('stagingSwitch');
         
-        cy.get('#' + Cypress.env('appId') + '-production-toggle')
+        cy.get('#newfold-production-toggle')
             .should('be.checked');
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .should('not.be.checked');
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .click();
         cy.get('.nfd-modal')
             .contains('h1', 'Switch to Staging')
@@ -198,12 +198,12 @@ describe('Staging Page', function () {
             .click();
         cy.get('.nfd-modal h1')
             .should('not.exist');
-        cy.get('#' + Cypress.env('appId') + '-production-toggle')
+        cy.get('#newfold-production-toggle')
             .should('be.checked');
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .should('not.be.checked');
         
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .click();
         cy.get('.nfd-modal .nfd-button--primary')
             .contains('Switch')
@@ -217,7 +217,7 @@ describe('Staging Page', function () {
         cy.wait('@stagingSwitch');
 
         cy.get('.nfd-notifications')
-            .contains('p', 'Reloading')
+            .contains('p', 'Switching')
             .should('be.visible');
 
         // actual reload cancelled by fixture containing a load_page value of `#`
@@ -238,22 +238,22 @@ describe('Staging Page - Staging environmant', function () {
 
     it('Displays staging environemnt properly', () => {
 
-        cy.get('#' + Cypress.env('appId') + '-production-toggle')
+        cy.get('#newfold-production-toggle')
             .should('not.be.checked');
-        cy.get( appClass + '-app-staging-prod')
-            .contains('h3', 'Production site')
+        cy.get('.newfold-staging-prod')
+            .contains('h3', 'Production Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-prod')
-            .contains('label[for="' + Cypress.env('appId') + '-production-toggle"]', 'Not currently editing')
+        cy.get('.newfold-staging-prod')
+            .contains('label[for="newfold-production-toggle"]', 'Not currently editing')
             .should('be.visible');
         
-        cy.get('#' + Cypress.env('appId') + '-staging-toggle')
+        cy.get('#newfold-staging-toggle')
             .should('be.checked');
-        cy.get( appClass + '-app-staging-staging')
-            .contains('h3', 'Staging site')
+        cy.get('.newfold-staging-staging')
+            .contains('h3', 'Staging Site')
             .should('be.visible');
-        cy.get( appClass + '-app-staging-staging')
-            .contains('label[for="' + Cypress.env('appId') + '-staging-toggle"]', 'Currently editing')
+        cy.get('.newfold-staging-staging')
+            .contains('label[for="newfold-staging-toggle"]', 'Currently editing')
             .should('be.visible');
         
         cy.get('#staging-clone-button')
