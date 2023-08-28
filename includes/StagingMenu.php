@@ -27,7 +27,7 @@ class StagingMenu {
 			if ( container()->get( 'isStaging' ) ) {
 				$args = array(
 					'id'    => 'newfold-staging',
-					'href'  => admin_url( 'admin.php?page=' . container()->plugin()->id . '#/tools/staging' ),
+					'href'  => admin_url( 'admin.php?page=' . container()->plugin()->id . '#/staging' ),
 					'title' => '<div style="background-color: #ce0000; padding: 0 10px;color:#fff;">' . esc_html__( 'Staging Environment', 'newfold-staging' ) . '</div>',
 					'meta'  => array(
 						'title' => esc_attr__( 'Staging Actions', 'newfold-staging' ),
