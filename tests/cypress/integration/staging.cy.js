@@ -1,11 +1,11 @@
 // <reference types="Cypress" />
-const stagingInit = require('../fixtures/stagingInit.json');
-const stagingClone = require('../fixtures/stagingClone.json');
-const stagingDelete = require('../fixtures/stagingDelete.json');
-const stagingCreate = require('../fixtures/stagingCreate.json');
-const stagingSwitch = require('../fixtures/stagingSwitch.json');
-const stagingStaging = require('../fixtures/stagingStaging.json');
-const stagingDeploy = require('../fixtures/stagingDeploy.json');
+const stagingInitFixture = require('../fixtures/stagingInit.json');
+const stagingCloneFixture = require('../fixtures/stagingClone.json');
+const stagingDeleteFixture = require('../fixtures/stagingDelete.json');
+const stagingCreateFixture = require('../fixtures/stagingCreate.json');
+const stagingSwitchFixture = require('../fixtures/stagingSwitch.json');
+const stagingStagingFixture = require('../fixtures/stagingStaging.json');
+const stagingDeployFixture = require('../fixtures/stagingDeploy.json');
 
 describe('Staging Page', function () {
 	let appClass = '.' + Cypress.env('appId');
@@ -14,9 +14,8 @@ describe('Staging Page', function () {
 		cy.intercept({
 			method: 'GET',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
-		}, stagingInit ).as('stagingInit');
+		}, stagingInitFixture );
 		cy.visit('/wp-admin/admin.php?page=' + Cypress.env('pluginId') + '#/staging');
-		cy.wait('@stagingInit');
 	});
 
 	it('Is Accessible', () => {
@@ -81,7 +80,7 @@ describe('Staging Page', function () {
         cy.intercept({
 			method: 'POST',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)clone/
-		}, stagingClone ).as('stagingClone');
+		}, stagingCloneFixture ).as('stagingClone');
 
         cy.get('#staging-clone-button').click();
         cy.get('.nfd-modal')
@@ -102,7 +101,7 @@ describe('Staging Page', function () {
     it('Delete Works', () => {
         cy.intercept({
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
-		}, stagingDelete ).as('stagingDelete');
+		}, stagingDeleteFixture ).as('stagingDelete');
 
         cy.get('#staging-delete-button').click();
         cy.get('.nfd-modal')
@@ -142,7 +141,7 @@ describe('Staging Page', function () {
 			method: 'POST',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
 		}, {
-			body: stagingCreate,
+			body: stagingCreateFixture,
             delay: 1000,
 		}).as('stagingCreate');
 
@@ -179,7 +178,7 @@ describe('Staging Page', function () {
 			method: 'GET',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)switch-to(\&|%26)env(\=|%3D)staging/
 		}, {
-			body: stagingSwitch,
+			body: stagingSwitchFixture,
             delay: 500,
 		}).as('stagingSwitch');
         
@@ -231,9 +230,8 @@ describe('Staging Page - Staging environmant', function () {
 		cy.intercept({
 			method: 'GET',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/
-		}, stagingStaging ).as('stagingStaging');
+		}, stagingStagingFixture );
 		cy.visit('/wp-admin/admin.php?page=' + Cypress.env('pluginId') + '#/staging');
-		cy.wait('@stagingStaging');
 	});
 
     it('Displays staging environemnt properly', () => {
@@ -269,7 +267,7 @@ describe('Staging Page - Staging environmant', function () {
 			method: 'POST',
 			url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)deploy/
 		}, {
-			body: stagingDeploy,
+			body: stagingDeployFixture,
             delay: 500,
 		}).as('stagingDeploy');
 
