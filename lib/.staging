@@ -164,7 +164,7 @@ function sso_staging {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
-	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=bluehost#\/staging\"\}
+	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
 function sso_production {
@@ -174,7 +174,7 @@ function sso_production {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
-	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=bluehost#\/staging\"\}
+	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
 function error {
@@ -208,6 +208,7 @@ STAGING_DIR=$4
 PRODUCTION_URL=$5
 STAGING_URL=$6
 USER_ID=$7
+PLUGIN_ID=$8
 DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -231,7 +232,7 @@ CONFIG=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --ski
 
 wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
-$1 "$8"
+$1 "$9"
 
 wp transient delete nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
@@ -242,4 +243,5 @@ wp transient delete nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip
 # $5 is production url
 # $6 is staging url
 # $7 is current user id
-# $8 is function param 1
+# $8 is plugin id/brand
+# $9 is function param 1
