@@ -390,6 +390,7 @@ class Staging {
 			$config['production_url'],
 			$config['staging_url'],
 			get_current_user_id(),
+			container()->plugin()->id,
 		);
 
 		if ( $args && is_array( $args ) ) {

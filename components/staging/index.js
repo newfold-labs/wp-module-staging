@@ -364,7 +364,7 @@ const Staging = ({methods, constants, Components, ...props}) => {
     };
 
 	return (
-		<Components.Page title={__('Staging', 'wp-plugin-bluehost')} className={methods.classnames('newfold-staging-page',  getClasses())}>
+		<Components.Page title={constants.text.title} className={methods.classnames('newfold-staging-page',  getClasses())}>
             <Components.SectionContainer className={'wppbh-app-staging-container'}>
 				<div className={methods.classnames('newfold-staging-wrapper')}>
 					<Components.SectionHeader
