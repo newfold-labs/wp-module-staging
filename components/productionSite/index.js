@@ -1,4 +1,4 @@
-import { Button, Radio } from '@newfold/ui-component-library';
+import { Button, Container, Radio } from '@newfold/ui-component-library';
 
 /**
  * Staging Module - Production Site
@@ -10,7 +10,6 @@ import { Button, Radio } from '@newfold/ui-component-library';
 const ProductionSite = ({ 
     methods,
     constants,
-    Components,
     hasStaging, 
     isProduction, 
     productionUrl,
@@ -19,7 +18,7 @@ const ProductionSite = ({
     setModal,
 }) => {
     return (
-        <Components.SectionSettings
+        <Container.SettingsField
             title={constants.text.productionSiteTitle}
             description={
                 <Radio
@@ -54,7 +53,7 @@ const ProductionSite = ({
                     </Button>
                 }
             </div>
-        </Components.SectionSettings>
+        </Container.SettingsField>
     );
 };
 

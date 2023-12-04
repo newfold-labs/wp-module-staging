@@ -1,4 +1,4 @@
-import { Button, Modal } from '@newfold/ui-component-library';
+import { Button, Container, Modal, Page } from '@newfold/ui-component-library';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { default as StagingSite } from '../stagingSite/';
 import { default as ProductionSite } from '../productionSite/';
@@ -11,7 +11,7 @@ import { default as defaultText } from './defaultText';
  * @param {*} props 
  * @returns 
  */
-const Staging = ({methods, constants, Components, ...props}) => {
+const Staging = ({methods, constants, ...props}) => {
 	const apiNamespace = '/newfold-staging/v1/';
 	const [ isLoading, setIsLoading ] = methods.useState( true );
 	const [ isThinking, setIsThinking ] = methods.useState( false );
@@ -364,20 +364,19 @@ const Staging = ({methods, constants, Components, ...props}) => {
     };
 
 	return (
-		<Components.Page title={constants.text.title} className={methods.classnames('newfold-staging-page',  getClasses())}>
-            <Components.SectionContainer className={'wppbh-app-staging-container'}>
+		<Page title={constants.text.title} className={methods.classnames('newfold-staging-page',  getClasses())}>
+            <Container className={'wppbh-app-staging-container'}>
 				<div className={methods.classnames('newfold-staging-wrapper')}>
-					<Components.SectionHeader
+					<Container.Header
 							title={constants.text.title}
-							subTitle={constants.text.subTitle}
+							description={constants.text.subTitle}
 							className={'newfold-staging-header'}
 						/>
 
-						<Components.SectionContent separator={true} className={'newfold-staging-prod'}>
+						<Container.Block separator={true} className={'newfold-staging-prod'}>
 							<ProductionSite
 								methods={methods}
 								constants={constants}
-								Components={Components}
 								isProduction={isProduction}
 								hasStaging={hasStaging}
 								productionUrl={productionUrl}
@@ -385,12 +384,11 @@ const Staging = ({methods, constants, Components, ...props}) => {
 								switchToMe={switchToProduction}
 								setModal={setModal}
 							/>
-						</Components.SectionContent>
-						<Components.SectionContent className={'newfold-staging-staging'}>
+						</Container.Block>
+						<Container.Block className={'newfold-staging-staging'}>
 							<StagingSite
 								methods={methods}
 								constants={constants}
-								Components={Components}
 								isProduction={isProduction}
 								hasStaging={hasStaging}
 								setHasStaging={setHasStaging}
@@ -402,15 +400,15 @@ const Staging = ({methods, constants, Components, ...props}) => {
 								creationDate={creationDate}
 								setModal={setModal}
 							/>
-						</Components.SectionContent>
+						</Container.Block>
 						<Modal 
 							isOpen={ modalOpen }
 							onClose={ modalClose }
 							children={ modalChildren }
 						/>
 				</div>
-			</Components.SectionContainer>
-		</Components.Page>
+			</Container>
+		</Page>
 	);
 
 };
