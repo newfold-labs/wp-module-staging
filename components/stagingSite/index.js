@@ -1,4 +1,4 @@
-import { Button, Radio, Select } from '@newfold/ui-component-library';
+import { Button, Container, Radio, Select } from '@newfold/ui-component-library';
 import { ArrowPathIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 /**
@@ -11,7 +11,6 @@ import { ArrowPathIcon, TrashIcon } from '@heroicons/react/24/outline';
 const StagingSite = ({
     methods,
     constants,
-    Components,
     hasStaging, 
     isProduction, 
     createMe,
@@ -25,7 +24,7 @@ const StagingSite = ({
     const [deployOption, setDeployOption] = methods.useState( 'all' );
 
     return (
-        <Components.SectionSettings
+        <Container.SettingsField
             title={constants.text.stagingSiteTitle}
             description={!hasStaging ? constants.text.noStagingSite :
                 <Radio
@@ -126,7 +125,7 @@ const StagingSite = ({
                 }
 
             </div>
-        </Components.SectionSettings>
+        </Container.SettingsField>
     );
 };
 
