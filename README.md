@@ -16,7 +16,7 @@ Newfold module for staging functionality in brand plugins
 ### 1. Add the Newfold Satis to your `composer.json`.
 
  ```bash
- composer config repositories.newfold composer https://newfold.github.io/satis
+ composer config repositories.newfold composer https://newfold-labs.github.io/satis
  ```
 
 ### 2. Require the `newfold-labs/wp-module-staging` package.
