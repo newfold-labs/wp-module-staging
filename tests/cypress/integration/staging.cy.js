@@ -152,13 +152,11 @@ describe('Staging Page', function () {
         cy.get('#staging-create-button')
             .should('be.visible')
             .click();
-        cy.wait(100);
-        
-        cy.get( appClass + '-page')
+        cy.get('.newfold-staging-page')
             .should('have.class', 'is-thinking');
         cy.wait('@stagingCreate');
 
-        cy.get( appClass + '-page')
+        cy.get('.newfold-staging-page')
             .should('not.have.class', 'is-thinking');
 
         cy.get('.newfold-staging-staging')
