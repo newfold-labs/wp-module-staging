@@ -1,21 +1,10 @@
 name: Build and Test Module Updates in Brand Plugins
 on:
-  push:
+  pull_request:
+    types: [ opened, reopened, ready_for_review, synchronize ]
     branches:
       - main
-      - master
-      - trunk
-      - develop
-      - release/*
-      - feature/*
-      - add/*
-      - update/*
-      - fix/*
-      - try/*
-  pull_request:
-    types: [ opened, reopened, ready_for_review ]
   workflow_dispatch:
-  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
