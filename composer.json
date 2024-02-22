@@ -47,6 +47,6 @@
     }
   },
   "require": {
-    "newfold-labs/wp-module-context": "^0.3.0"
+    "newfold-labs/wp-module-context": "^1.0"
   }
 }
