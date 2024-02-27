@@ -45,5 +45,8 @@
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
     }
+  },
+  "require": {
+    "newfold-labs/wp-module-context": "^1.0"
   }
 }
