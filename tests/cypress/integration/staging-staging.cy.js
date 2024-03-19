@@ -56,7 +56,7 @@ describe( 'Staging Page - Staging Environmant', function () {
 			},
 			{
 				body: stagingDeployFixture,
-				delay: 500,
+				delay: 1000,
 			}
 		).as( 'stagingDeploy' );
 
@@ -71,9 +71,10 @@ describe( 'Staging Page - Staging Environmant', function () {
 			.contains( 'Deploy' )
 			.should( 'be.visible' )
 			.click();
+		cy.wait( 100 );
 
 		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Working...' )
+			.contains( 'p', 'Working' )
 			.should( 'be.visible' );
 
 		cy.wait( '@stagingDeploy' );

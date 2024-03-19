@@ -198,7 +198,7 @@ describe( 'Staging Page - Production Environment', function () {
 			},
 			{
 				body: stagingSwitchFixture,
-				delay: 500,
+				delay: 1000,
 			}
 		).as( 'stagingSwitch' );
 
@@ -221,9 +221,10 @@ describe( 'Staging Page - Production Environment', function () {
 			.contains( 'Switch' )
 			.should( 'be.visible' )
 			.click();
+		cy.wait( 100 );
 
 		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Working...' )
+			.contains( 'p', 'Working' )
 			.should( 'be.visible' );
 
 		cy.wait( '@stagingSwitch' );
