@@ -42,5 +42,4 @@ jobs:
       module-branch: ${{ needs.setup.outputs.branch }}
       plugin-repo: 'newfold-labs/wp-plugin-hostgator'
       plugin-branch: 'update/i18n-and-lint'
-      only-module-tests: true
     secrets: inherit
