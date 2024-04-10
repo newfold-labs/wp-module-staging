@@ -202,6 +202,11 @@ describe( 'Staging Page - Production Environment', function () {
 			}
 		).as( 'stagingSwitch' );
 
+		// close all snackbar notices
+		cy.get( '.nfd-notification button' ).each( ( $btn ) => {
+			cy.wrap( $btn ).click();
+		});
+
 		cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
 		cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
 		cy.get( '#newfold-staging-toggle' ).click();
