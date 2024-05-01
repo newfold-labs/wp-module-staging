@@ -26,7 +26,6 @@ class Staging {
 		$this->container = $container;
 
 		// Module functionality goes here
-		// add_action( 'rest_api_init', array( StagingApi::class, 'register_routes' ) );
 		add_action(
 			'rest_api_init',
 			function () {
