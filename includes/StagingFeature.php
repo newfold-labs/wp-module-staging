@@ -4,7 +4,7 @@ namespace NewfoldLabs\WP\Module\Staging;
 
 use NewfoldLabs\WP\ModuleLoader\Container;
 use NewfoldLabs\WP\Module\Staging\Staging;
-use function NewfoldLabs\WP\ModuleLoader\register;
+use function NewfoldLabs\WP\ModuleLoader\container as getContainer;
 
 /**
  * Child class for a feature
@@ -28,26 +28,13 @@ class StagingFeature extends \NewfoldLabs\WP\Module\Features\Feature {
     public function initialize() {
         if ( function_exists( 'add_action' ) ) {
 
+            // Register module
             add_action(
                 'plugins_loaded',
                 function () {
-
-                    register(
-                        array(
-                            'name'     => 'staging',
-                            'label'    => __( 'Staging', 'newfold-staging-module' ),
-                            'callback' => function ( Container $container ) {
-                                return new Staging( $container );
-                            },
-                            'isActive' => true,
-                            'isHidden' => true,
-                        )
-                    );
-
+                    new Staging( getContainer() );
                 }
             );
-
         }
     }
-
 }
