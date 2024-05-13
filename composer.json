@@ -48,6 +48,6 @@
   },
   "require": {
     "newfold-labs/wp-module-context": "^1.0",
-    "newfold-labs/wp-module-features": "dev-main"
+    "newfold-labs/wp-module-features": "^1.1"
   }
 }

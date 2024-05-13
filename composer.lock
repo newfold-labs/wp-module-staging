@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "27083de06da1ae46c76532107e2f8eaa",
+    "content-hash": "f855ce68c67e58895aa8dfaf47953ef7",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -158,27 +158,32 @@
         },
         {
             "name": "newfold-labs/wp-module-features",
-            "version": "dev-main",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/newfold-labs/wp-module-features.git",
-                "reference": "b8642cadff5ec6909c134fa87c605b5de4d2585a"
+                "reference": "a6780ec96584aab97036468de5d42939978b39c6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/newfold-labs/wp-module-features/zipball/b8642cadff5ec6909c134fa87c605b5de4d2585a",
-                "reference": "b8642cadff5ec6909c134fa87c605b5de4d2585a",
+                "url": "https://api.github.com/repos/newfold-labs/wp-module-features/zipball/a6780ec96584aab97036468de5d42939978b39c6",
+                "reference": "a6780ec96584aab97036468de5d42939978b39c6",
                 "shasum": ""
             },
-            "require-dev": {
-                "newfold-labs/wp-php-standards": "^1.2"
+            "require": {
+                "wp-forge/wp-options": "^1.1.1"
             },
-            "default-branch": true,
+            "require-dev": {
+                "newfold-labs/wp-php-standards": "^1.2.3"
+            },
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "NewfoldLabs\\WP\\Module\\Features\\": "includes"
-                }
+                },
+                "files": [
+                    "includes/functions.php"
+                ]
             },
             "scripts": {
                 "fix": [
@@ -203,10 +208,10 @@
             ],
             "description": "A module for providing an interface for features.",
             "support": {
-                "source": "https://github.com/newfold-labs/wp-module-features/tree/main",
+                "source": "https://github.com/newfold-labs/wp-module-features/tree/1.1.0",
                 "issues": "https://github.com/newfold-labs/wp-module-features/issues"
             },
-            "time": "2024-04-19T20:13:00+00:00"
+            "time": "2024-05-13T17:34:22+00:00"
         },
         {
             "name": "wp-forge/helpers",
@@ -251,6 +256,43 @@
                 "source": "https://github.com/wp-forge/helpers/tree/2.0"
             },
             "time": "2022-01-06T13:10:47+00:00"
+        },
+        {
+            "name": "wp-forge/wp-options",
+            "version": "1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wp-forge/wp-options.git",
+                "reference": "511b1c5e626582dd4c3c1b5602e7a20352dabc1b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wp-forge/wp-options/zipball/511b1c5e626582dd4c3c1b5602e7a20352dabc1b",
+                "reference": "511b1c5e626582dd4c3c1b5602e7a20352dabc1b",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "WP_Forge\\Options\\": "includes"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "Micah Wood",
+                    "email": "micah@wpscholar.com"
+                }
+            ],
+            "description": "A WordPress helper class for managing plugin options.",
+            "support": {
+                "issues": "https://github.com/wp-forge/wp-options/issues",
+                "source": "https://github.com/wp-forge/wp-options/tree/1.1.1"
+            },
+            "time": "2024-05-10T14:57:37+00:00"
         }
     ],
     "packages-dev": [
@@ -858,9 +900,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "newfold-labs/wp-module-features": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
