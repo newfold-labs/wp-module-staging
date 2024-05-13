@@ -19,13 +19,13 @@ class StagingFeatureHooks {
 	public function hooks() {
 
         // Filter vale based on context
-        add_filter( 'newfold/features/filter/isEnabled:staging', array( $this, 'filterValue' ) );
+        \add_filter( 'newfold/features/filter/isEnabled:staging', array( $this, 'filterValue' ) );
 
         // Force disable based on context
-        add_action( 'newfold/features/action/onEnable:staging', array( $this, 'maybeDisable' ) );
+        \add_action( 'newfold/features/action/onEnable:staging', array( $this, 'maybeDisable' ) );
 
         // Check if should disable on setup
-        add_action( 'after_setup_theme', array( $this, 'maybeDisable' ) );
+        \add_action( 'after_setup_theme', array( $this, 'maybeDisable' ) );
 
     }
 
