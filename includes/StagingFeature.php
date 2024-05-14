@@ -19,11 +19,16 @@ class StagingFeature extends \NewfoldLabs\WP\Module\Features\Feature {
 	 * @var string
 	 */
 	protected $name  = 'staging';
-	protected $value = true; // default to on
 
 	/**
-	 * Initialize staging feature
+	 * The feature value. Defaults to on.
 	 *
+	 * @var boolean
+	 */
+	protected $value = true;
+
+	/**
+	 * Initialize staging feature.
 	 */
 	public function initialize() {
 		if ( function_exists( 'add_action' ) ) {

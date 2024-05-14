@@ -36,7 +36,7 @@ class StagingFeatureHooks {
 	 * @param boolean $value the value
 	 * @return boolean the filtered value
 	 */
-	function filterValue( $value ) {
+	public function filterValue( $value ) {
 		if ( $this->shouldDisable() ) {
 			$value = false;
 		}
@@ -48,7 +48,7 @@ class StagingFeatureHooks {
 	 *
 	 * @return void
 	 */
-	function maybeDisable() {
+	public function maybeDisable() {
 		if ( $this->shouldDisable() ) {
 			disableFeature( 'staging' );
 		}
@@ -59,7 +59,7 @@ class StagingFeatureHooks {
 	 *
 	 * @return boolean whether the feature should be disabled
 	 */
-	function shouldDisable() {
+	public function shouldDisable() {
 		// check for atomic context
 		return 'atomic' === getContext( 'platform' );
 	}
