@@ -23,6 +23,7 @@
       "NewfoldLabs\\WP\\Module\\Staging\\": "includes"
     },
     "files": [
+      "includes/StagingFeature.php",
       "bootstrap.php"
     ]
   },
