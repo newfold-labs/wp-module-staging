@@ -27,7 +27,7 @@
     ]
   },
   "require-dev": {
-    "newfold-labs/wp-php-standards": "^1.2"
+    "newfold-labs/wp-php-standards": "^1.2.2"
   },
   "scripts": {
     "fix": [
@@ -48,6 +48,6 @@
   },
   "require": {
     "newfold-labs/wp-module-context": "^1.0",
-    "newfold-labs/wp-module-features": "^1.1"
+    "newfold-labs/wp-module-features": "^1.2"
   }
 }
