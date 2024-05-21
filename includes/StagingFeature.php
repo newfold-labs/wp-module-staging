@@ -18,7 +18,7 @@ class StagingFeature extends \NewfoldLabs\WP\Module\Features\Feature {
 	 *
 	 * @var string
 	 */
-	protected $name  = 'staging';
+	protected $name = 'staging';
 
 	/**
 	 * The feature value. Defaults to on.

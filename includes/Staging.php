@@ -165,30 +165,6 @@ class Staging {
 	}
 
 	/**
-	 * Get production screenshot URL.
-	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
-	 *
-	 * @return string
-	 */
-	public function getProductionScreenshotUrl( $width = 122, $height = 92 ) {
-		return '';
-	}
-
-	/**
-	 * Get staging screenshot URL.
-	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
-	 *
-	 * @return string
-	 */
-	public function getStagingScreenshotUrl( $width = 122, $height = 92 ) {
-		return '';
-	}
-
-	/**
 	 * Check if the current environment matches a specific value.
 	 *
 	 * @param string $env Environment name (production or staging).
