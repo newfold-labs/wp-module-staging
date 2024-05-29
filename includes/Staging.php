@@ -26,7 +26,6 @@ class Staging {
 		$this->container = $container;
 
 		// Module functionality goes here
-		// add_action( 'rest_api_init', array( StagingApi::class, 'register_routes' ) );
 		add_action(
 			'rest_api_init',
 			function () {
@@ -49,7 +48,7 @@ class Staging {
 		// add CLI commands
 		add_action(
 			'cli_init',
-			function() {
+			function () {
 				\WP_CLI::add_command(
 					'newfold staging',
 					'NewfoldLabs\WP\Module\Staging\StagingCLI',
@@ -446,5 +445,4 @@ class Staging {
 
 		return $response;
 	}
-
 }
