@@ -54,4 +54,11 @@ Newfold module for staging functionality in brand plugins.
  composer require newfold-labs/wp-module-staging
  ```
 
+### 3. Instantiate the Features singleton to load all features.
+
+```
+Features::getInstance();
+```
+
 [More on NewFold WordPress Modules](https://github.com/newfold-labs/wp-module-loader)
+[More on the NewFold Features Modules](https://github.com/newfold-labs/wp-module-features)
