@@ -364,9 +364,9 @@ const Staging = ({methods, constants, ...props}) => {
     };
 
 	return (
-		<Page title={constants.text.title} className={methods.classnames('newfold-staging-page',  getClasses())}>
-            <Container className={'wppbh-app-staging-container'}>
-				<div className={methods.classnames('newfold-staging-wrapper')}>
+		<Page title={constants.text.title} className={methods.classNames('newfold-staging-page',  getClasses())}>
+            <Container className={'newfold-staging-container'}>
+				<div className={'newfold-staging-wrapper'}>
 					<Container.Header
 							title={constants.text.title}
 							description={constants.text.subTitle}
