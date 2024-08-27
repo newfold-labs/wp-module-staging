@@ -256,7 +256,10 @@ const Staging = ({methods, constants, ...props}) => {
 				if ( response.hasOwnProperty( 'load_page' ) ) {
 					window.location.href = response.load_page;
 					// navigate(response.load_page);
-					makeNotice( 'redirecting', constants.text.switching, constants.text.switchToProductionNoticeCompleteText, 'success', 8000 );
+					alert("changed to "+env)
+					const notifyMessageText = env === "production" ? constants.text.switchToProductionNoticeCompleteText : constants.text.switchToStagingNoticeCompleteText;
+					alert(notifyMessageText)
+					makeNotice( 'redirecting', constants.text.switching, notifyMessageText, 'success', 8000 );
 				} else if ( response.hasOwnProperty('status') && response.status === 'error' ) {
 					setError(response.message);
 				} else {
