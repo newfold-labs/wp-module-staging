@@ -4,6 +4,7 @@ const stagingCloneFixture = require( '../fixtures/stagingClone.json' );
 const stagingDeleteFixture = require( '../fixtures/stagingDelete.json' );
 const stagingCreateFixture = require( '../fixtures/stagingCreate.json' );
 const stagingSwitchFixture = require( '../fixtures/stagingSwitch.json' );
+const customCommandTimeout = 60000;
 
 describe( 'Staging Page - Production Environment', function () {
 	const appClass = '.' + Cypress.env( 'appId' );
@@ -15,12 +16,16 @@ describe( 'Staging Page - Production Environment', function () {
 				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
 			},
 			stagingInitFixture
-		);
+		).as('mock-staging-data');
 		cy.visit(
 			'/wp-admin/admin.php?page=' +
 				Cypress.env( 'pluginId' ) +
 				'#/staging'
 		);
+		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
+			.then( ( interception ) => {
+				expect( interception.response.statusCode ).to.eq( 200 );
+			});
 	} );
 
 	it( 'Is Accessible', () => {
