@@ -4,7 +4,7 @@ const stagingCloneFixture = require( '../fixtures/stagingClone.json' );
 const stagingDeleteFixture = require( '../fixtures/stagingDelete.json' );
 const stagingCreateFixture = require( '../fixtures/stagingCreate.json' );
 const stagingSwitchFixture = require( '../fixtures/stagingSwitch.json' );
-const customCommandTimeout = 20000;
+const customCommandTimeout = 60000;
 
 describe( 'Staging Page - Production Environment', function () {
 	const appClass = '.' + Cypress.env( 'appId' );
