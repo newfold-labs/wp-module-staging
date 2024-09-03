@@ -31,13 +31,13 @@ function create {
 			wp core download --version=$WP_VER --force || error 'Unable to install WordPress in staging directory.'
 	fi
 	wp core config --dbhost=$DB_HOST --dbname=$DB_NAME --dbuser=$DB_USER --dbpass=$DB_PASS --dbprefix=staging_$DB_PREFIX --skip-themes --skip-plugins --quiet || error 'Unable to configure WordPress.'
-	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || error 'Unable to update prefix.'
+	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || error 'Unable to update database prefix.'
 	wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || error 'Unable to import database.'
 	rm $STAGING_DIR/.export-sql --force
 	wp option update staging_environment staging --skip-themes --skip-plugins --quiet || error 'Unable to set environment.'
-	wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || error 'Unable to update URL on staging.'
+	wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || error 'Unable to update URLs on staging.'
 	wp option update staging_config "$CONFIG" --format=json --path=$STAGING_DIR  --skip-themes --skip-plugins --quiet || error 'Unable to import global config on staging.'
-	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR  --skip-themes --skip-plugins --quiet || error 'Unable to enable the coming soon page on staging.'
+	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR  --skip-themes --skip-plugins --quiet || error 'Unable to turn on Coming Soon page in staging.'
 	wp rewrite flush --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to flush rewrite rules.'
 	rewrite_htaccess $STAGING_DIR
 	clear
@@ -51,9 +51,9 @@ function clone {
 		then
 		SESSIONS=$(wp user meta get $USER_ID session_tokens --format=json --path=$STAGING_DIR --skip-themes --skip-plugins --quiet)
 	fi
-	wp db query "DROP TABLE $STAGING_TABLES;" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to drop staging tables.'
+	wp db query "DROP TABLE $STAGING_TABLES;" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to drop staging database tables.'
 	wp db export $STAGING_DIR/.export-sql --add-drop-table --skip-themes --skip-plugins --quiet || error 'Unable to export database.'
-	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || error 'Unable to update prefix.'
+	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || error 'Unable to update database prefix.'
 	cd $STAGING_DIR || error 'Unable to move to staging directory.'
 	wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || error 'Unable to import database.'
 	if [ "0" != "$USER_ID" ]
@@ -71,7 +71,7 @@ function clone {
 	fi
 	wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || error 'Unable to update URL on staging.'
 	wp option update staging_config "$CONFIG" --format=json --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to import global config on staging.'
-	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to enable the coming soon page on staging.'
+	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to turn on Coming Soon page in staging.'
 	wp rewrite flush --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to flush rewrite rules.'
 	rm $STAGING_DIR/.export-sql --force
 	rewrite_htaccess $STAGING_DIR
@@ -103,7 +103,7 @@ function deploy_db {
 	rm $STAGING_DIR/.export-sql --force
 	wp option update staging_environment production --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to set environment.'
 	wp option update staging_config "$CONFIG" --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to import global config on production.'
-	wp option delete nfd_coming_soon --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to disable coming soon page.'
+	wp option delete nfd_coming_soon --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to turn off Coming Soon page.'
 	rewrite_htaccess $PRODUCTION_DIR
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Database deployed successfully.\"}
@@ -154,7 +154,7 @@ function move_files {
 
 function rewrite_htaccess {
 	LOCATION="$1"
-	wp eval 'global $wp_rewrite; echo $wp_rewrite->mod_rewrite_rules();' --path=$LOCATION > $LOCATION/.htaccess --skip-themes --skip-plugins --quiet || error 'Unable to create htaccess'
+	wp eval 'global $wp_rewrite; echo $wp_rewrite->mod_rewrite_rules();' --path=$LOCATION > $LOCATION/.htaccess --skip-themes --skip-plugins --quiet || error 'Unable to create .htaccess file.'
 }
 
 function sso_staging {
@@ -186,14 +186,14 @@ function lock_check {
 	LOCK=$(wp transient get nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 	if [ -n "$LOCK" ]
 		then
-		error 'Staging action is locked by another command'
+		error 'Staging action is locked by another command.'
 	fi
 }
 
 function compatibility_check {
 	if [[ -z $(type wp) ]]
 		then
-		error 'WPCLI is not available.'
+		error 'WP-CLI is not available.'
 	fi
 
 	if [ "compat_check" == "$1" ]
