@@ -22,16 +22,16 @@ describe( 'Staging Page - Production Environment', function () {
 				Cypress.env( 'pluginId' ) +
 				'#/staging'
 		);
+		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
+			.then( ( interception ) => {
+				expect( interception.response.statusCode ).to.eq( 200 );
+			});
 	} );
 
 	it( 'Is Accessible', () => {
 		cy.injectAxe();
 		cy.wait( 500 );
 		cy.checkA11y( appClass + '-app-body' );
-		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
-			.then( ( interception ) => {
-				expect( interception.response.statusCode ).to.eq( 200 );
-			});
 	} );
 
 	it( 'Displays in Production Environment Properly', () => {
