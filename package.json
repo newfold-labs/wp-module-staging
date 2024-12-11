@@ -17,6 +17,6 @@
   "devDependencies": {
     "@testing-library/cypress": "^9.0.0",
     "cypress": "^12.9.0",
-    "cypress-axe": "^1.4.0"
+    "cypress-axe": "^1.5.0"
   }
 }
