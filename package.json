@@ -11,7 +11,7 @@
     "William Earnhardt (https://wearnhardt.com)"
   ],
   "dependencies": {
-    "@heroicons/react": "^2.0.18",
+    "@heroicons/react": "^2.2.0",
     "@newfold/ui-component-library": "^1.1.1"
   },
   "devDependencies": {
