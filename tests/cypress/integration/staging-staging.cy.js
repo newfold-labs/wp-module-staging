@@ -2,10 +2,10 @@
 const stagingStagingFixture = require( '../fixtures/stagingStaging.json' );
 const stagingDeployFixture = require( '../fixtures/stagingDeploy.json' );
 
-describe( 'Staging Page - Staging Environmant', function () {
+describe( 'Staging Page - Staging Environmant', { testIsolation: true }, () => {
 	const appClass = '.' + Cypress.env( 'appId' );
 
-	before( () => {
+	beforeEach( () => {
 		cy.intercept(
 			{
 				method: 'GET',
@@ -13,6 +13,8 @@ describe( 'Staging Page - Staging Environmant', function () {
 			},
 			stagingStagingFixture
 		);
+
+		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
 		cy.visit(
 			'/wp-admin/admin.php?page=' +
 				Cypress.env( 'pluginId' ) +

@@ -6,10 +6,10 @@ const stagingCreateFixture = require( '../fixtures/stagingCreate.json' );
 const stagingSwitchFixture = require( '../fixtures/stagingSwitch.json' );
 const customCommandTimeout = 60000;
 
-describe( 'Staging Page - Production Environment', function () {
+describe( 'Staging Page - Production Environment', { testIsolation: true }, () => {
 	const appClass = '.' + Cypress.env( 'appId' );
 
-	before( () => {
+	beforeEach( () => {
 		cy.intercept(
 			{
 				method: 'GET',
@@ -17,6 +17,8 @@ describe( 'Staging Page - Production Environment', function () {
 			},
 			stagingInitFixture
 		).as('mock-staging-data');
+
+		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
 		cy.visit(
 			'/wp-admin/admin.php?page=' +
 				Cypress.env( 'pluginId' ) +
@@ -113,7 +115,7 @@ describe( 'Staging Page - Production Environment', function () {
 			.should( 'be.visible' );
 	} );
 
-	it( 'Delete Works', () => {
+	it( 'Deleting, Creating and Switch to staging Environment', () => {
 		cy.intercept(
 			{
 				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
@@ -154,9 +156,7 @@ describe( 'Staging Page - Production Environment', function () {
 		cy.get( '#staging-create-button' )
 			.should( 'be.visible' )
 			.should( 'not.be.disabled' );
-	} );
 
-	it( 'Create Works', () => {
 		cy.intercept(
 			{
 				method: 'POST',
@@ -193,9 +193,7 @@ describe( 'Staging Page - Production Environment', function () {
 		cy.get( '.newfold-staging-staging' )
 			.contains( 'div', 'https://localhost:8882/staging/1234' )
 			.should( 'be.visible' );
-	} );
 
-	it( 'Switch Works', () => {
 		cy.intercept(
 			{
 				method: 'GET',
@@ -242,7 +240,5 @@ describe( 'Staging Page - Production Environment', function () {
 		cy.get( '.nfd-notifications' )
 			.contains( 'p', 'Switching' )
 			.should( 'be.visible' );
-
-		// actual reload cancelled by fixture containing a load_page value of `#`
 	} );
 } );
