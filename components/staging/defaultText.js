@@ -29,7 +29,7 @@ const defaultText = {
     'deployNoticeStartText': __('Deploying from staging to production, this should take about a minute.', 'wp-module-staging'),
     'deploySite': __('Deploy Site', 'wp-module-staging'),
     'error': __('Error', 'wp-module-staging'),
-    'noStagingSite': "You don't have a staging site yet.", 'wp-module-staging'),
+    'noStagingSite': __("You don't have a staging site yet.", 'wp-module-staging'),
     'notCurrentlyEditing': __('Not currently editing', 'wp-module-staging'),
     'proceed': __('Proceed', 'wp-module-staging'),
     'productionSiteTitle': __('Production Site', 'wp-module-staging'),
