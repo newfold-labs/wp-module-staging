@@ -12,7 +12,8 @@
   ],
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@newfold/ui-component-library": "^1.1.1"
+    "@newfold/ui-component-library": "^1.1.1",
+    "@wordpress/i18n": "^5.18.0"
   },
   "devDependencies": {
     "@testing-library/cypress": "^10.0.3",
