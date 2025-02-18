@@ -61,6 +61,22 @@ class Staging {
 				);
 			}
 		);
+
+		\add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+	}
+
+	/**
+	 * Load text domain for Module
+	 *
+	 * @return void
+	 */
+	public static function loadTextDomain() {
+
+		\load_plugin_textdomain(
+			'wp-module-staging',
+			false,
+			NFD_STAGING_DIR . '/languages'
+		);
 	}
 
 	/**
@@ -237,7 +253,7 @@ class Staging {
 		if ( ! $this->isProduction() ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'Cloning can only be done from the production environment.', 'newfold-staging-module' )
+				__( 'Cloning can only be done from the production environment.', 'wp-module-staging' )
 			);
 		}
 
@@ -262,7 +278,7 @@ class Staging {
 		if ( $this->stagingExists() ) {
 			return new \WP_Error(
 				'environment_exists',
-				__( 'Staging environment already exists!', 'newfold-staging-module' )
+				__( 'Staging environment already exists!', 'wp-module-staging' )
 			);
 		}
 
@@ -296,7 +312,7 @@ class Staging {
 		if ( ! $this->isProduction() ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'You must switch to the production environment before destroying staging.', 'newfold-staging-module' )
+				__( 'You must switch to the production environment before destroying staging.', 'wp-module-staging' )
 			);
 		}
 
@@ -318,7 +334,7 @@ class Staging {
 		if ( $this->isEnvironment( $env ) ) {
 			return new \WP_Error(
 				'invalid_environment',
-				__( 'Switch to an environment you are already in, you cannot.', 'newfold-staging-module' )
+				__( 'Switch to an environment you are already in, you cannot.', 'wp-module-staging' )
 			);
 		}
 
@@ -355,7 +371,7 @@ class Staging {
 		if ( ! array_key_exists( $command, $allowedCommands ) ) {
 			return new \WP_Error(
 				'invalid_command',
-				__( 'Invalid staging CLI command.', 'newfold-staging-module' )
+				__( 'Invalid staging CLI command.', 'wp-module-staging' )
 			);
 		}
 
@@ -405,7 +421,7 @@ class Staging {
 				return new \WP_Error(
 					'invalid_character',
 					// translators: Invalid character that was entered
-					sprintf( __( 'Invalid character (%s) in command.', 'newfold-staging-module' ), $char )
+					sprintf( __( 'Invalid character (%s) in command.', 'wp-module-staging' ), $char )
 				);
 			}
 		}
@@ -414,7 +430,7 @@ class Staging {
 
 		$disabled_functions = explode( ',', ini_get( 'disable_functions' ) );
 		if ( is_array( $disabled_functions ) && in_array( 'exec', array_map( 'trim', $disabled_functions ), true ) ) {
-			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'newfold-staging-module' ) );
+			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'wp-module-staging' ) );
 		}
 
 		// Verify staging script file permissions
@@ -422,7 +438,7 @@ class Staging {
 			if ( is_writable( $script ) ) {
 				chmod( $script, 0755 );
 			} else {
-				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'newfold-staging-module' ) );
+				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'wp-module-staging' ) );
 			}
 		}
 
@@ -435,7 +451,7 @@ class Staging {
 		// Check if we can properly decode the JSON
 		$response = json_decode( $json, true );
 		if ( ! $response ) {
-			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'newfold-staging-module' ) );
+			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'wp-module-staging' ) );
 		}
 
 		// Check if response is an error response.

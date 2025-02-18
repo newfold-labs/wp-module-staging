@@ -93,7 +93,7 @@ class StagingCLI extends \WP_CLI_Command {
 	protected function render( $data ) {
 		$response = array(
 			'status'  => 'error',
-			'message' => __( 'Invalid JSON response', 'newfold-staging-module' ),
+			'message' => __( 'Invalid JSON response', 'wp-module-staging' ),
 		);
 		switch ( gettype( $data ) ) {
 			case 'string':
