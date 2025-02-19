@@ -1,252 +1,258 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
+"Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
-"Last-Translator: Vara Prasad Maruboina <varaprasad.maruboina@newfold.com>\n"
-"Language-Team: Dutch <vertaling@vrijschrift.org>\n"
+"Last-Translator: \n"
+"Language-Team: Dutch\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-13T11:02:08+00:00\n"
-"PO-Revision-Date: 2025-02-13 19:40+0530\n"
-"Language: nl\n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-02-19 13:44\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: newfold-labswp-module-staging\n"
+"X-Crowdin-Project-ID: 764889\n"
+"X-Crowdin-Language: nl\n"
+"X-Crowdin-File: wp-module-staging.pot\n"
+"X-Crowdin-File-ID: 8\n"
+"Language: nl_NL\n"
 
 #: includes/Staging.php:256
 msgid "Cloning can only be done from the production environment."
-msgstr ""
+msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
 
 #: includes/Staging.php:281
 msgid "Staging environment already exists!"
-msgstr ""
+msgstr "Testomgeving bestaat al!"
 
 #: includes/Staging.php:315
 msgid "You must switch to the production environment before destroying staging."
-msgstr ""
+msgstr "U moet naar de productieomgeving overschakelen voordat u stagneert."
 
 #: includes/Staging.php:337
 msgid "Switch to an environment you are already in, you cannot."
-msgstr ""
+msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
 
 #: includes/Staging.php:374
 msgid "Invalid staging CLI command."
-msgstr ""
+msgstr "Ongeldig staging CLI commando."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:424
 msgid "Invalid character (%s) in command."
-msgstr ""
+msgstr "Ongeldig teken (%s) in command."
 
 #: includes/Staging.php:433
 msgid "Unable to execute script (disabled_function)."
-msgstr ""
+msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
 
 #: includes/Staging.php:441
 msgid "Unable to execute script (permission error)."
-msgstr ""
+msgstr "Kan script niet uitvoeren (toestemmingsfout)."
 
 #: includes/Staging.php:454
 msgid "Unable to parse JSON"
-msgstr ""
+msgstr "Kan JSON niet parsen"
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
-msgstr ""
+msgstr "Ongeldig JSON-antwoord"
 
 #: includes/StagingMenu.php:31
 msgid "Staging Environment"
-msgstr ""
+msgstr "Staging Omgeving"
 
 #: includes/StagingMenu.php:33
 msgid "Staging Actions"
-msgstr ""
+msgstr "Staging Acties"
 
 #: components/staging/defaultText.js:4
 msgid "Cancel"
-msgstr ""
+msgstr "annuleren"
 
 #: components/staging/defaultText.js:5
 msgid "Clone"
-msgstr ""
+msgstr "Dupliceren"
 
 #: components/staging/defaultText.js:6
 msgid "Confirm Clone Action"
-msgstr ""
+msgstr "Bevestig kloonactie"
 
 #: components/staging/defaultText.js:7
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr ""
+msgstr "Dit zal alles in staging overschrijven en bijwerken naar een exacte kloon van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
 
 #: components/staging/defaultText.js:8
 msgid "Cloned to Staging"
-msgstr ""
+msgstr "Gekloond naar Staging"
 
 #: components/staging/defaultText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr ""
+msgstr "Het stilleggen van de productie zou ongeveer een minuut moeten duren."
 
 #: components/staging/defaultText.js:10
 msgid "Clone to staging"
-msgstr ""
+msgstr "Kopieer naar staging"
 
 #: components/staging/defaultText.js:11
 msgid "Created"
-msgstr ""
+msgstr "Aangemaakt"
 
 #: components/staging/defaultText.js:12
 msgid "Staging Created"
-msgstr ""
+msgstr "Staging aangemaakt"
 
 #: components/staging/defaultText.js:13
 msgid "Creating a staging site, this should take about a minute."
-msgstr ""
+msgstr "Het creëren van een halteplaats zou ongeveer een minuut moeten duren."
 
 #: components/staging/defaultText.js:14
 msgid "Create staging site"
-msgstr ""
+msgstr "Stageings site maken"
 
 #: components/staging/defaultText.js:15
 msgid "Currently editing"
-msgstr ""
+msgstr "Momenteel bewerken"
 
 #: components/staging/defaultText.js:16
 msgid "Delete"
-msgstr ""
+msgstr "Verwijderen"
 
 #: components/staging/defaultText.js:17
 msgid "Confirm Delete"
-msgstr ""
+msgstr "Verwijderen bevestigen"
 
 #: components/staging/defaultText.js:18
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr ""
+msgstr "Dit zal de stagingsite permanent verwijderen. Weet u zeker dat u wilt doorgaan? Je kunt op elk moment een andere staging site aanmaken, maar eventuele specifieke wijzigingen die je hebt aangebracht in deze staging site gaan verloren."
 
 #: components/staging/defaultText.js:19
 msgid "Deleted Staging"
-msgstr ""
+msgstr "Verwijderde fasering"
 
 #: components/staging/defaultText.js:20
 msgid "Deleting the staging site, this should take about a minute."
-msgstr ""
+msgstr "De voorgehouden site wordt verwijderd, dit duurt ongeveer een minuut."
 
 #: components/staging/defaultText.js:21
 msgid "Delete Staging Site"
-msgstr ""
+msgstr "Verwijder Staging Site"
 
 #: components/staging/defaultText.js:22
 msgid "Deploy"
-msgstr ""
+msgstr "Implementeren"
 
 #: components/staging/defaultText.js:23
 msgid "Deploy all changes"
-msgstr ""
+msgstr "Alle wijzigingen implementeren"
 
 #: components/staging/defaultText.js:24
 msgid "Confirm Deployment"
-msgstr ""
+msgstr "Bevestig implementatie"
 
 #: components/staging/defaultText.js:25
 msgid "Deploy database only"
-msgstr ""
+msgstr "Alleen database implementeren"
 
 #: components/staging/defaultText.js:26
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr ""
+msgstr "Dit zal staging implementeren naar productie en huidige productie site overschrijven. Weet u zeker dat u wilt doorgaan?"
 
 #: components/staging/defaultText.js:27
 msgid "Deploy files only"
-msgstr ""
+msgstr "Alleen bestanden implementeren"
 
 #: components/staging/defaultText.js:28
 msgid "Deployed"
-msgstr ""
+msgstr "Geïmplementeerd"
 
 #: components/staging/defaultText.js:29
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr ""
+msgstr "Het inzetten van halteplaatsen op productie, dit zou ongeveer een minuut moeten duren."
 
 #: components/staging/defaultText.js:30
 msgid "Deploy Site"
-msgstr ""
+msgstr "Site implementeren"
 
 #: components/staging/defaultText.js:31
 msgid "Error"
-msgstr ""
+msgstr "Foutmelding"
 
 #: components/staging/defaultText.js:32
 msgid "You don't have a staging site yet."
-msgstr ""
+msgstr "U hebt nog geen staging site."
 
 #: components/staging/defaultText.js:33
 msgid "Not currently editing"
-msgstr ""
+msgstr "Momenteel niet bewerkt"
 
 #: components/staging/defaultText.js:34
 msgid "Proceed"
-msgstr ""
+msgstr "Doorgaan"
 
 #: components/staging/defaultText.js:35
 msgid "Production Site"
-msgstr ""
+msgstr "Productie site"
 
 #: components/staging/defaultText.js:36
 msgid "Staging Site"
-msgstr ""
+msgstr "Staging Site"
 
 #: components/staging/defaultText.js:37
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr ""
+msgstr "Een stagingsite is een duplicaat van uw website en biedt een veilige omgeving aan om te experimenteren, updates te testen en te implementeren wanneer u klaar bent."
 
 #: components/staging/defaultText.js:38
 msgid "Switch"
-msgstr ""
+msgstr "Schakelaar"
 
 #: components/staging/defaultText.js:39
 msgid "Switching"
-msgstr ""
+msgstr "Schakelen"
 
 #: components/staging/defaultText.js:40
 msgid "Switch to Production"
-msgstr ""
+msgstr "Overschakelen naar productie"
 
 #: components/staging/defaultText.js:41
 msgid "This will navigate you to the production environment"
-msgstr ""
+msgstr "Dit zal je naar de productieomgeving navigeren"
 
 #: components/staging/defaultText.js:42
 msgid "Loading the production environment now."
-msgstr ""
+msgstr "De productieomgeving nu laden."
 
 #: components/staging/defaultText.js:43
 msgid "Switching to the production environment, this should take about a minute."
-msgstr ""
+msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
 
 #: components/staging/defaultText.js:44
 msgid "Switch to Staging"
-msgstr ""
+msgstr "Overschakelen naar fasering"
 
 #: components/staging/defaultText.js:45
 msgid "This will navigate you to the staging environment"
-msgstr ""
+msgstr "Dit zal u navigeren naar de stagingomgeving"
 
 #: components/staging/defaultText.js:46
 msgid "Loading the staging environment now."
-msgstr ""
+msgstr "De stagingomgeving nu laden."
 
 #: components/staging/defaultText.js:47
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr ""
+msgstr "Overschakelen op de stagingomgeving, dit zou ongeveer een minuut moeten duren."
 
 #: components/staging/defaultText.js:48
 msgid "Staging"
-msgstr ""
+msgstr "Testboeking"
 
 #: components/staging/defaultText.js:49
 msgid "An unknown error has occurred."
-msgstr ""
+msgstr "Er is een onbekende fout opgetreden."
 
 #: components/staging/defaultText.js:50
 msgid "Working..."
-msgstr ""
+msgstr "Bezig..."
+
