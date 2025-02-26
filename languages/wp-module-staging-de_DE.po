@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: newfold-labswp-module-staging\n"
+"Project-Id-Version: wp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -8,15 +8,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 13:44\n"
+"PO-Revision-Date: 2025-02-26 07:50\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Crowdin-Project: newfold-labswp-module-staging\n"
-"X-Crowdin-Project-ID: 764889\n"
+"X-Crowdin-Project: wp-module-staging\n"
+"X-Crowdin-Project-ID: 763063\n"
 "X-Crowdin-Language: de\n"
-"X-Crowdin-File: wp-module-staging.pot\n"
-"X-Crowdin-File-ID: 8\n"
+"X-Crowdin-File: /languages/wp-module-staging.pot\n"
+"X-Crowdin-File-ID: 9\n"
 "Language: de_DE\n"
 
 #: includes/Staging.php:256
@@ -142,7 +142,7 @@ msgstr "Staging-Site löschen"
 
 #: components/staging/defaultText.js:22
 msgid "Deploy"
-msgstr "Deploy"
+msgstr ""
 
 #: components/staging/defaultText.js:23
 msgid "Deploy all changes"
