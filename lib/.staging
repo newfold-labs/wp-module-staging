@@ -10,35 +10,37 @@ function delete_temp_staging {
     step=$((step + 0))
     
     if [ "$step" -ge 5 ]; then
-       echo "Reverting step 5: Updating nfd_coming_soon option"
+       #echo "Reverting step 5: Updating nfd_coming_soon option"
        wp option update nfd_coming_soon 'false'
     fi
 
     if [ "$step" -ge 4 ]; then
-        echo "Reverting step 4: Removing option staging_config."
+        #echo "Reverting step 4: Removing option staging_config."
         wp option delete staging_config --skip-themes --skip-plugins --quiet
     fi
 
     if [ "$step" -ge 3 ]; then
-        echo "Reverting step 3: Removing all staging tables"
+        #echo "Reverting step 3: Removing all staging tables"
         wp db query "DROP TABLE IF EXISTS $(wp db tables --all-tables-with-prefix --format=csv | grep '^staging_' | tr '\n' ',' | sed 's/,$//')" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
     fi
 	
     if [ "$step" -ge 2 ]; then
-        echo "Reverting step 2: Removing option staging_environment"
+        #echo "Reverting step 2: Removing option staging_environment"
 		cd $PRODUCTION_DIR
         wp option delete staging_environment --skip-themes --skip-plugins --quiet
     fi
 
     if [ "$step" -ge 1 ]; then
-        echo "Reverting step 1: Removing staging directory..."
+        #echo "Reverting step 1: Removing staging directory..."
         rm -rf "$STAGING_DIR"
     fi
 
     wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 
-    echo "Cleanup completed."
-    exit 1
+    error "$2"
+
+    #echo "Cleanup completed."
+    #exit 1
 }
 
 function auth_action {
@@ -58,16 +60,13 @@ function create {
 	WP_VER=$(wp core version)
 	mkdir -p $STAGING_DIR || error 'Unable to create staging directory.'
 	wp db export $STAGING_DIR/.export-sql --add-drop-table --skip-themes --skip-plugins --quiet --tables=$PRODUCTION_TABLES || { 
-    	echo "Unable to export database.";
-    	delete_temp_staging 1
+    	delete_temp_staging 1 "Unable to export database.";
 	}
 	wp option update staging_environment production --skip-themes --skip-plugins --quiet || {
-		echo "Unable to set environment.";
-		delete_temp_staging 1
+		delete_temp_staging 1 "Unable to set environment.";
 	}
 	cd $STAGING_DIR || {
-		echo "Unable to move to staging directory.";
-		delete_temp_staging 2
+		delete_temp_staging 2 "Unable to move to staging directory.";
 	}
 	move_files $PRODUCTION_DIR $STAGING_DIR
 	if [ -L $PRODUCTION_DIR/index.php ]
@@ -76,44 +75,36 @@ function create {
 			echo 'SetEnv WP_ABSPATH '$STAGING_DIR > .htaccess
 		else
 			wp core download --version=$WP_VER --force || {
-				error 'Unable to install WordPress in staging directory.'
-				delete_temp_staging 2
+				delete_temp_staging 2 "Unable to install WordPress in staging directory.";
 			}
 	fi
 	wp core config --dbhost=$DB_HOST --dbname=$DB_NAME --dbuser=$DB_USER --dbpass=$DB_PASS --dbprefix=staging_$DB_PREFIX --skip-themes --skip-plugins --quiet || {
-		echo "Unable to configure WordPress.";
-		delete_temp_staging 2
+		delete_temp_staging 2 "Unable to configure WordPress.";
 	}
 	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || {
-		echo "Unable to update database prefix.";
-		delete_temp_staging 2
+		delete_temp_staging 2 "Unable to update database prefix.";
 	}
 	wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || {
-		echo "Unable to import database.";
-		delete_temp_staging 2
+		delete_temp_staging 2 "Unable to import database."
 	}
 	rm $STAGING_DIR/.export-sql --force
 	wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
-		echo "Unable to set environment.";
-		delete_temp_staging 3
+		delete_temp_staging 3 "Unable to set environment."
 	}
 	wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || {
-		echo "Unable to update URLs on staging.";
-		delete_temp_staging 3
+		delete_temp_staging 3 "Unable to update URLs on staging.";
 	}
 	wp option update staging_config "$CONFIG" --format=json --path=$STAGING_DIR  --skip-themes --skip-plugins --quiet || {
-		echo "Unable to import global config on staging.";
-		delete_temp_staging 3
+		delete_temp_staging 3 "Unable to import global config on staging."
 	}
 	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR  --skip-themes --skip-plugins --quiet || {
-		echo "Unable to turn on Coming Soon page in staging.";
-		delete_temp_staging 4
+		delete_temp_staging 4 "Unable to turn on Coming Soon page in staging.";
 	}
 	wp rewrite flush --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || {
-		echo "Unable to flush rewrite rules.";
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to flush rewrite rules.";
 	}
 	rewrite_htaccess $STAGING_DIR
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Staging website created successfully.\",\"reload\":\"true\"\}
 }
@@ -125,30 +116,27 @@ function clone {
 		then
 		SESSIONS=$(wp user meta get $USER_ID session_tokens --format=json --path=$STAGING_DIR --skip-themes --skip-plugins --quiet)
 	fi
-	wp db query "DROP TABLE $STAGING_TABLES;" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to drop staging database tables.'
+	wp db query "DROP TABLE $STAGING_TABLES;" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || {
+		delete_temp_staging 5 "Unable to drop staging database tables.";
+	}
 	wp db export $STAGING_DIR/.export-sql --add-drop-table --skip-themes --skip-plugins --quiet || {
-		error 'Unable to export database.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to export database.";
 	}
 	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || {
-		error 'Unable to update database prefix.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to update database prefix.";
 	}
 	cd $STAGING_DIR || {
-		error 'Unable to move to staging directory.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to move to staging directory.";
 	}
 	wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || {
-		error 'Unable to import database.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to import database.";
 	}
 	if [ "0" != "$USER_ID" ]
 		then
 		wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
 	fi
 	wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
-		error 'Unable to set environment.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to set environment.";
 	}
 	move_files $PRODUCTION_DIR $STAGING_DIR
 	if [ -L $PRODUCTION_DIR/index.php ]
@@ -157,28 +145,24 @@ function clone {
 		else
 			WP_VER=$(wp core version)
 			wp core download --version=$WP_VER --force || {
-				error 'Unable to install WordPress in staging directory.'
-				delete_temp_staging 5
+				delete_temp_staging 5 "Unable to install WordPress in staging directory.";
 			}
 	fi
 	wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || {
-		error 'Unable to update URLs on staging.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to update URLs on staging.";
 	}
 	wp option update staging_config "$CONFIG" --format=json --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || {
-		error 'Unable to import global config on staging.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to import global config on staging.";
 	}
 	wp option update nfd_coming_soon 'true' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || {
-		error 'Unable to turn on Coming Soon page in staging.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to turn on Coming Soon page in staging.";
 	}
 	wp rewrite flush --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || {
-		error 'Unable to flush rewrite rules.'
-		delete_temp_staging 5
+		delete_temp_staging 5 "Unable to flush rewrite rules.";
 	}
 	rm $STAGING_DIR/.export-sql --force
 	rewrite_htaccess $STAGING_DIR
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Website cloned successfully.\"\}
 }
@@ -193,6 +177,7 @@ function deploy_files {
 			wp core download --version=$WP_VER --force --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to move WordPress files.'
 	fi
 	move_files $STAGING_DIR $PRODUCTION_DIR
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Files deployed successfully.\"}
 }
@@ -209,6 +194,7 @@ function deploy_db {
 	wp option update staging_config "$CONFIG" --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to import global config on production.'
 	wp option delete nfd_coming_soon --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to turn off Coming Soon page.'
 	rewrite_htaccess $PRODUCTION_DIR
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Database deployed successfully.\"}
 }
@@ -236,6 +222,7 @@ function destroy {
 		rm -r $STAGING_DIR --force || error 'Unable to remove staging files.'
 		mkdir -p $STAGING_DIR
 		echo "<script type='text/javascript'>window.location = '$PRODUCTION_URL';</script>" > $STAGING_DIR/index.php
+		wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 		clear
 		echo \{\"status\":\"success\",\"message\":\"Staging website destroyed.\",\"reload\":\"true\"\}
 	fi
@@ -268,6 +255,7 @@ function sso_staging {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
@@ -278,6 +266,7 @@ function sso_production {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
