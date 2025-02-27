@@ -195,9 +195,11 @@ const Staging = ({methods, constants, ...props}) => {
                         makeNotice( 'cloned', constants.text.cloneNoticeCompleteText, response.message );
 					} else {
 						setError( response.message );
+						setHasStaging( false );
 					}
 				} else {
 					setError( unknownErrorMsg ); // report unknown error
+					setHasStaging( false );
 				}
 				setIsThinking( false );
 			}
