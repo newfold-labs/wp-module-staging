@@ -262,6 +262,7 @@ function sso_production {
 
 function error {
 	echo \{\"status\":\"error\",\"message\":\"$1\"\}
+	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	exit
 }
 
