@@ -35,8 +35,6 @@ function delete_temp_staging {
         rm -rf "$STAGING_DIR"
     fi
 
-    wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
-
     error "$2"
 
     #echo "Cleanup completed."
@@ -44,7 +42,6 @@ function delete_temp_staging {
 }
 
 function auth_action {
-	echo $CURRENT_DIR
 	cd $CURRENT_DIR || error 'Unable to switch directory.'
 	TOKEN=$(wp transient get staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet)
 	if [ "$1" != "$TOKEN" ] || [ -z "$TOKEN" ]
@@ -104,7 +101,6 @@ function create {
 		delete_temp_staging 5 "Unable to flush rewrite rules.";
 	}
 	rewrite_htaccess $STAGING_DIR
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Staging website created successfully.\",\"reload\":\"true\"\}
 }
@@ -162,7 +158,6 @@ function clone {
 	}
 	rm $STAGING_DIR/.export-sql --force
 	rewrite_htaccess $STAGING_DIR
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Website cloned successfully.\"\}
 }
@@ -177,7 +172,6 @@ function deploy_files {
 			wp core download --version=$WP_VER --force --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to move WordPress files.'
 	fi
 	move_files $STAGING_DIR $PRODUCTION_DIR
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Files deployed successfully.\"}
 }
@@ -194,7 +188,6 @@ function deploy_db {
 	wp option update staging_config "$CONFIG" --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to import global config on production.'
 	wp option delete nfd_coming_soon --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to turn off Coming Soon page.'
 	rewrite_htaccess $PRODUCTION_DIR
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	clear
 	echo \{\"status\" :\"success\",\"message\":\"Database deployed successfully.\"}
 }
@@ -222,7 +215,6 @@ function destroy {
 		rm -r $STAGING_DIR --force || error 'Unable to remove staging files.'
 		mkdir -p $STAGING_DIR
 		echo "<script type='text/javascript'>window.location = '$PRODUCTION_URL';</script>" > $STAGING_DIR/index.php
-		wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 		clear
 		echo \{\"status\":\"success\",\"message\":\"Staging website destroyed.\",\"reload\":\"true\"\}
 	fi
@@ -255,7 +247,6 @@ function sso_staging {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
@@ -266,7 +257,6 @@ function sso_production {
 	fi
 	wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 	LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
-	wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 	echo \{\"status\":\"success\",\"load_page\":\"$LINK\&redirect=admin.php\?page=$PLUGIN_ID#\/staging\"\}
 }
 
@@ -321,7 +311,7 @@ fi
 
 compatibility_check "$1"
 #everything must auth.
-#auth_action $2
+auth_action $2
 lock_check
 
 CONFIG=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -329,6 +319,8 @@ CONFIG=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --ski
 wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 $1 "$9"
+
+wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
 
 # $1 is function
 # $2 is auth TOKEN
