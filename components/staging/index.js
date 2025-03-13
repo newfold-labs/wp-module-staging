@@ -80,7 +80,7 @@ const Staging = ({methods, constants, ...props}) => {
 
 	};
 
-    const makeNotice = (id, title, description, variant="success", duration=false) => {
+    const makeNotice = (id, title, description, variant="success", duration=5000) => {
         notify.push(`staging-notice-${id}`, {
             title,
             description: (
