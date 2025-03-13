@@ -80,7 +80,7 @@ const Staging = ({methods, constants, ...props}) => {
 
 	};
 
-    const makeNotice = (id, title, description, variant="success", duration=false) => {
+    const makeNotice = (id, title, description, variant="success", duration=5000) => {
         notify.push(`staging-notice-${id}`, {
             title,
             description: (
@@ -195,9 +195,11 @@ const Staging = ({methods, constants, ...props}) => {
                         makeNotice( 'cloned', constants.text.cloneNoticeCompleteText, response.message );
 					} else {
 						setError( response.message );
+						setHasStaging( false );
 					}
 				} else {
 					setError( unknownErrorMsg ); // report unknown error
+					setHasStaging( false );
 				}
 				setIsThinking( false );
 			}
