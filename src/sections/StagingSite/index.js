@@ -1,35 +1,55 @@
-import { Button, Container, Radio, Select } from '@newfold/ui-component-library';
-import { ArrowPathIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+    Button,
+    Container, Radio, Select,
+} from '@newfold/ui-component-library';
 
-/**
- * Staging Site
- * For use in brand plugin apps to display staging page
- * 
- * @param {*} props 
- * @returns 
- */
-const StagingSite = ({
-    methods,
-    constants,
-    hasStaging, 
-    isProduction, 
+import getStagingSiteText from './getStagingSiteText';
+import {ArrowPathIcon, TrashIcon} from "@heroicons/react/24/outline";
+import getAppText from "../../components/App/getAppText";
+
+const {
+    title,
+    noStagingSite,
+    createStagingSite,
+    deleteStagingSite,
+    deleteDescription
+} = getStagingSiteText();
+
+const StagingSite = ( {
+    appText,
+    isProduction,
+    hasStaging,
     createMe,
-    deployMe,
     deleteMe,
+    deployMe,
     switchToMe,
     stagingUrl,
-    setModal,
     creationDate,
-}) => {
-    const [deployOption, setDeployOption] = methods.useState( 'all' );
+    setModal,
+   } ) => {
+
+    const {
+        created,
+        currentlyEditing,
+        deleteConfirm,
+        deploy,
+        deployAll,
+        deployConfirm,
+        deployDatabase,
+        deployDescription,
+        deployFiles,
+        deploySite,
+        notCurrentlyEditing,
+    } = appText();
+
 
     return (
         <Container.SettingsField
-            title={constants.text.stagingSiteTitle}
-            description={!hasStaging ? constants.text.noStagingSite :
+            title={title}
+            description={!hasStaging ? noStagingSite :
                 <Radio
                     checked={isProduction !== true}
-                    label={isProduction ? constants.text.notCurrentlyEditing : constants.text.currentlyEditing }
+                    label={isProduction ? notCurrentlyEditing : currentlyEditing }
                     id="newfold-staging-toggle"
                     name="newfold-staging-selector"
                     value="staging"
@@ -42,13 +62,13 @@ const StagingSite = ({
             <div className="nfd-flex nfd-justify-between nfd-items-center nfd-flex-wrap nfd-gap-3">
                 {!hasStaging &&
                     <div className="nfd-flex nfd-justify-end nfd-w-full">
-                        <Button 
+                        <Button
                             variant="secondary"
                             id="staging-create-button"
-                            onClick={() => { 
-                            createMe()
-                        }}>
-                            {constants.text.createStagingSite}
+                            onClick={() => {
+                                createMe()
+                            }}>
+                            {createStagingSite}
                         </Button>
                     </div>
                 }
@@ -57,7 +77,7 @@ const StagingSite = ({
                         <div>
                             {stagingUrl}
                             <dl className="nfd-flex nfd-justify-between nfd-items-center nfd-flex-wrap nfd-gap-3">
-                                <dt>{constants.text.created}:</dt>
+                                <dt>{created}:</dt>
                                 <dd>{creationDate}</dd>
                             </dl>
                         </div>
@@ -71,15 +91,15 @@ const StagingSite = ({
                                 onChange={(value) => { setDeployOption(value) }}
                                 options={[
                                     {
-                                        label: constants.text.deployAll,
+                                        label: deployAll,
                                         value: 'all'
                                     },
                                     {
-                                        label: constants.text.deployFiles,
+                                        label: deployFiles,
                                         value: 'files'
                                     },
                                     {
-                                        label: constants.text.deployDatabase,
+                                        label: deployDatabase,
                                         value: 'db'
                                     }
                                 ]}
@@ -87,15 +107,15 @@ const StagingSite = ({
                             <Button
                                 disabled={isProduction ? true : false }
                                 id="staging-deploy-button"
-                                title={constants.text.deploySite}
-                                onClick={() => { 
+                                title={deploySite}
+                                onClick={() => {
                                     // console.log('Open confirm modal: Deploy stagin option to production');
                                     setModal(
-                                        constants.text.deployConfirm,
-                                        constants.text.deployDescription,
+                                        deployConfirm,
+                                        deployDescription,
                                         deployMe,
                                         deployOption,
-                                        constants.text.deploy
+                                        deploy
                                     )
                                 }}
                             >
@@ -106,15 +126,15 @@ const StagingSite = ({
                                 disabled={isProduction ? false : true }
                                 variant="error"
                                 id="staging-delete-button"
-                                title={constants.text.deleteSite}
-                                onClick={() => { 
+                                title={deleteStagingSite}
+                                onClick={() => {
                                     // console.log('Open confirm modal: Delete stagin option to production');
                                     setModal(
-                                        constants.text.deleteConfirm,
-                                        constants.text.deleteDescription,
+                                        deleteConfirm,
+                                        deleteDescription,
                                         deleteMe,
                                         null,
-                                        constants.text.delete
+                                        deleteSite
                                     )
                                 }}
                             >
