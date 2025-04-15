@@ -16,6 +16,13 @@ class Staging {
 	 */
 	protected $container;
 
+    /**
+     * Slug used for the Staging module's admin page.
+     *
+     * @var string
+     */
+    const PAGE_SLUG = 'nfd-staging';
+
 
 	/**
 	 * Constructor.
@@ -63,7 +70,87 @@ class Staging {
 		);
 
 		\add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+
+        add_action( 'admin_menu', array( $this, 'add_management_page' ) );
+
+        add_action( 'load-tools_page_' . self::PAGE_SLUG, array( __CLASS__, 'initialize_staging_app' ) );
+
+        new Constants( $container );
 	}
+
+
+    /**
+     * Adds the Staging module to the WordPress Tools > Site Health menu.
+     *
+     * @return void
+     */
+    public function add_management_page() {
+        add_management_page(
+            __( 'Staging', 'wp-module-staging' ),
+            __( 'Staging', 'wp-module-staging' ),
+            'manage_options',
+            self::PAGE_SLUG,
+            array( __CLASS__, 'render_staging_app' )
+        );
+    }
+
+
+    /**
+     * Outputs the HTML container for the Staging module's React application.
+     *
+     * @return void
+     */
+    public static function render_staging_app() {
+        echo PHP_EOL;
+        echo '<!-- NFD:STAGING -->';
+        echo PHP_EOL;
+        echo '<div id="' . esc_attr( self::PAGE_SLUG ) . '" class="' . esc_attr( self::PAGE_SLUG ) . '-container nfd-root"></div>';
+        echo PHP_EOL;
+        echo '<!-- /NFD:STAGING -->';
+        echo PHP_EOL;
+    }
+
+    /**
+     * Initializes the Staging module by registering and enqueuing its assets.
+     *
+     * @return void
+     */
+    public static function initialize_staging_app() {
+        self::register_staging_assets();
+    }
+
+    /**
+     * Registers and enqueues the JavaScript and CSS assets for the Staging module.
+     *
+     * @return void
+     */
+    public static function register_staging_assets() {
+        $build_dir  =   NFD_STAGING_BUILD_DIR;
+        $build_url  = NFD_STAGING_BUILD_URL;
+        $asset_file = $build_dir . '/staging/staging.min.asset.php';
+
+        if ( is_readable( $asset_file ) ) {
+            $asset = include_once $asset_file;
+
+           wp_register_script(
+                self::PAGE_SLUG,
+                $build_url . '/staging/staging.min.js',
+                $asset['dependencies'],
+                $asset['version'],
+                true
+            );
+
+            wp_register_style(
+                self::PAGE_SLUG,
+                $build_url . '/staging/staging.min.css',
+                array(),
+                $asset['version']
+            );
+
+            wp_enqueue_script( self::PAGE_SLUG );
+            wp_enqueue_style( self::PAGE_SLUG );
+        }
+    }
 
 	/**
 	 * Load text domain for Module
@@ -240,7 +327,6 @@ class Staging {
 	 */
 	public function stagingExists() {
 		$stagingDir = $this->getStagingDir();
-
 		return ! empty( $stagingDir ) && file_exists( $stagingDir );
 	}
 
@@ -448,8 +534,10 @@ class Staging {
 
 		$json = exec( "{$script} {$command}" ); // phpcs:ignore
 
+
 		// Check if we can properly decode the JSON
 		$response = json_decode( $json, true );
+
 		if ( ! $response ) {
 			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'wp-module-staging' ) );
 		}

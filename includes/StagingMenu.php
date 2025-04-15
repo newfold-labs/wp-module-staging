@@ -25,12 +25,12 @@ class StagingMenu {
 	 */
 	public static function add_nfd_subnav( $subnav ) {
 		$brand       = container()->get( 'plugin' )['id'];
-		$performance = array(
+		$staging = array(
 			'route'    => $brand . '#/staging',
 			'title'    => __( 'Staging', 'wp-module-staging' ),
 			'priority' => 50,
 		);
-		array_push( $subnav, $performance );
+		array_push( $subnav, $staging );
 		return $subnav;
 	}
 
