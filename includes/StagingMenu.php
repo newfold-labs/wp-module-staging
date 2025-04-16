@@ -24,17 +24,34 @@ class StagingMenu {
 	 * @return array The filtered nav array
 	 */
 	public static function add_nfd_subnav( $subnav ) {
-		$brand   = container()->get( 'plugin' )['id'];
-		$staging = array(
-			'route'    => $brand . '#/staging',
-			'title'    => __( 'Staging', 'wp-module-staging' ),
-			'priority' => 50,
-		);
-		array_push( $subnav, $staging );
-		return $subnav;
+        $staging = array(
+            'route'    => Staging::PAGE_SLUG,
+            'title'    => __( 'Staging', 'wp-module-staging' ),
+            'priority' => 30,
+            'callback' => array( __CLASS__, 'render_staging_app' ),
+        );
+        array_push( $subnav, $staging );
+
+        return $subnav;
 	}
 
-	/**
+    /**
+     * Outputs the HTML container for the Staging module's React application.
+     *
+     * @return void
+     */
+    public static function render_staging_app() {
+        echo PHP_EOL;
+        echo '<!-- NFD:STAGING -->';
+        echo PHP_EOL;
+        echo '<div id="' . esc_attr( Staging::PAGE_SLUG ) . '" class="' . esc_attr( Staging::PAGE_SLUG ) . '-container nfd-root"></div>';
+        echo PHP_EOL;
+        echo '<!-- /NFD:STAGING -->';
+        echo PHP_EOL;
+    }
+
+
+    /**
 	 * Customize the admin bar.
 	 *
 	 * @param \WP_Admin_Bar $admin_bar An instance of the WP_Admin_Bar class.

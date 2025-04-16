@@ -75,45 +75,9 @@ class Staging {
 			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 		}
 
-		add_filter( 'nfd_plugin_subnav', array( $this, 'add_nfd_subnav' ) );
-
 		new Constants( $container );
 	}
 
-
-	/**
-	 * Adds the Hosting panel entry to the Newfold Brand Plugin sub-navigation.
-	 *
-	 * @param array $subnav The existing sub-navigation array.
-	 * @return array Modified sub-navigation array with Hosting panel entry appended.
-	 */
-	public function add_nfd_subnav( $subnav ) {
-		$hosting = array(
-			'route'    => self::PAGE_SLUG,
-			'title'    => __( 'Staging', 'wp-module-staging' ),
-			'priority' => 30,
-			'callback' => array( __CLASS__, 'render_staging_app' ),
-		);
-		array_push( $subnav, $hosting );
-
-		return $subnav;
-	}
-
-
-	/**
-	 * Outputs the HTML container for the Staging module's React application.
-	 *
-	 * @return void
-	 */
-	public static function render_staging_app() {
-		echo PHP_EOL;
-		echo '<!-- NFD:STAGING -->';
-		echo PHP_EOL;
-		echo '<div id="' . esc_attr( self::PAGE_SLUG ) . '" class="' . esc_attr( self::PAGE_SLUG ) . '-container nfd-root"></div>';
-		echo PHP_EOL;
-		echo '<!-- /NFD:STAGING -->';
-		echo PHP_EOL;
-	}
 
 	/**
 	 * Initializes the Staging module by registering and enqueuing its assets.
