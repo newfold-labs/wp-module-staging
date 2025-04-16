@@ -63,6 +63,10 @@
 .nfd-root.nfd-staging-container {
 	margin-top: 20px;
 }
+.nfd-root .nfd-container__settings-field.newfold-staging-production-site-container{
+	grid-template-columns: auto;
+	gap: 1em;
+}
 .newfold-staging-page.is-loading {
 	position: relative;
 	-webkit-user-select: none;
@@ -85,13 +89,13 @@
 	 width: 100%;
 	 z-index: 1;
 }
-.newfold-staging-page.is-thinking {
+.newfold-staging-page.is-thinking > .nfd-container {
 	position: relative;
 	-webkit-user-select: none;
 	   -moz-user-select: none;
 	        user-select: none;
 }
-.newfold-staging-page.is-thinking::before {
+.newfold-staging-page.is-thinking > .nfd-container::before {
 	 background: rgba(255,255,255,1);
 	 border-radius: 8px;
 	 content: '';
@@ -107,8 +111,7 @@
 	 width: 100%;
 	 z-index: 1;
 }
-.newfold-staging-page.is-thinking::after,
-.newfold-staging-page.is-loading::after{
+.newfold-staging-page.is-thinking::after{
 	 background-position: center center;
 	 background-size: 200px auto;
 	 background-repeat: no-repeat;
@@ -124,11 +127,6 @@
 	         user-select: none;
 	 width: 100%;
 	 z-index: 2;
-	 background-image: url(images/loader.3f40aeb2.webp);
-}
-.nfd-root .nfd-container__settings-field.newfold-staging-production-site-container{
-	grid-template-columns: auto;
-	gap: 1em;
 }
 /* Tailwind base styles, layers must come *after* the import */
 *, ::before, ::after {
