@@ -1,69 +1,74 @@
 .nfd-root.nfd-staging-container {
-	margin-top: 20px;
+    margin-top: 20px;
 }
 
 .nfd-root .nfd-container__settings-field.newfold-staging-production-site-container{
-	grid-template-columns: auto;
-	gap: 1em;
+    grid-template-columns: auto;
+    gap: 1em;
 }
 
 .newfold-staging-page.is-loading {
-	position: relative;
-	user-select: none;
+    position: relative;
+    user-select: none;
 }
 
-.newfold-staging-page.is-loading::before {
-	 background: rgba(0,0,0,1);
-	 border-radius: 8px;
-	 content: '';
-	 cursor: progress;
-	 display: block;
-	 height: 100%;
-	 opacity: .1;
-	 pointer-events: all;
-	 position: absolute;
-	 user-select: none;
-	 width: 100%;
-	 z-index: 1;
+.newfold-staging-page.is-loading > .nfd-container{
+    position: relative;
+    user-select: none;
+}
+
+.newfold-staging-page.is-loading > .nfd-container:before {
+    background: rgba(0,0,0,1);
+    border-radius: 8px;
+    content: '';
+    cursor: progress;
+    display: block;
+    height: 100%;
+    opacity: .1;
+    pointer-events: all;
+    position: absolute;
+    user-select: none;
+    width: 100%;
+    z-index: 1;
 }
 
 .newfold-staging-page.is-thinking > .nfd-container {
-	position: relative;
-	user-select: none;
+    position: relative;
+    user-select: none;
 }
 
-.newfold-staging-page.is-thinking > .nfd-container::before {
-	 background: rgba(255,255,255,1);
-	 border-radius: 8px;
-	 content: '';
-	 cursor: progress;
-	 display: block;
-	 height: 100%;
-	 opacity: .75;
-	 pointer-events: all;
-	 position: absolute;
-	 user-select: none;
-	 width: 100%;
-	 z-index: 1;
+.newfold-staging-page.is-thinking > .nfd-container:before {
+    background: rgba(255,255,255,1);
+    border-radius: 8px;
+    content: '';
+    cursor: progress;
+    display: block;
+    height: 100%;
+    opacity: .75;
+    pointer-events: all;
+    position: absolute;
+    top: 0;
+    left: 0;
+    user-select: none;
+    width: 100%;
+    z-index: 1;
 }
 
-.newfold-staging-page.is-thinking::after{
-	 background-image: url('../images/loader.svg');
-	 background-position: center center;
-	 background-size: 200px auto;
-	 background-repeat: no-repeat;
-	 content: '';
-	 cursor: progress;
-	 display: block;
-	 height: 100%;
-	 opacity: 0.75;
-	 pointer-events: all;
-	 position: absolute;
-	 user-select: none;
-	 width: 100%;
-	 z-index: 2;
+.newfold-staging-page.is-thinking > .nfd-container:after{
+    background-image: url('../images/loader.svg');
+    background-position: center center;
+    background-size: 200px auto;
+    background-repeat: no-repeat;
+    content: '';
+    cursor: progress;
+    display: block;
+    height: 100%;
+    opacity: 0.75;
+    pointer-events: all;
+    position: absolute;
+    top: 0;
+    left: 0;
+    user-select: none;
+    width: 100%;
+    z-index: 2;
 }
-
-
-
-
