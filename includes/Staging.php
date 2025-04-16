@@ -70,45 +70,34 @@ class Staging {
 		);
 
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
-		add_action( 'admin_menu', array( $this, 'add_management_page' ) );
-		add_action( 'load-tools_page_' . self::PAGE_SLUG, array( __CLASS__, 'initialize_staging_app' ) );
-        add_filter( 'nfd_plugin_subnav', array( $this, 'add_nfd_subnav' ) );
+
+		if ( 'bluehost' === container()->plugin()->brand && isset( $_GET['page'] ) && self::PAGE_SLUG === $_GET['page'] ) {
+			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
+		}
+
+		add_filter( 'nfd_plugin_subnav', array( $this, 'add_nfd_subnav' ) );
 
 		new Constants( $container );
 	}
 
 
 	/**
-	 * Adds the Staging module to the WordPress Tools > Site Health menu.
+	 * Adds the Hosting panel entry to the Newfold Brand Plugin sub-navigation.
 	 *
-	 * @return void
+	 * @param array $subnav The existing sub-navigation array.
+	 * @return array Modified sub-navigation array with Hosting panel entry appended.
 	 */
-	public function add_management_page() {
-		add_management_page(
-			__( 'Staging', 'wp-module-staging' ),
-			'',
-			'manage_options',
-			self::PAGE_SLUG,
-			array( __CLASS__, 'render_staging_app' )
+	public function add_nfd_subnav( $subnav ) {
+		$hosting = array(
+			'route'    => self::PAGE_SLUG,
+			'title'    => __( 'Staging', 'wp-module-staging' ),
+			'priority' => 30,
+			'callback' => array( __CLASS__, 'render_staging_app' ),
 		);
+		array_push( $subnav, $hosting );
+
+		return $subnav;
 	}
-
-    /**
-     * Adds the Hosting panel entry to the Newfold Brand Plugin sub-navigation.
-     *
-     * @param array $subnav The existing sub-navigation array.
-     * @return array Modified sub-navigation array with Hosting panel entry appended.
-     */
-    public function add_nfd_subnav( $subnav ) {
-        $hosting = array(
-            'route'    => self::PAGE_SLUG,
-            'title'    => __( 'Staging', 'wp-module-staging' ),
-            'priority' => 30,
-        );
-        array_push( $subnav, $hosting );
-
-        return $subnav;
-    }
 
 
 	/**
@@ -294,7 +283,6 @@ class Staging {
 
 	/**
 	 * Get staging screenshot URL.
-	 *
 	 *
 	 * @return string
 	 */
