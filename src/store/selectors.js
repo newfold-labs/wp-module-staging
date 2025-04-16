@@ -1,5 +1,3 @@
-export const getCacheLevel = ( state ) => state.cacheLevel;
-
 export const getNotifications = ( state ) => state.feed;
 
 export const getVisibleNotifications = ( state ) =>

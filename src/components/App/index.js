@@ -431,7 +431,7 @@ const App = () => {
 
 					<Container.Block className="newfold-staging-staging">
 						<StagingSite
-							appText={getAppText}
+							getAppText={getAppText}
 							isProduction={isProduction}
 							hasStaging={hasStaging}
 							createMe={createStaging}

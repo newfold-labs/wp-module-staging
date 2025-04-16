@@ -21,6 +21,5 @@ class Constants {
 		if ( ! defined( 'NFD_STAGING_BUILD_URL' ) ) {
 			define( 'NFD_STAGING_BUILD_URL', $container->plugin()->url . 'vendor/newfold-labs/wp-module-staging/build' );
 		}
-
 	}
 }

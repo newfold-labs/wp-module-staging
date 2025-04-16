@@ -1,4 +1,4 @@
-.nfd-staging-container {
+.nfd-root.nfd-staging-container {
 	margin-top: 20px;
 }
 
@@ -40,7 +40,8 @@
 	 z-index: 1;
 }
 
-.newfold-staging-page.is-thinking::after{
+.newfold-staging-page.is-thinking::after,
+.newfold-staging-page.is-loading::after{
 	 background-position: center center;
 	 background-size: 200px auto;
 	 background-repeat: no-repeat;
@@ -54,6 +55,7 @@
 	 user-select: none;
 	 width: 100%;
 	 z-index: 2;
+	 background-image: url('../images/loader.webp');
 }
 
 .nfd-root .nfd-container__settings-field.newfold-staging-production-site-container{

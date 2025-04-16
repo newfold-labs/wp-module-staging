@@ -5,7 +5,6 @@ import {
 
 import getStagingSiteText from './getStagingSiteText';
 import {ArrowPathIcon, TrashIcon} from "@heroicons/react/24/outline";
-import getAppText from "../../components/App/getAppText";
 
 const {
     title,
@@ -16,7 +15,7 @@ const {
 } = getStagingSiteText();
 
 const StagingSite = ( {
-    appText,
+    getAppText,
     isProduction,
     hasStaging,
     createMe,
@@ -40,7 +39,7 @@ const StagingSite = ( {
         deployFiles,
         deploySite,
         notCurrentlyEditing,
-    } = appText();
+    } = getAppText();
 
 
     return (

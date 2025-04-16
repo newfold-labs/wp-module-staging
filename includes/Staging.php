@@ -16,12 +16,12 @@ class Staging {
 	 */
 	protected $container;
 
-    /**
-     * Slug used for the Staging module's admin page.
-     *
-     * @var string
-     */
-    const PAGE_SLUG = 'nfd-staging';
+	/**
+	 * Slug used for the Staging module's admin page.
+	 *
+	 * @var string
+	 */
+	const PAGE_SLUG = 'nfd-staging';
 
 
 	/**
@@ -69,88 +69,104 @@ class Staging {
 			}
 		);
 
-		\add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+		add_action( 'admin_menu', array( $this, 'add_management_page' ) );
+		add_action( 'load-tools_page_' . self::PAGE_SLUG, array( __CLASS__, 'initialize_staging_app' ) );
+        add_filter( 'nfd_plugin_subnav', array( $this, 'add_nfd_subnav' ) );
 
-        add_action( 'admin_menu', array( $this, 'add_management_page' ) );
-
-        add_action( 'load-tools_page_' . self::PAGE_SLUG, array( __CLASS__, 'initialize_staging_app' ) );
-
-        new Constants( $container );
+		new Constants( $container );
 	}
 
 
+	/**
+	 * Adds the Staging module to the WordPress Tools > Site Health menu.
+	 *
+	 * @return void
+	 */
+	public function add_management_page() {
+		add_management_page(
+			__( 'Staging', 'wp-module-staging' ),
+			'',
+			'manage_options',
+			self::PAGE_SLUG,
+			array( __CLASS__, 'render_staging_app' )
+		);
+	}
+
     /**
-     * Adds the Staging module to the WordPress Tools > Site Health menu.
+     * Adds the Hosting panel entry to the Newfold Brand Plugin sub-navigation.
      *
-     * @return void
+     * @param array $subnav The existing sub-navigation array.
+     * @return array Modified sub-navigation array with Hosting panel entry appended.
      */
-    public function add_management_page() {
-        add_management_page(
-            __( 'Staging', 'wp-module-staging' ),
-            __( 'Staging', 'wp-module-staging' ),
-            'manage_options',
-            self::PAGE_SLUG,
-            array( __CLASS__, 'render_staging_app' )
+    public function add_nfd_subnav( $subnav ) {
+        $hosting = array(
+            'route'    => self::PAGE_SLUG,
+            'title'    => __( 'Staging', 'wp-module-staging' ),
+            'priority' => 30,
         );
+        array_push( $subnav, $hosting );
+
+        return $subnav;
     }
 
 
-    /**
-     * Outputs the HTML container for the Staging module's React application.
-     *
-     * @return void
-     */
-    public static function render_staging_app() {
-        echo PHP_EOL;
-        echo '<!-- NFD:STAGING -->';
-        echo PHP_EOL;
-        echo '<div id="' . esc_attr( self::PAGE_SLUG ) . '" class="' . esc_attr( self::PAGE_SLUG ) . '-container nfd-root"></div>';
-        echo PHP_EOL;
-        echo '<!-- /NFD:STAGING -->';
-        echo PHP_EOL;
-    }
+	/**
+	 * Outputs the HTML container for the Staging module's React application.
+	 *
+	 * @return void
+	 */
+	public static function render_staging_app() {
+		echo PHP_EOL;
+		echo '<!-- NFD:STAGING -->';
+		echo PHP_EOL;
+		echo '<div id="' . esc_attr( self::PAGE_SLUG ) . '" class="' . esc_attr( self::PAGE_SLUG ) . '-container nfd-root"></div>';
+		echo PHP_EOL;
+		echo '<!-- /NFD:STAGING -->';
+		echo PHP_EOL;
+	}
 
-    /**
-     * Initializes the Staging module by registering and enqueuing its assets.
-     *
-     * @return void
-     */
-    public static function initialize_staging_app() {
-        self::register_staging_assets();
-    }
+	/**
+	 * Initializes the Staging module by registering and enqueuing its assets.
+	 *
+	 * @return void
+	 */
+	public static function initialize_staging_app() {
+		self::register_staging_assets();
+	}
 
-    /**
-     * Registers and enqueues the JavaScript and CSS assets for the Staging module.
-     *
-     * @return void
-     */
-    public static function register_staging_assets() {
-        $build_dir  =   NFD_STAGING_BUILD_DIR;
-        $build_url  = NFD_STAGING_BUILD_URL;
-        $asset_file = $build_dir . '/staging/staging.min.asset.php';
+	/**
+	 * Registers and enqueues the JavaScript and CSS assets for the Staging module.
+	 *
+	 * @return void
+	 */
+	public static function register_staging_assets() {
+		$build_dir  = NFD_STAGING_BUILD_DIR;
+		$build_url  = NFD_STAGING_BUILD_URL;
+		$asset_file = $build_dir . '/staging/staging.min.asset.php';
 
-        if ( is_readable( $asset_file ) ) {
-            $asset = include_once $asset_file;
+		if ( is_readable( $asset_file ) ) {
+			$asset = include_once $asset_file;
 
-           wp_register_script(
-                self::PAGE_SLUG,
-                $build_url . '/staging/staging.min.js',
-                $asset['dependencies'],
-                $asset['version'],
-                true
-            );
+			wp_register_script(
+				self::PAGE_SLUG,
+				$build_url . '/staging/staging.min.js',
+				$asset['dependencies'],
+				$asset['version'],
+				true
+			);
 
-            wp_register_style(
-                self::PAGE_SLUG,
-                $build_url . '/staging/staging.min.css',
-                array(),
-                $asset['version']
-            );
+			wp_register_style(
+				self::PAGE_SLUG,
+				$build_url . '/staging/staging.min.css',
+				array(),
+				$asset['version']
+			);
 
-            wp_enqueue_script( self::PAGE_SLUG );
-            wp_enqueue_style( self::PAGE_SLUG );
-        }
-    }
+			wp_enqueue_script( self::PAGE_SLUG );
+			wp_enqueue_style( self::PAGE_SLUG );
+		}
+	}
 
 	/**
 	 * Load text domain for Module
@@ -203,14 +219,14 @@ class Staging {
 	 *  - creation_date
 	 *
 	 * @param string $key     Configuration name.
-	 * @param string $default Return value if key doesn't exist.
+	 * @param string $std Return default value if key doesn't exist.
 	 *
 	 * @return string
 	 */
-	public function getConfigValue( $key, $default = '' ) {
+	public function getConfigValue( $key, $std = '' ) {
 		$config = $this->getConfig();
 
-		return isset( $config[ $key ] ) ? $config[ $key ] : $default;
+		return isset( $config[ $key ] ) ? $config[ $key ] : $std;
 	}
 
 	/**
@@ -270,24 +286,19 @@ class Staging {
 	/**
 	 * Get production screenshot URL.
 	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
-	 *
 	 * @return string
 	 */
-	public function getProductionScreenshotUrl( $width = 122, $height = 92 ) {
+	public function getProductionScreenshotUrl() {
 		return '';
 	}
 
 	/**
 	 * Get staging screenshot URL.
 	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
 	 *
 	 * @return string
 	 */
-	public function getStagingScreenshotUrl( $width = 122, $height = 92 ) {
+	public function getStagingScreenshotUrl() {
 		return '';
 	}
 
@@ -519,10 +530,26 @@ class Staging {
 			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'wp-module-staging' ) );
 		}
 
-		// Verify staging script file permissions
-		if ( ! is_executable( $script ) ) {
-			if ( is_writable( $script ) ) {
-				chmod( $script, 0755 );
+		// Verify staging script file permissions using WP_Filesystem API
+		global $wp_filesystem;
+
+		if ( ! function_exists( 'request_filesystem_credentials' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		$creds = request_filesystem_credentials( '', '', false, false, null );
+
+		if ( false === $creds ) {
+			return new \WP_Error( 'error_response', __( 'Filesystem credentials required.', 'wp-module-staging' ) );
+		}
+
+		if ( ! WP_Filesystem( $creds ) ) {
+			return new \WP_Error( 'error_response', __( 'Unable to initialize WP Filesystem.', 'wp-module-staging' ) );
+		}
+
+		if ( $wp_filesystem->exists( $script ) ) {
+			if ( $wp_filesystem->is_writable( $script ) ) {
+				$wp_filesystem->chmod( $script, 0755 );
 			} else {
 				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'wp-module-staging' ) );
 			}
@@ -533,7 +560,6 @@ class Staging {
 		do_action( 'newfold_staging_command', $command ); // bh_staging_command
 
 		$json = exec( "{$script} {$command}" ); // phpcs:ignore
-
 
 		// Check if we can properly decode the JSON
 		$response = json_decode( $json, true );
