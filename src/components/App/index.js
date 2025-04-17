@@ -410,7 +410,7 @@ const App = () => {
 	return (
 		<Root context={ { isRTL: false } }>
 			<NotificationFeed />
-			<Page title={ pageTitle } className={classNames('newfold-staging-page',  getClasses())}>
+			<Page id='wppbh-app"' title={ pageTitle } className={classNames(['newfold-staging-page', 'wppbh', 'wppbh_app'],  getClasses())}>
 				<Container className='newfold-staging-container'>
 					<Container.Header
 						title={ pageTitle }

@@ -20,9 +20,7 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 
 		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
 		cy.visit(
-			'/wp-admin/admin.php?page=' +
-				Cypress.env( 'pluginId' ) +
-				'#/staging'
+			'/wp-admin/admin.php?page=nfd-staging'
 		);
 		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
 			.then( ( interception ) => {
@@ -32,8 +30,9 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 
 	it( 'Is Accessible', () => {
 		cy.injectAxe();
-		cy.wait( 500 );
-		cy.checkA11y( appClass + '-app-body' );
+		cy.get(appClass, { timeout: 2000 }).should('be.visible');
+		cy.injectAxe();
+		cy.checkA11y(appClass);
 	} );
 
 	it( 'Displays in Production Environment Properly', () => {
