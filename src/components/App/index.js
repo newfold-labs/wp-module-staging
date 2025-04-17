@@ -31,9 +31,11 @@ const App = () => {
 		pageTitle,
 		proceed,
 		switchSite,
+		switchToProductionTitle,
 		switchToProductionDescription,
 		switchToProductionNoticeCompleteText,
 		switchToProductionNoticeStartText,
+		switchToStagingTitle,
 		switchToStagingDescription,
 		switchToStagingNoticeCompleteText,
 		switchToStagingNoticeStartText,
@@ -243,7 +245,7 @@ const App = () => {
 			// console.log('Already on staging.');
 		} else {
 			setModal(
-				switchToStaging,
+				switchToStagingTitle,
 				switchToStagingDescription,
 				switchToEnv,
 				'staging',
@@ -257,7 +259,7 @@ const App = () => {
 			// console.log('Already on production.');
 		} else {
 			setModal(
-				switchToProduction,
+				switchToProductionTitle,
 				switchToProductionDescription,
 				switchToEnv,
 				'production',

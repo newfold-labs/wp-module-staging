@@ -57,7 +57,7 @@ const getAppText = () => ( {
 	pageTitle: __( 'Staging', 'wp-module-performance' ),
 	proceed: __( 'Proceed', 'wp-module-staging' ),
 	switch: __( 'Switch', 'wp-module-staging' ),
-	switchToProduction: __(
+	switchToProductionTitle: __(
 		'Switch to Production',
 		'wp-module-staging'
 	),
@@ -73,7 +73,7 @@ const getAppText = () => ( {
 		'Switching to the production environment, this should take about a minute.',
 		'wp-module-staging'
 	),
-	switchToStaging: __( 'Switch to Staging', 'wp-module-staging' ),
+	switchToStagingTitle: __( 'Switch to Staging', 'wp-module-staging' ),
 	switchToStagingDescription: __(
 		'This will navigate you to the staging environment',
 		'wp-module-staging'
