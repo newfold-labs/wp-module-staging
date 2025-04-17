@@ -19,9 +19,15 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 		).as('mock-staging-data');
 
 		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
-		cy.visit(
-			'/wp-admin/admin.php?page=nfd-staging'
-		);
+		if ( Cypress.env( 'pluginId' ) === 'bluehost' ) {
+			cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
+		} else {
+			cy.visit(
+				'/wp-admin/admin.php?page=' +
+				Cypress.env( 'pluginId' ) +
+				'#/staging'
+			);
+		}
 		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
 			.then( ( interception ) => {
 				expect( interception.response.statusCode ).to.eq( 200 );
