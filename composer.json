@@ -52,7 +52,13 @@
   },
   "scripts-descriptions": {
     "fix": "Automatically fix coding standards issues where possible.",
-    "lint": "Check files against coding standards."
+    "lint": "Check files against coding standards.",
+    "i18n": "Generate new language files.",
+    "i18n-pot": "Generate a .pot file for translation.",
+    "i18n-po": "Update existing .po files.",
+    "i18n-mo": "Generate new language .mo files.",
+    "i18n-php": "Generate new language .php files.",
+    "i18n-json": "Generate new language .json files."
   },
   "config": {
     "allow-plugins": {
@@ -63,7 +69,7 @@
     }
   },
   "require": {
-    "newfold-labs/wp-module-context": "^1.0",
+    "newfold-labs/wp-module-context": "^1.0.1",
     "newfold-labs/wp-module-features": "^1.5.0"
   }
 }
