@@ -246,7 +246,7 @@ msgstr "Beim Wechsel auf die Staging-Umgebung sollte dies ungefähr eine Minute 
 
 #: components/staging/defaultText.js:48
 msgid "Staging"
-msgstr "Staging"
+msgstr "Staging-Umgebung"
 
 #: components/staging/defaultText.js:49
 msgid "An unknown error has occurred."
@@ -259,4 +259,4 @@ msgstr "Arbeiten..."
 #: includes/StagingMenu.php:30
 msgctxt "Menu item text"
 msgid "Staging"
-msgstr "Staging"
+msgstr "Staging-Umgebung"
