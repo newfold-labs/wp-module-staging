@@ -54,7 +54,7 @@ msgid "Invalid JSON response"
 msgstr ""
 
 #: includes/StagingMenu.php:30
-#: components/staging/defaultText.js:48
+msgctxt "Menu item text"
 msgid "Staging"
 msgstr ""
 
@@ -240,6 +240,10 @@ msgstr ""
 
 #: components/staging/defaultText.js:47
 msgid "Switching to the staging environment, this should take about a minute."
+msgstr ""
+
+#: components/staging/defaultText.js:48
+msgid "Staging"
 msgstr ""
 
 #: components/staging/defaultText.js:49
