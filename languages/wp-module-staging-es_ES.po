@@ -25,11 +25,11 @@ msgstr "La clonación sólo puede hacerse desde el entorno de producción."
 
 #: includes/Staging.php:281
 msgid "Staging environment already exists!"
-msgstr "¡El entorno de escenario ya existe!"
+msgstr "¡El entorno de preproducción ya existe!"
 
 #: includes/Staging.php:315
 msgid "You must switch to the production environment before destroying staging."
-msgstr "Debes cambiar al entorno de producción antes de destruir la etapa."
+msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
 
 #: includes/Staging.php:337
 msgid "Switch to an environment you are already in, you cannot."
@@ -37,7 +37,7 @@ msgstr "Cambiar a un entorno en el que ya está, no puede."
 
 #: includes/Staging.php:374
 msgid "Invalid staging CLI command."
-msgstr "Comando CLI de staging inválido."
+msgstr "Comando CLI de preproducción inválido."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:424
@@ -62,11 +62,11 @@ msgstr "Respuesta JSON inválida"
 
 #: includes/StagingMenu.php:49
 msgid "Staging Environment"
-msgstr "Entorno de Staging"
+msgstr "Entorno de preproducción"
 
 #: includes/StagingMenu.php:51
 msgid "Staging Actions"
-msgstr "Acciones de Staging"
+msgstr "Acciones de preproducción"
 
 #: components/staging/defaultText.js:4
 msgid "Cancel"
@@ -78,23 +78,23 @@ msgstr "Clonar"
 
 #: components/staging/defaultText.js:6
 msgid "Confirm Clone Action"
-msgstr "Confirmar Clonar acción"
+msgstr "Confirmar acción de clonación"
 
 #: components/staging/defaultText.js:7
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Esto sobrescribirá cualquier cosa en la puesta en escena y la actualizará a un clon exacto del sitio de producción actual. ¿Está seguro que desea continuar?"
+msgstr "Esto sobrescribirá todo en preproducción y lo actualizará a un clon exacto del sitio de producción actual. ¿Está seguro que desea continuar?"
 
 #: components/staging/defaultText.js:8
 msgid "Cloned to Staging"
-msgstr "Clonado a Staging"
+msgstr "Clonado a preproducción"
 
 #: components/staging/defaultText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr "La producción de la clonación hasta el escenario, esto debería tomar aproximadamente un minuto."
+msgstr "Clonando producción a preproducción, esto debería tomar aproximadamente un minuto."
 
 #: components/staging/defaultText.js:10
 msgid "Clone to staging"
-msgstr "Clonar a Staging"
+msgstr "Clonar a preproducción"
 
 #: components/staging/defaultText.js:11
 msgid "Created"
@@ -102,15 +102,15 @@ msgstr "Creado"
 
 #: components/staging/defaultText.js:12
 msgid "Staging Created"
-msgstr "Staging creado"
+msgstr "Preproducción creada"
 
 #: components/staging/defaultText.js:13
 msgid "Creating a staging site, this should take about a minute."
-msgstr "Crear un sitio en escena, esto debería tomar aproximadamente un minuto."
+msgstr "Creando un sitio de preproducción, esto debería tomar aproximadamente un minuto."
 
 #: components/staging/defaultText.js:14
 msgid "Create staging site"
-msgstr "Crear sitio de staging"
+msgstr "Crear sitio de preproducción"
 
 #: components/staging/defaultText.js:15
 msgid "Currently editing"
@@ -126,19 +126,19 @@ msgstr "Confirmar eliminación"
 
 #: components/staging/defaultText.js:18
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Esto eliminará permanentemente el sitio provisional. ¿Está seguro que desea continuar? Puede volver a crear otro sitio de staging en cualquier momento, pero cualquier cambio específico que haya realizado en este sitio de staging se perderá."
+msgstr "Esto eliminará permanentemente el sitio de preproducción. ¿Está seguro que desea continuar? Puede volver a crear otro sitio de preproducción en cualquier momento, pero cualquier cambio específico que haya realizado en este sitio se perderá."
 
 #: components/staging/defaultText.js:19
 msgid "Deleted Staging"
-msgstr "Estreno eliminado"
+msgstr "Preproducción eliminada"
 
 #: components/staging/defaultText.js:20
 msgid "Deleting the staging site, this should take about a minute."
-msgstr "Eliminando el sitio de instalación, esto tomará aproximadamente un minuto."
+msgstr "Eliminando el sitio de preproducción, esto tomará aproximadamente un minuto."
 
 #: components/staging/defaultText.js:21
 msgid "Delete Staging Site"
-msgstr "Eliminar sitio Staging"
+msgstr "Eliminar sitio de preproducción"
 
 #: components/staging/defaultText.js:22
 msgid "Deploy"
@@ -158,7 +158,7 @@ msgstr "Desplegar sólo base de datos"
 
 #: components/staging/defaultText.js:26
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Esto desplegará la puesta en escena en la producción y sobrescribirá el sitio actual de producción. ¿Está seguro de que desea continuar?"
+msgstr "Esto desplegará la preproducción a producción y sobrescribirá el sitio actual de producción. ¿Está seguro de que desea continuar?"
 
 #: components/staging/defaultText.js:27
 msgid "Deploy files only"
@@ -170,7 +170,7 @@ msgstr "Desplegado"
 
 #: components/staging/defaultText.js:29
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Desplegar desde la puesta en escena hasta la producción, esto debería tomar aproximadamente un minuto."
+msgstr "Desplegando de preproducción a producción, esto debería tomar aproximadamente un minuto."
 
 #: components/staging/defaultText.js:30
 msgid "Deploy Site"
@@ -182,7 +182,7 @@ msgstr "Error"
 
 #: components/staging/defaultText.js:32
 msgid "You don't have a staging site yet."
-msgstr "Todavía no tienes un sitio de staging."
+msgstr "Todavía no tienes un sitio de preproducción."
 
 #: components/staging/defaultText.js:33
 msgid "Not currently editing"
@@ -198,11 +198,11 @@ msgstr "Sitio de producción"
 
 #: components/staging/defaultText.js:36
 msgid "Staging Site"
-msgstr "Sitio de Staging"
+msgstr "Sitio de preproducción"
 
 #: components/staging/defaultText.js:37
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Un sitio de staging es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando esté listo."
+msgstr "Un sitio de preproducción es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando esté listo."
 
 #: components/staging/defaultText.js:38
 msgid "Switch"
@@ -214,7 +214,7 @@ msgstr "Cambiando"
 
 #: components/staging/defaultText.js:40
 msgid "Switch to Production"
-msgstr "Cambiar a Producción"
+msgstr "Cambiar a producción"
 
 #: components/staging/defaultText.js:41
 msgid "This will navigate you to the production environment"
@@ -226,28 +226,27 @@ msgstr "Cargando el entorno de producción ahora."
 
 #: components/staging/defaultText.js:43
 msgid "Switching to the production environment, this should take about a minute."
-msgstr "Cambiar al entorno de producción, esto debería tomar aproximadamente un minuto."
+msgstr "Cambiando al entorno de producción, esto debería tomar aproximadamente un minuto."
 
 #: components/staging/defaultText.js:44
 msgid "Switch to Staging"
-msgstr "Cambiar a Staging"
+msgstr "Cambiar a preproducción"
 
 #: components/staging/defaultText.js:45
 msgid "This will navigate you to the staging environment"
-msgstr "Esto lo llevará al entorno de staging"
+msgstr "Esto lo llevará al entorno de preproducción"
 
 #: components/staging/defaultText.js:46
 msgid "Loading the staging environment now."
-msgstr "Cargando el entorno de staging ahora."
+msgstr "Cargando el entorno de preproducción ahora."
 
 #: components/staging/defaultText.js:47
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Cambiar al entorno de escena, esto debería tomar aproximadamente un minuto."
+msgstr "Cambiando al entorno de preproducción, esto debería tomar aproximadamente un minuto."
 
-#: includes/StagingMenu.php:30
 #: components/staging/defaultText.js:48
 msgid "Staging"
-msgstr "Escenario"
+msgstr "Preproducción"
 
 #: components/staging/defaultText.js:49
 msgid "An unknown error has occurred."
@@ -256,3 +255,8 @@ msgstr "Se ha producido un error desconocido."
 #: components/staging/defaultText.js:50
 msgid "Working..."
 msgstr "Trabajando..."
+
+#: includes/StagingMenu.php:30
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Preproducción"
