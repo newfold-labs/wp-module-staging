@@ -20,22 +20,22 @@
                 "Klon-Aktion best\u00e4tigen"
             ],
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
-                "Dies wird alles in der Stagierung \u00fcberschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
+                "Dies wird alle Inhalte in der Staging-Umgebung \u00fcberschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
             ],
             "Cloned to Staging": [
-                "Zu Staging geklont"
+                "In Staging-Umgebung geklont"
             ],
             "Cloning production to staging, this should take about a minute.": [
-                "Das Klonen der Produktion auf Stagnation sollte ungef\u00e4hr eine Minute dauern."
+                "Klonen der Produktionsumgebung in die Staging-Umgebung, dies sollte ungef\u00e4hr eine Minute dauern."
             ],
             "Clone to staging": [
-                "Zum Stagieren klonen"
+                "In Staging-Umgebung klonen"
             ],
             "Created": [
                 "Erstellt"
             ],
             "Staging Created": [
-                "Staging erstellt"
+                "Staging-Umgebung erstellt"
             ],
             "Creating a staging site, this should take about a minute.": [
                 "Erstellen einer Staging-Site sollte eine Minute dauern."
@@ -56,10 +56,10 @@
                 "Staging-Site wird dauerhaft gel\u00f6scht. Sind Sie sicher, dass Sie fortfahren m\u00f6chten? Sie k\u00f6nnen jederzeit eine andere Staging-Site neu erstellen, aber alle spezifischen \u00c4nderungen, die Sie an dieser Staging-Site vorgenommen haben, gehen verloren."
             ],
             "Deleted Staging": [
-                "Gel\u00f6schte Staging"
+                "Staging-Umgebung gel\u00f6scht"
             ],
             "Deleting the staging site, this should take about a minute.": [
-                "Staging Site wird gel\u00f6scht. Dies sollte ungef\u00e4hr eine Minute dauern."
+                "Die Staging-Seite wird gel\u00f6scht, dies sollte ungef\u00e4hr eine Minute dauern."
             ],
             "Delete Staging Site": [
                 "Staging-Site l\u00f6schen"
@@ -77,7 +77,7 @@
                 "Nur Datenbank verteilen"
             ],
             "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?": [
-                "Dies wird Staging zur Produktion bereitstellen und die aktuelle Produktionsseite \u00fcberschreiben. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
+                "Dies wird die Staging-Umgebung in die Produktionsumgebung \u00fcberf\u00fchren und die aktuelle Produktionsseite \u00fcberschreiben. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
             ],
             "Deploy files only": [
                 "Nur Dateien verteilen"
@@ -86,7 +86,7 @@
                 "Ausgestellt"
             ],
             "Deploying from staging to production, this should take about a minute.": [
-                "Der Einsatz von Staging in die Produktion sollte etwa eine Minute in Anspruch nehmen."
+                "\u00dcberf\u00fchrung von Staging- in Produktionsumgebung, dies sollte ungef\u00e4hr eine Minute dauern."
             ],
             "Deploy Site": [
                 "Site verteilen"
@@ -143,7 +143,7 @@
                 "Beim Wechsel auf die Staging-Umgebung sollte dies ungef\u00e4hr eine Minute dauern."
             ],
             "Staging": [
-                "Inszenierung"
+                "Staging"
             ],
             "An unknown error has occurred.": [
                 "Ein unbekannter Fehler ist aufgetreten."

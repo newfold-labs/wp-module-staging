@@ -20,28 +20,28 @@
                 "Conferma Azione Clona"
             ],
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
-                "Questo sovrascriver\u00e0 qualsiasi cosa nello staging e lo aggiorner\u00e0 ad un clone esatto del sito di produzione corrente. Sei sicuro di voler procedere?"
+                "Questo sovrascriver\u00e0 qualsiasi cosa nell'ambiente di preproduzione e lo aggiorner\u00e0 ad un clone esatto del sito di produzione corrente. Sei sicuro di voler procedere?"
             ],
             "Cloned to Staging": [
-                "Clonato allo Staging"
+                "Clonato in preproduzione"
             ],
             "Cloning production to staging, this should take about a minute.": [
-                "La clonazione della produzione per la staging, questo dovrebbe richiedere circa un minuto."
+                "Clonazione da produzione a preproduzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Clone to staging": [
-                "Clona allo staging"
+                "Clona in preproduzione"
             ],
             "Created": [
                 "Creato"
             ],
             "Staging Created": [
-                "Staging Creato"
+                "Preproduzione creata"
             ],
             "Creating a staging site, this should take about a minute.": [
-                "Creare un sito di staging dovrebbe richiedere circa un minuto."
+                "Creazione del sito di preproduzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Create staging site": [
-                "Crea sito di staging"
+                "Crea sito di preproduzione"
             ],
             "Currently editing": [
                 "Modifica attualmente"
@@ -53,16 +53,16 @@
                 "Conferma Eliminazione"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
-                "Questo eliminer\u00e0 definitivamente il sito di stadio. Sei sicuro di voler procedere? \u00c8 possibile ricreare un altro sito di staging in qualsiasi momento, ma tutte le modifiche specifiche che hai fatto a questo sito di staging andranno perse."
+                "Questo eliminer\u00e0 definitivamente il sito di preproduzione. Sei sicuro di voler procedere? \u00c8 possibile ricreare un altro sito di preproduzione in qualsiasi momento, ma tutte le modifiche specifiche apportate a questo sito andranno perse."
             ],
             "Deleted Staging": [
-                "Staging Eliminato"
+                "Preproduzione eliminata"
             ],
             "Deleting the staging site, this should take about a minute.": [
-                "L'eliminazione del sito di staging dovrebbe richiedere circa un minuto."
+                "Eliminazione del sito di preproduzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Delete Staging Site": [
-                "Elimina Sito Di Staging"
+                "Elimina sito di preproduzione"
             ],
             "Deploy": [
                 "Dispiega"
@@ -77,7 +77,7 @@
                 "Distribuisci solo il database"
             ],
             "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?": [
-                "Questo distribuir\u00e0 lo staging alla produzione e sovrascriver\u00e0 il sito di produzione corrente. Sei sicuro di voler procedere?"
+                "Questo distribuir\u00e0 la preproduzione in produzione e sovrascriver\u00e0 il sito di produzione corrente. Sei sicuro di voler procedere?"
             ],
             "Deploy files only": [
                 "Distribuisci solo file"
@@ -86,7 +86,7 @@
                 "Dispiegato"
             ],
             "Deploying from staging to production, this should take about a minute.": [
-                "Distribuire dalla messa in scena alla produzione, questo dovrebbe richiedere circa un minuto."
+                "Distribuzione da preproduzione a produzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Deploy Site": [
                 "Distribuisci Sito"
@@ -95,7 +95,7 @@
                 "Errore"
             ],
             "You don't have a staging site yet.": [
-                "Non hai ancora un sito di stadio."
+                "Non hai ancora un sito di preproduzione."
             ],
             "Not currently editing": [
                 "Non \u00e8 attualmente in modifica"
@@ -107,10 +107,10 @@
                 "Sito Di Produzione"
             ],
             "Staging Site": [
-                "Sito Di Staging"
+                "Sito di preproduzione"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Un sito di staging \u00e8 un duplicato del vostro sito dal vivo, offrendo un ambiente sicuro per sperimentare, testare gli aggiornamenti e distribuire quando pronto."
+                "Un sito di preproduzione \u00e8 un duplicato del tuo sito in produzione, che offre un ambiente sicuro per sperimentare, testare gli aggiornamenti e distribuire quando sei pronto."
             ],
             "Switch": [
                 "Cambia"
@@ -131,19 +131,19 @@
                 "Passando all'ambiente di produzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Switch to Staging": [
-                "Passa allo Staging"
+                "Passa a preproduzione"
             ],
             "This will navigate you to the staging environment": [
-                "Questo ti porter\u00e0 all'ambiente di staging"
+                "Questo ti porter\u00e0 all'ambiente di preproduzione"
             ],
             "Loading the staging environment now.": [
-                "Caricamento dell'ambiente di staging ora."
+                "Caricamento dell'ambiente di preproduzione."
             ],
             "Switching to the staging environment, this should take about a minute.": [
-                "Passando all'ambiente di stadio, questo dovrebbe richiedere circa un minuto."
+                "Passaggio all'ambiente di preproduzione, questo dovrebbe richiedere circa un minuto."
             ],
             "Staging": [
-                "Staging"
+                "Preproduzione"
             ],
             "An unknown error has occurred.": [
                 "Si \u00e8 verificato un errore sconosciuto."
