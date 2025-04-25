@@ -9,6 +9,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
 "PO-Revision-Date: 2025-02-19 13:44\n"
+"Language: de_DE\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -17,7 +18,6 @@ msgstr ""
 "X-Crowdin-Language: de\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
-"Language: de_DE\n"
 
 #: includes/Staging.php:256
 msgid "Cloning can only be done from the production environment."
@@ -29,7 +29,7 @@ msgstr "Staging-Umgebung existiert bereits!"
 
 #: includes/Staging.php:315
 msgid "You must switch to the production environment before destroying staging."
-msgstr "Sie müssen zur Produktionsumgebung wechseln, bevor Sie die Stagnation zerstören."
+msgstr "Sie müssen zur Produktionsumgebung wechseln, bevor Sie die Staging-Umgebung löschen."
 
 #: includes/Staging.php:337
 msgid "Switch to an environment you are already in, you cannot."
@@ -60,11 +60,11 @@ msgstr "JSON kann nicht analysiert werden"
 msgid "Invalid JSON response"
 msgstr "Ungültige JSON-Antwort"
 
-#: includes/StagingMenu.php:31
+#: includes/StagingMenu.php:49
 msgid "Staging Environment"
 msgstr "Staging-Umgebung"
 
-#: includes/StagingMenu.php:33
+#: includes/StagingMenu.php:51
 msgid "Staging Actions"
 msgstr "Staging-Aktionen"
 
@@ -82,19 +82,19 @@ msgstr "Klon-Aktion bestätigen"
 
 #: components/staging/defaultText.js:7
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Dies wird alles in der Stagierung überschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren möchten?"
+msgstr "Dies wird alle Inhalte in der Staging-Umgebung überschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren möchten?"
 
 #: components/staging/defaultText.js:8
 msgid "Cloned to Staging"
-msgstr "Zu Staging geklont"
+msgstr "In Staging-Umgebung geklont"
 
 #: components/staging/defaultText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr "Das Klonen der Produktion auf Stagnation sollte ungefähr eine Minute dauern."
+msgstr "Klonen der Produktionsumgebung in die Staging-Umgebung, dies sollte ungefähr eine Minute dauern."
 
 #: components/staging/defaultText.js:10
 msgid "Clone to staging"
-msgstr "Zum Stagieren klonen"
+msgstr "In Staging-Umgebung klonen"
 
 #: components/staging/defaultText.js:11
 msgid "Created"
@@ -102,7 +102,7 @@ msgstr "Erstellt"
 
 #: components/staging/defaultText.js:12
 msgid "Staging Created"
-msgstr "Staging erstellt"
+msgstr "Staging-Umgebung erstellt"
 
 #: components/staging/defaultText.js:13
 msgid "Creating a staging site, this should take about a minute."
@@ -130,11 +130,11 @@ msgstr "Staging-Site wird dauerhaft gelöscht. Sind Sie sicher, dass Sie fortfah
 
 #: components/staging/defaultText.js:19
 msgid "Deleted Staging"
-msgstr "Gelöschte Staging"
+msgstr "Staging-Umgebung gelöscht"
 
 #: components/staging/defaultText.js:20
 msgid "Deleting the staging site, this should take about a minute."
-msgstr "Staging Site wird gelöscht. Dies sollte ungefähr eine Minute dauern."
+msgstr "Die Staging-Seite wird gelöscht, dies sollte ungefähr eine Minute dauern."
 
 #: components/staging/defaultText.js:21
 msgid "Delete Staging Site"
@@ -158,7 +158,7 @@ msgstr "Nur Datenbank verteilen"
 
 #: components/staging/defaultText.js:26
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Dies wird Staging zur Produktion bereitstellen und die aktuelle Produktionsseite überschreiben. Sind Sie sicher, dass Sie fortfahren möchten?"
+msgstr "Dies wird die Staging-Umgebung in die Produktionsumgebung überführen und die aktuelle Produktionsseite überschreiben. Sind Sie sicher, dass Sie fortfahren möchten?"
 
 #: components/staging/defaultText.js:27
 msgid "Deploy files only"
@@ -170,7 +170,7 @@ msgstr "Ausgestellt"
 
 #: components/staging/defaultText.js:29
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Der Einsatz von Staging in die Produktion sollte etwa eine Minute in Anspruch nehmen."
+msgstr "Überführung von Staging- in Produktionsumgebung, dies sollte ungefähr eine Minute dauern."
 
 #: components/staging/defaultText.js:30
 msgid "Deploy Site"
@@ -246,7 +246,7 @@ msgstr "Beim Wechsel auf die Staging-Umgebung sollte dies ungefähr eine Minute 
 
 #: components/staging/defaultText.js:48
 msgid "Staging"
-msgstr "Inszenierung"
+msgstr "Staging-Umgebung"
 
 #: components/staging/defaultText.js:49
 msgid "An unknown error has occurred."
@@ -256,3 +256,7 @@ msgstr "Ein unbekannter Fehler ist aufgetreten."
 msgid "Working..."
 msgstr "Arbeiten..."
 
+#: includes/StagingMenu.php:30
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Staging-Umgebung"

@@ -27,7 +27,7 @@ class StagingMenu {
 		$brand       = container()->get( 'plugin' )['id'];
 		$performance = array(
 			'route'    => $brand . '#/staging',
-			'title'    => __( 'Staging', 'wp-module-staging' ),
+			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
 			'priority' => 50,
 		);
 		array_push( $subnav, $performance );

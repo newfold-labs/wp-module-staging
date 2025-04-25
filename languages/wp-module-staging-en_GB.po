@@ -9,9 +9,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
 "PO-Revision-Date: 2025-02-19 19:16+0530\n"
+"Language: en_GB\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
-"Language: en_GB\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: includes/Staging.php:256
@@ -23,10 +23,8 @@ msgid "Staging environment already exists!"
 msgstr "Staging environment already exists!"
 
 #: includes/Staging.php:315
-msgid ""
-"You must switch to the production environment before destroying staging."
-msgstr ""
-"You must switch to the production environment before destroying staging."
+msgid "You must switch to the production environment before destroying staging."
+msgstr "You must switch to the production environment before destroying staging."
 
 #: includes/Staging.php:337
 msgid "Switch to an environment you are already in, you cannot."
@@ -57,11 +55,11 @@ msgstr "Unable to parse JSON"
 msgid "Invalid JSON response"
 msgstr "Invalid JSON response"
 
-#: includes/StagingMenu.php:31
+#: includes/StagingMenu.php:49
 msgid "Staging Environment"
 msgstr "Staging Environment"
 
-#: includes/StagingMenu.php:33
+#: includes/StagingMenu.php:51
 msgid "Staging Actions"
 msgstr "Staging Actions"
 
@@ -78,12 +76,8 @@ msgid "Confirm Clone Action"
 msgstr "Confirm Clone Action"
 
 #: components/staging/defaultText.js:7
-msgid ""
-"This will overwrite anything in staging and update it to an exact clone of "
-"the current production site. Are you sure you want to proceed?"
-msgstr ""
-"This will overwrite anything in staging and update it to an exact clone of "
-"the current production site. Are you sure you want to proceed?"
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 
 #: components/staging/defaultText.js:8
 msgid "Cloned to Staging"
@@ -126,14 +120,8 @@ msgid "Confirm Delete"
 msgstr "Confirm Delete"
 
 #: components/staging/defaultText.js:18
-msgid ""
-"This will permanently delete staging site. Are you sure you want to proceed? "
-"You can recreate another staging site at any time, but any specific changes "
-"you've made to this staging site will be lost."
-msgstr ""
-"This will permanently delete staging site. Are you sure you want to proceed? "
-"You can recreate another staging site at any time, but any specific changes "
-"you've made to this staging site will be lost."
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 
 #: components/staging/defaultText.js:19
 msgid "Deleted Staging"
@@ -164,12 +152,8 @@ msgid "Deploy database only"
 msgstr "Deploy database only"
 
 #: components/staging/defaultText.js:26
-msgid ""
-"This will deploy staging to production and overwrite current production "
-"site. Are you sure you want to proceed?"
-msgstr ""
-"This will deploy staging to production and overwrite current production "
-"site. Are you sure you want to proceed?"
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 
 #: components/staging/defaultText.js:27
 msgid "Deploy files only"
@@ -212,12 +196,8 @@ msgid "Staging Site"
 msgstr "Staging Site"
 
 #: components/staging/defaultText.js:37
-msgid ""
-"A staging site is a duplicate of your live site, offering a secure "
-"environment to experiment, test updates, and deploy when ready."
-msgstr ""
-"A staging site is a duplicate of your live site, offering a secure "
-"environment to experiment, test updates, and deploy when ready."
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 
 #: components/staging/defaultText.js:38
 msgid "Switch"
@@ -240,10 +220,8 @@ msgid "Loading the production environment now."
 msgstr "Loading the production environment now."
 
 #: components/staging/defaultText.js:43
-msgid ""
-"Switching to the production environment, this should take about a minute."
-msgstr ""
-"Switching to the production environment, this should take about a minute."
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "Switching to the production environment, this should take about a minute."
 
 #: components/staging/defaultText.js:44
 msgid "Switch to Staging"
@@ -272,3 +250,8 @@ msgstr "An unknown error has occurred."
 #: components/staging/defaultText.js:50
 msgid "Working..."
 msgstr "Working..."
+
+#: includes/StagingMenu.php:30
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Staging"
