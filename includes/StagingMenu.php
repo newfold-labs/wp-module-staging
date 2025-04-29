@@ -24,13 +24,13 @@ class StagingMenu {
 	 * @return array The filtered nav array
 	 */
 	public static function add_nfd_subnav( $subnav ) {
-		$brand       = container()->get( 'plugin' )['id'];
-		$performance = array(
+		$brand   = container()->get( 'plugin' )['id'];
+		$staging = array(
 			'route'    => $brand . '#/staging',
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
 			'priority' => 50,
 		);
-		array_push( $subnav, $performance );
+		array_push( $subnav, $staging );
 		return $subnav;
 	}
 
