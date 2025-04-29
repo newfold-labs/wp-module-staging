@@ -258,24 +258,24 @@ msgstr "Staging"
 
 #: includes/StagingCLI.php:19
 msgid "No sub-command provided"
-msgstr ""
+msgstr "No sub-command provided"
 
 #: includes/StagingCLI.php:39
 msgid "Invalid user."
-msgstr ""
+msgstr "Invalid user."
 
 #: includes/StagingCLI.php:67
 msgid "Invalid deploy type"
-msgstr ""
+msgstr "Invalid deployment type"
 
 #: includes/StagingCLI.php:84
 msgid "Invalid action"
-msgstr ""
+msgstr "Invalid action"
 
 #: includes/StagingCLI.php:231
 msgid "Error: "
-msgstr ""
+msgstr "Error: "
 
 #: includes/StagingCLI.php:280
 msgid "Provided $data wasn't valid array or JSON string."
-msgstr ""
+msgstr "Provided $data wasn't a valid array or JSON string."
