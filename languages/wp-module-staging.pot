@@ -12,45 +12,69 @@ msgstr ""
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
 
-#: includes/Staging.php:256
+#: includes/Staging.php:255
 msgid "Cloning can only be done from the production environment."
 msgstr ""
 
-#: includes/Staging.php:281
+#: includes/Staging.php:280
 msgid "Staging environment already exists!"
 msgstr ""
 
-#: includes/Staging.php:315
+#: includes/Staging.php:314
 msgid "You must switch to the production environment before destroying staging."
 msgstr ""
 
-#: includes/Staging.php:337
+#: includes/Staging.php:336
 msgid "Switch to an environment you are already in, you cannot."
 msgstr ""
 
-#: includes/Staging.php:374
+#: includes/Staging.php:373
 msgid "Invalid staging CLI command."
 msgstr ""
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:424
+#: includes/Staging.php:423
 msgid "Invalid character (%s) in command."
 msgstr ""
 
-#: includes/Staging.php:433
+#: includes/Staging.php:432
 msgid "Unable to execute script (disabled_function)."
 msgstr ""
 
-#: includes/Staging.php:441
+#: includes/Staging.php:440
 msgid "Unable to execute script (permission error)."
 msgstr ""
 
-#: includes/Staging.php:454
+#: includes/Staging.php:453
 msgid "Unable to parse JSON"
+msgstr ""
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr ""
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr ""
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr ""
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
 msgstr ""
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
+msgstr ""
+
+#: includes/StagingCLI.php:231
+msgid "Error: "
+msgstr ""
+
+#: includes/StagingCLI.php:280
+msgid "Provided $data wasn't valid array or JSON string."
 msgstr ""
 
 #: includes/StagingMenu.php:30

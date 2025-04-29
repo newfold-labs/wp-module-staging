@@ -114,7 +114,6 @@ class StagingApi extends \WP_REST_Controller {
 				),
 			)
 		);
-
 	}
 
 	/**

@@ -8,53 +8,53 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 13:44\n"
+"PO-Revision-Date: 2025-04-28 13:00+0100\n"
 "Language: es_ES\n"
-"X-Generator: WP-CLI 2.11.0\n"
-"X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.6\n"
+"X-Domain: wp-module-staging\n"
 "X-Crowdin-Project: newfold-labswp-module-staging\n"
 "X-Crowdin-Project-ID: 764889\n"
 "X-Crowdin-Language: es-ES\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
 
-#: includes/Staging.php:256
+#: includes/Staging.php:255
 msgid "Cloning can only be done from the production environment."
 msgstr "La clonación sólo puede hacerse desde el entorno de producción."
 
-#: includes/Staging.php:281
+#: includes/Staging.php:280
 msgid "Staging environment already exists!"
 msgstr "¡El entorno de preproducción ya existe!"
 
-#: includes/Staging.php:315
+#: includes/Staging.php:314
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
 
-#: includes/Staging.php:337
+#: includes/Staging.php:336
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Cambiar a un entorno en el que ya está, no puede."
 
-#: includes/Staging.php:374
+#: includes/Staging.php:373
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de preproducción inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:424
+#: includes/Staging.php:423
 msgid "Invalid character (%s) in command."
 msgstr "Carácter inválido (%s) en el comando."
 
-#: includes/Staging.php:433
+#: includes/Staging.php:432
 msgid "Unable to execute script (disabled_function)."
 msgstr "No se puede ejecutar el script (disabled_function)."
 
-#: includes/Staging.php:441
+#: includes/Staging.php:440
 msgid "Unable to execute script (permission error)."
 msgstr "No se puede ejecutar el script (error de permisos)."
 
-#: includes/Staging.php:454
+#: includes/Staging.php:453
 msgid "Unable to parse JSON"
-msgstr "No se puede analizar JSON"
+msgstr "No se pudo procesar el JSON"
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
@@ -260,3 +260,27 @@ msgstr "Trabajando..."
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr "Preproducción"
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "No se proporcionó un subcomando"
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Usuario no válido."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Tipo de despliegue no válido"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Acción no válida"
+
+#: includes/StagingCLI.php:231
+msgid "Error: "
+msgstr "Error: "
+
+#: includes/StagingCLI.php:280
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "El $data proporcionado no era un array válido ni una cadena JSON válida."

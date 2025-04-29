@@ -14,40 +14,40 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: includes/Staging.php:256
+#: includes/Staging.php:255
 msgid "Cloning can only be done from the production environment."
 msgstr "Cloning can only be done from the production environment."
 
-#: includes/Staging.php:281
+#: includes/Staging.php:280
 msgid "Staging environment already exists!"
 msgstr "Staging environment already exists!"
 
-#: includes/Staging.php:315
+#: includes/Staging.php:314
 msgid "You must switch to the production environment before destroying staging."
 msgstr "You must switch to the production environment before destroying staging."
 
-#: includes/Staging.php:337
+#: includes/Staging.php:336
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Switch to an environment you are already in, you cannot."
 
-#: includes/Staging.php:374
+#: includes/Staging.php:373
 msgid "Invalid staging CLI command."
 msgstr "Invalid staging CLI command."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:424
+#: includes/Staging.php:423
 msgid "Invalid character (%s) in command."
 msgstr "Invalid character (%s) in command."
 
-#: includes/Staging.php:433
+#: includes/Staging.php:432
 msgid "Unable to execute script (disabled_function)."
 msgstr "Unable to execute script (disabled_function)."
 
-#: includes/Staging.php:441
+#: includes/Staging.php:440
 msgid "Unable to execute script (permission error)."
 msgstr "Unable to execute script (permission error)."
 
-#: includes/Staging.php:454
+#: includes/Staging.php:453
 msgid "Unable to parse JSON"
 msgstr "Unable to parse JSON"
 
@@ -255,3 +255,27 @@ msgstr "Working..."
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr "Staging"
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "No sub-command provided"
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Invalid user."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Invalid deployment type"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Invalid action"
+
+#: includes/StagingCLI.php:231
+msgid "Error: "
+msgstr "Error: "
+
+#: includes/StagingCLI.php:280
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "Provided $data wasn't a valid array or JSON string."
