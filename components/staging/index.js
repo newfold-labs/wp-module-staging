@@ -1,4 +1,4 @@
-import { Button, Container, Modal, Page } from '@newfold/ui-component-library';
+import { Button, Container, Modal, Page, Title } from '@newfold/ui-component-library';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { default as StagingSite } from '../stagingSite/';
 import { default as ProductionSite } from '../productionSite/';
@@ -368,13 +368,16 @@ const Staging = ({methods, constants, ...props}) => {
 
 	return (
 		<Page title={constants.text.title} className={methods.classNames('newfold-staging-page',  getClasses())}>
+			<div className="newfold-staging-header">
+				<Title as="h1" className="nfd-mb-2">
+					{ constants.text.title }
+				</Title>
+				<Title as="h2" className="nfd-font-normal nfd-text-[13px]">
+					{ constants.text.subTitle }
+				</Title>
+			</div>
             <Container className={'newfold-staging-container'}>
 				<div className={'newfold-staging-wrapper'}>
-					<Container.Header
-							title={constants.text.title}
-							description={constants.text.subTitle}
-							className={'newfold-staging-header'}
-						/>
 
 						<Container.Block separator={true} className={'newfold-staging-prod'}>
 							<ProductionSite
