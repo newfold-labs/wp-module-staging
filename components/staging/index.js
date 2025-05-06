@@ -372,7 +372,7 @@ const Staging = ({methods, constants, ...props}) => {
 				<Title as="h1" className="nfd-mb-2">
 					{ constants.text.title }
 				</Title>
-				<Title as="p" className="nfd-font-normal">
+				<Title as="h2" className="nfd-font-normal nfd-text-[13px]">
 					{ constants.text.subTitle }
 				</Title>
 			</div>
