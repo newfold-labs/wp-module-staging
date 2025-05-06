@@ -1,5 +1,5 @@
 {
-    "translation-revision-date": "2025-02-19 13:44",
+    "translation-revision-date": "2025-04-28 13:00+0100",
     "generator": "WP-CLI\/2.11.0",
     "source": "components\/staging\/defaultText.js",
     "domain": "messages",
@@ -17,31 +17,31 @@
                 "Clonar"
             ],
             "Confirm Clone Action": [
-                "Confirmar Clonar acci\u00f3n"
+                "Confirmar acci\u00f3n de clonaci\u00f3n"
             ],
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
-                "Esto sobrescribir\u00e1 cualquier cosa en la puesta en escena y la actualizar\u00e1 a un clon exacto del sitio de producci\u00f3n actual. \u00bfEst\u00e1 seguro que desea continuar?"
+                "Esto sobrescribir\u00e1 todo en preproducci\u00f3n y lo actualizar\u00e1 a un clon exacto del sitio de producci\u00f3n actual. \u00bfEst\u00e1 seguro que desea continuar?"
             ],
             "Cloned to Staging": [
-                "Clonado a Staging"
+                "Clonado a preproducci\u00f3n"
             ],
             "Cloning production to staging, this should take about a minute.": [
-                "La producci\u00f3n de la clonaci\u00f3n hasta el escenario, esto deber\u00eda tomar aproximadamente un minuto."
+                "Clonando producci\u00f3n a preproducci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
             ],
             "Clone to staging": [
-                "Clonar a Staging"
+                "Clonar a preproducci\u00f3n"
             ],
             "Created": [
                 "Creado"
             ],
             "Staging Created": [
-                "Staging creado"
+                "Preproducci\u00f3n creada"
             ],
             "Creating a staging site, this should take about a minute.": [
-                "Crear un sitio en escena, esto deber\u00eda tomar aproximadamente un minuto."
+                "Creando un sitio de preproducci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
             ],
             "Create staging site": [
-                "Crear sitio de staging"
+                "Crear sitio de preproducci\u00f3n"
             ],
             "Currently editing": [
                 "Edici\u00f3n actual"
@@ -53,16 +53,16 @@
                 "Confirmar eliminaci\u00f3n"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
-                "Esto eliminar\u00e1 permanentemente el sitio provisional. \u00bfEst\u00e1 seguro que desea continuar? Puede volver a crear otro sitio de staging en cualquier momento, pero cualquier cambio espec\u00edfico que haya realizado en este sitio de staging se perder\u00e1."
+                "Esto eliminar\u00e1 permanentemente el sitio de preproducci\u00f3n. \u00bfEst\u00e1 seguro que desea continuar? Puede volver a crear otro sitio de preproducci\u00f3n en cualquier momento, pero cualquier cambio espec\u00edfico que haya realizado en este sitio se perder\u00e1."
             ],
             "Deleted Staging": [
-                "Estreno eliminado"
+                "Preproducci\u00f3n eliminada"
             ],
             "Deleting the staging site, this should take about a minute.": [
-                "Eliminando el sitio de instalaci\u00f3n, esto tomar\u00e1 aproximadamente un minuto."
+                "Eliminando el sitio de preproducci\u00f3n, esto tomar\u00e1 aproximadamente un minuto."
             ],
             "Delete Staging Site": [
-                "Eliminar sitio Staging"
+                "Eliminar sitio de preproducci\u00f3n"
             ],
             "Deploy": [
                 "Desplegar"
@@ -77,7 +77,7 @@
                 "Desplegar s\u00f3lo base de datos"
             ],
             "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?": [
-                "Esto desplegar\u00e1 la puesta en escena en la producci\u00f3n y sobrescribir\u00e1 el sitio actual de producci\u00f3n. \u00bfEst\u00e1 seguro de que desea continuar?"
+                "Esto desplegar\u00e1 la preproducci\u00f3n a producci\u00f3n y sobrescribir\u00e1 el sitio actual de producci\u00f3n. \u00bfEst\u00e1 seguro de que desea continuar?"
             ],
             "Deploy files only": [
                 "Desplegar s\u00f3lo archivos"
@@ -86,7 +86,7 @@
                 "Desplegado"
             ],
             "Deploying from staging to production, this should take about a minute.": [
-                "Desplegar desde la puesta en escena hasta la producci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
+                "Desplegando de preproducci\u00f3n a producci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
             ],
             "Deploy Site": [
                 "Desplegar sitio"
@@ -95,7 +95,7 @@
                 "Error"
             ],
             "You don't have a staging site yet.": [
-                "Todav\u00eda no tienes un sitio de staging."
+                "Todav\u00eda no tienes un sitio de preproducci\u00f3n."
             ],
             "Not currently editing": [
                 "Actualmente no se est\u00e1 editando"
@@ -107,10 +107,10 @@
                 "Sitio de producci\u00f3n"
             ],
             "Staging Site": [
-                "Sitio de Staging"
+                "Sitio de preproducci\u00f3n"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Un sitio de staging es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando est\u00e9 listo."
+                "Un sitio de preproducci\u00f3n es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando est\u00e9 listo."
             ],
             "Switch": [
                 "Cambiar"
@@ -119,7 +119,7 @@
                 "Cambiando"
             ],
             "Switch to Production": [
-                "Cambiar a Producci\u00f3n"
+                "Cambiar a producci\u00f3n"
             ],
             "This will navigate you to the production environment": [
                 "Esto le llevar\u00e1 al entorno de producci\u00f3n"
@@ -128,22 +128,22 @@
                 "Cargando el entorno de producci\u00f3n ahora."
             ],
             "Switching to the production environment, this should take about a minute.": [
-                "Cambiar al entorno de producci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
+                "Cambiando al entorno de producci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
             ],
             "Switch to Staging": [
-                "Cambiar a Staging"
+                "Cambiar a preproducci\u00f3n"
             ],
             "This will navigate you to the staging environment": [
-                "Esto lo llevar\u00e1 al entorno de staging"
+                "Esto lo llevar\u00e1 al entorno de preproducci\u00f3n"
             ],
             "Loading the staging environment now.": [
-                "Cargando el entorno de staging ahora."
+                "Cargando el entorno de preproducci\u00f3n ahora."
             ],
             "Switching to the staging environment, this should take about a minute.": [
-                "Cambiar al entorno de escena, esto deber\u00eda tomar aproximadamente un minuto."
+                "Cambiando al entorno de preproducci\u00f3n, esto deber\u00eda tomar aproximadamente un minuto."
             ],
             "Staging": [
-                "Escenario"
+                "Preproducci\u00f3n"
             ],
             "An unknown error has occurred.": [
                 "Se ha producido un error desconocido."

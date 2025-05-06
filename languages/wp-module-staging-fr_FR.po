@@ -9,6 +9,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
 "PO-Revision-Date: 2025-02-19 13:44\n"
+"Language: fr_FR\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -17,42 +18,41 @@ msgstr ""
 "X-Crowdin-Language: fr\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
-"Language: fr_FR\n"
 
-#: includes/Staging.php:256
+#: includes/Staging.php:255
 msgid "Cloning can only be done from the production environment."
 msgstr "Le clonage ne peut se faire qu'à partir de l'environnement de production."
 
-#: includes/Staging.php:281
+#: includes/Staging.php:280
 msgid "Staging environment already exists!"
 msgstr "L'environnement de pré-production existe déjà !"
 
-#: includes/Staging.php:315
+#: includes/Staging.php:314
 msgid "You must switch to the production environment before destroying staging."
-msgstr "Vous devez passer à l'environnement de production avant de détruire la mise en scène."
+msgstr "Vous devez passer à l'environnement de production avant de supprimer l'environnement de pré-production."
 
-#: includes/Staging.php:337
+#: includes/Staging.php:336
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Passez à un environnement dans lequel vous êtes déjà, vous ne pouvez pas."
 
-#: includes/Staging.php:374
+#: includes/Staging.php:373
 msgid "Invalid staging CLI command."
 msgstr "Commande CLI de pré-production invalide."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:424
+#: includes/Staging.php:423
 msgid "Invalid character (%s) in command."
 msgstr "Caractère invalide (%s) dans la commande."
 
-#: includes/Staging.php:433
+#: includes/Staging.php:432
 msgid "Unable to execute script (disabled_function)."
 msgstr "Impossible d'exécuter le script (désactivé_function)."
 
-#: includes/Staging.php:441
+#: includes/Staging.php:440
 msgid "Unable to execute script (permission error)."
 msgstr "Impossible d'exécuter le script (erreur de permission)."
 
-#: includes/Staging.php:454
+#: includes/Staging.php:453
 msgid "Unable to parse JSON"
 msgstr "Impossible d'analyser le JSON"
 
@@ -60,11 +60,11 @@ msgstr "Impossible d'analyser le JSON"
 msgid "Invalid JSON response"
 msgstr "Réponse JSON invalide"
 
-#: includes/StagingMenu.php:31
+#: includes/StagingMenu.php:49
 msgid "Staging Environment"
 msgstr "Environnement de pré-production"
 
-#: includes/StagingMenu.php:33
+#: includes/StagingMenu.php:51
 msgid "Staging Actions"
 msgstr "Actions de pré-production"
 
@@ -90,7 +90,7 @@ msgstr "Cloné en pré-production"
 
 #: components/staging/defaultText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr "Clonage de la production à la mise en scène, cela devrait prendre environ une minute."
+msgstr "Clonage de la production vers la pré-production, cela devrait prendre environ une minute."
 
 #: components/staging/defaultText.js:10
 msgid "Clone to staging"
@@ -130,11 +130,11 @@ msgstr "Ceci supprimera définitivement le site de pré-production. Êtes-vous s
 
 #: components/staging/defaultText.js:19
 msgid "Deleted Staging"
-msgstr "Staging supprimé"
+msgstr "Environnement de pré-production supprimé"
 
 #: components/staging/defaultText.js:20
 msgid "Deleting the staging site, this should take about a minute."
-msgstr "Suppression du site de diffusion, cela devrait prendre environ une minute."
+msgstr "Suppression du site de pré-production, cela devrait prendre environ une minute."
 
 #: components/staging/defaultText.js:21
 msgid "Delete Staging Site"
@@ -158,7 +158,7 @@ msgstr "Déployer la base de données uniquement"
 
 #: components/staging/defaultText.js:26
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Ceci va déployer des staging en production et écraser le site de production actuel. Êtes-vous sûr de vouloir continuer ?"
+msgstr "Ceci va déployer la pré-production vers la production et écraser le site de production actuel. Êtes-vous sûr de vouloir continuer ?"
 
 #: components/staging/defaultText.js:27
 msgid "Deploy files only"
@@ -170,7 +170,7 @@ msgstr "Déployé"
 
 #: components/staging/defaultText.js:29
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Déploiement de la phase de production vers la production, cela devrait prendre environ une minute."
+msgstr "Déploiement de la pré-production vers la production, cela devrait prendre environ une minute."
 
 #: components/staging/defaultText.js:30
 msgid "Deploy Site"
@@ -242,7 +242,7 @@ msgstr "Chargement de l'environnement de pré-production maintenant."
 
 #: components/staging/defaultText.js:47
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Passage à l'environnement de mise en scène, cela devrait prendre environ une minute."
+msgstr "Passage à l'environnement de pré-production, cela devrait prendre environ une minute."
 
 #: components/staging/defaultText.js:48
 msgid "Staging"
@@ -256,3 +256,31 @@ msgstr "Une erreur inconnue s'est produite."
 msgid "Working..."
 msgstr "Traitement..."
 
+#: includes/StagingMenu.php:30
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Pré-production"
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "Aucune sous-commande fournie"
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Utilisateur invalide."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Type de déploiement invalide"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Action invalide"
+
+#: includes/StagingCLI.php:231
+msgid "Error: "
+msgstr "Erreur : "
+
+#: includes/StagingCLI.php:280
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "Les données fournies ($data) ne sont pas un tableau ou une chaîne JSON valides."

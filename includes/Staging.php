@@ -127,11 +127,10 @@ class Staging {
 	 * @return void
 	 */
 	public static function loadTextDomain() {
-
 		\load_plugin_textdomain(
 			'wp-module-staging',
 			false,
-			NFD_STAGING_DIR . '/languages'
+			dirname( plugin_basename( NFD_STAGING_DIR ) ) . '/' . basename( NFD_STAGING_DIR ) . '/languages'
 		);
 	}
 

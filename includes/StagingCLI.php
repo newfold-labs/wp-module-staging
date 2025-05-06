@@ -16,7 +16,7 @@ class StagingCLI extends \WP_CLI_Command {
 	public function __invoke( $args, $assoc_args ) {
 
 		if ( ! is_array( $args ) || ! isset( $args[0] ) ) {
-			$this->error( 'No sub-command provided' );
+			$this->error( __( 'No sub-command provided', 'wp-module-staging' ) );
 		}
 
 		switch ( $args[0] ) {
@@ -36,7 +36,7 @@ class StagingCLI extends \WP_CLI_Command {
 			case 'sso_staging':
 				$user_id = $this->get_admin_user_id();
 				if ( ! $user_id ) {
-					$this->error( 'Invalid user.' );
+					$this->error( __( 'Invalid user.', 'wp-module-staging' ) );
 				}
 				$this->render( Staging::getInstance()->switchTo( 'staging', $user_id ) );
 				break;
@@ -64,7 +64,7 @@ class StagingCLI extends \WP_CLI_Command {
 						$this->render( Staging::getInstance()->deployToProduction( 'files' ) );
 						break;
 					default:
-						$this->error( 'Invalid deploy type' );
+						$this->error( __( 'Invalid deploy type', 'wp-module-staging' ) );
 				}
 				break;
 
@@ -81,7 +81,7 @@ class StagingCLI extends \WP_CLI_Command {
 				break;
 
 			default:
-				$this->error( 'Invalid action' );
+				$this->error( __( 'Invalid action', 'wp-module-staging' ) );
 		}
 	}
 
@@ -228,7 +228,7 @@ class StagingCLI extends \WP_CLI_Command {
 	 * @throws \WP_CLI\ExitException Throws exit exception.
 	 */
 	protected function error( $message, $silent = false, $halt = true, $code = 400 ) {
-		$pre_ = $silent ? '' : 'Error: ';
+		$pre_ = $silent ? '' : __( 'Error: ', 'wp-module-staging' );
 		$this->colorize_log( $pre_ . $message, '1', 'W', '🛑️' );
 		if ( $halt ) {
 			\WP_CLI::halt( $code );
@@ -277,7 +277,7 @@ class StagingCLI extends \WP_CLI_Command {
 		} elseif ( is_array( json_decode( $data, true ) ) ) {
 			\WP_CLI::log( $data );
 		} else {
-			$this->error( 'Provided $data wasn\'t valid array or JSON string.' );
+			$this->error( __( 'Provided $data wasn\'t valid array or JSON string.', 'wp-module-staging' ) );
 		}
 	}
 

@@ -3923,6 +3923,9 @@
 .nfd-font-medium {
 		font-weight: 500 !important;
 }
+.nfd-font-normal {
+		font-weight: 400 !important;
+}
 .nfd-font-semibold {
 		font-weight: 600 !important;
 }

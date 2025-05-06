@@ -26,7 +26,7 @@
                 "Clon\u00e9 en pr\u00e9-production"
             ],
             "Cloning production to staging, this should take about a minute.": [
-                "Clonage de la production \u00e0 la mise en sc\u00e8ne, cela devrait prendre environ une minute."
+                "Clonage de la production vers la pr\u00e9-production, cela devrait prendre environ une minute."
             ],
             "Clone to staging": [
                 "Cloner vers la pr\u00e9-production"
@@ -56,10 +56,10 @@
                 "Ceci supprimera d\u00e9finitivement le site de pr\u00e9-production. \u00cates-vous s\u00fbr de vouloir continuer ? Vous pouvez recr\u00e9er un autre site de pr\u00e9-production \u00e0 tout moment, mais toutes les modifications sp\u00e9cifiques que vous avez apport\u00e9es \u00e0 ce site de pr\u00e9-production seront perdues."
             ],
             "Deleted Staging": [
-                "Staging supprim\u00e9"
+                "Environnement de pr\u00e9-production supprim\u00e9"
             ],
             "Deleting the staging site, this should take about a minute.": [
-                "Suppression du site de diffusion, cela devrait prendre environ une minute."
+                "Suppression du site de pr\u00e9-production, cela devrait prendre environ une minute."
             ],
             "Delete Staging Site": [
                 "Supprimer le site de pr\u00e9-production"
@@ -77,7 +77,7 @@
                 "D\u00e9ployer la base de donn\u00e9es uniquement"
             ],
             "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?": [
-                "Ceci va d\u00e9ployer des staging en production et \u00e9craser le site de production actuel. \u00cates-vous s\u00fbr de vouloir continuer ?"
+                "Ceci va d\u00e9ployer la pr\u00e9-production vers la production et \u00e9craser le site de production actuel. \u00cates-vous s\u00fbr de vouloir continuer ?"
             ],
             "Deploy files only": [
                 "D\u00e9ployer uniquement les fichiers"
@@ -86,7 +86,7 @@
                 "D\u00e9ploy\u00e9"
             ],
             "Deploying from staging to production, this should take about a minute.": [
-                "D\u00e9ploiement de la phase de production vers la production, cela devrait prendre environ une minute."
+                "D\u00e9ploiement de la pr\u00e9-production vers la production, cela devrait prendre environ une minute."
             ],
             "Deploy Site": [
                 "D\u00e9ployer le site"
@@ -140,7 +140,7 @@
                 "Chargement de l'environnement de pr\u00e9-production maintenant."
             ],
             "Switching to the staging environment, this should take about a minute.": [
-                "Passage \u00e0 l'environnement de mise en sc\u00e8ne, cela devrait prendre environ une minute."
+                "Passage \u00e0 l'environnement de pr\u00e9-production, cela devrait prendre environ une minute."
             ],
             "Staging": [
                 "Pr\u00e9-production"
