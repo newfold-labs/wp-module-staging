@@ -131,6 +131,7 @@ class StagingApi extends \WP_REST_Controller {
 	 * @return \WP_REST_Response
 	 */
 	public function createStaging() {
+
 		$payload = $this->staging->createStaging();
 		if ( ! is_wp_error( $payload ) ) {
 			$this->staging->getConfig( false );

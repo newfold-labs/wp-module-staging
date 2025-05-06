@@ -29,10 +29,27 @@ class StagingMenu {
 			'route'    => $brand . '#/staging',
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
 			'priority' => 50,
+			'callback' => array( __CLASS__, 'render_staging_app' ),
 		);
 		array_push( $subnav, $staging );
 		return $subnav;
 	}
+
+	/**
+	 * Outputs the HTML container for the Staging module's React application.
+	 *
+	 * @return void
+	 */
+	public static function render_staging_app() {
+		echo PHP_EOL;
+		echo '<!-- NFD:STAGING -->';
+		echo PHP_EOL;
+		echo '<div id="' . esc_attr( Staging::PAGE_SLUG ) . '" class="' . esc_attr( Staging::PAGE_SLUG ) . '-container nfd-root"></div>';
+		echo PHP_EOL;
+		echo '<!-- /NFD:STAGING -->';
+		echo PHP_EOL;
+	}
+
 
 	/**
 	 * Customize the admin bar.
