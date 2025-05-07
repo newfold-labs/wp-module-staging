@@ -41,6 +41,7 @@ msgstr "Ongeldig testomgeving CLI commando."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:423
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Ongeldig teken (%s) in command."
 
