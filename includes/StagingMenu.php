@@ -26,9 +26,9 @@ class StagingMenu {
 	public static function add_nfd_subnav( $subnav ) {
 		$brand   = container()->get( 'plugin' )['id'];
 		$staging = array(
-			'route'    => $brand . '#/staging',
+			'route'    => Staging::PAGE_SLUG,
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
-			'priority' => 50,
+			'priority' => 30,
 			'callback' => array( __CLASS__, 'render_staging_app' ),
 		);
 		array_push( $subnav, $staging );
