@@ -24,7 +24,6 @@ class StagingMenu {
 	 * @return array The filtered nav array
 	 */
 	public static function add_nfd_subnav( $subnav ) {
-		$brand   = container()->get( 'plugin' )['id'];
 		$staging = array(
 			'route'    => Staging::PAGE_SLUG,
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
