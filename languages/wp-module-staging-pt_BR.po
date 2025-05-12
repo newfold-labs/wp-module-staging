@@ -36,6 +36,7 @@ msgstr "Comando CLI de testes inválido."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:423
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Caractere inválido (%s) no comando."
 

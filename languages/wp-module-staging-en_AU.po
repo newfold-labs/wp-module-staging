@@ -36,6 +36,7 @@ msgstr "Invalid staging CLI command."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:423
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Invalid character (%s) in command."
 

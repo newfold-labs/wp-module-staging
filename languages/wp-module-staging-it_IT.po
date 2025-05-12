@@ -41,6 +41,7 @@ msgstr "Comando CLI di preproduzione non valido."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:423
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Carattere non valido (%s) nel comando."
 
