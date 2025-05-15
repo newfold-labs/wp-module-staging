@@ -19,11 +19,15 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 		).as('mock-staging-data');
 
 		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
-		cy.visit(
-			'/wp-admin/admin.php?page=' +
+		if ( Cypress.env( 'pluginId' ) === 'bluehost' ) {
+			cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
+		} else {
+			cy.visit(
+				'/wp-admin/admin.php?page=' +
 				Cypress.env( 'pluginId' ) +
 				'#/staging'
-		);
+			);
+		}
 		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
 			.then( ( interception ) => {
 				expect( interception.response.statusCode ).to.eq( 200 );
@@ -32,8 +36,9 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 
 	it( 'Is Accessible', () => {
 		cy.injectAxe();
-		cy.wait( 500 );
-		cy.checkA11y( appClass + '-app-body' );
+		cy.get(appClass, { timeout: 2000 }).should('be.visible');
+		cy.injectAxe();
+		cy.checkA11y(appClass);
 	} );
 
 	it( 'Displays in Production Environment Properly', () => {
@@ -66,7 +71,7 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 			.contains( 'div', 'https://localhost:8882/staging/1234' )
 			.should( 'be.visible' );
 		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', 'May 30, 2023' )
+			.contains( 'dd', 'May 30, 2023' )
 			.should( 'be.visible' );
 
 		cy.get( '#staging-clone-button' ).should( 'not.be.disabled' );
@@ -85,9 +90,11 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 			.click();
 		cy.wait( 100 );
 
-		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Error' )
-			.should( 'be.visible' );
+		cy.get( '.nfd-notification--error' )
+			.should( 'exist' )
+			.find( 'p' )
+			.should( 'not.be.empty' )
+			.and( 'be.visible' );
 	} );
 
 	it( 'Clone Works', () => {
@@ -226,7 +233,7 @@ describe( 'Staging Page - Production Environment', { testIsolation: true }, () =
 
 		cy.get( '#newfold-staging-toggle' ).click();
 		cy.get( '.nfd-modal .nfd-button--primary' )
-			.contains( 'Switch' )
+			.contains( 'Proceed' )
 			.should( 'be.visible' )
 			.click();
 		cy.wait( 100 );

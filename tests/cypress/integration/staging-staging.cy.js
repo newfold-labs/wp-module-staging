@@ -16,9 +16,7 @@ describe( 'Staging Page - Staging Environmant', { testIsolation: true }, () => {
 
 		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
 		cy.visit(
-			'/wp-admin/admin.php?page=' +
-				Cypress.env( 'pluginId' ) +
-				'#/staging'
+			'/wp-admin/admin.php?page=nfd-staging'
 		);
 	} );
 

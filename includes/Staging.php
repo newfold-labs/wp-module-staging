@@ -16,6 +16,13 @@ class Staging {
 	 */
 	protected $container;
 
+	/**
+	 * Slug used for the Staging module's admin page.
+	 *
+	 * @var string
+	 */
+	const PAGE_SLUG = 'nfd-staging';
+
 
 	/**
 	 * Constructor.
@@ -62,7 +69,56 @@ class Staging {
 			}
 		);
 
-		\add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
+
+		if ( 'bluehost' === container()->plugin()->brand && isset( $_GET['page'] ) && self::PAGE_SLUG === $_GET['page'] ) {
+			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
+		}
+
+		new Constants( $container );
+	}
+
+
+	/**
+	 * Initializes the Staging module by registering and enqueuing its assets.
+	 *
+	 * @return void
+	 */
+	public static function initialize_staging_app() {
+		self::register_staging_assets();
+	}
+
+	/**
+	 * Registers and enqueues the JavaScript and CSS assets for the Staging module.
+	 *
+	 * @return void
+	 */
+	public static function register_staging_assets() {
+		$build_dir  = NFD_STAGING_BUILD_DIR;
+		$build_url  = NFD_STAGING_BUILD_URL;
+		$asset_file = $build_dir . '/staging/staging.min.asset.php';
+
+		if ( is_readable( $asset_file ) ) {
+			$asset = include_once $asset_file;
+
+			wp_register_script(
+				self::PAGE_SLUG,
+				$build_url . '/staging/staging.min.js',
+				$asset['dependencies'],
+				$asset['version'],
+				true
+			);
+
+			wp_register_style(
+				self::PAGE_SLUG,
+				$build_url . '/staging/staging.min.css',
+				array(),
+				$asset['version']
+			);
+
+			wp_enqueue_script( self::PAGE_SLUG );
+			wp_enqueue_style( self::PAGE_SLUG );
+		}
 	}
 
 	/**
@@ -115,14 +171,14 @@ class Staging {
 	 *  - creation_date
 	 *
 	 * @param string $key     Configuration name.
-	 * @param string $default Return value if key doesn't exist.
+	 * @param string $std Return default value if key doesn't exist.
 	 *
 	 * @return string
 	 */
-	public function getConfigValue( $key, $default = '' ) {
+	public function getConfigValue( $key, $std = '' ) {
 		$config = $this->getConfig();
 
-		return isset( $config[ $key ] ) ? $config[ $key ] : $default;
+		return isset( $config[ $key ] ) ? $config[ $key ] : $std;
 	}
 
 	/**
@@ -182,24 +238,18 @@ class Staging {
 	/**
 	 * Get production screenshot URL.
 	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
-	 *
 	 * @return string
 	 */
-	public function getProductionScreenshotUrl( $width = 122, $height = 92 ) {
+	public function getProductionScreenshotUrl() {
 		return '';
 	}
 
 	/**
 	 * Get staging screenshot URL.
 	 *
-	 * @param int $width  Screenshot width.
-	 * @param int $height Screenshot height.
-	 *
 	 * @return string
 	 */
-	public function getStagingScreenshotUrl( $width = 122, $height = 92 ) {
+	public function getStagingScreenshotUrl() {
 		return '';
 	}
 
@@ -239,7 +289,6 @@ class Staging {
 	 */
 	public function stagingExists() {
 		$stagingDir = $this->getStagingDir();
-
 		return ! empty( $stagingDir ) && file_exists( $stagingDir );
 	}
 
@@ -432,10 +481,26 @@ class Staging {
 			return new \WP_Error( 'error_response', __( 'Unable to execute script (disabled_function).', 'wp-module-staging' ) );
 		}
 
-		// Verify staging script file permissions
-		if ( ! is_executable( $script ) ) {
-			if ( is_writable( $script ) ) {
-				chmod( $script, 0755 );
+		// Verify staging script file permissions using WP_Filesystem API
+		global $wp_filesystem;
+
+		if ( ! function_exists( 'request_filesystem_credentials' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		$creds = request_filesystem_credentials( '', '', false, false, null );
+
+		if ( false === $creds ) {
+			return new \WP_Error( 'error_response', __( 'Filesystem credentials required.', 'wp-module-staging' ) );
+		}
+
+		if ( ! WP_Filesystem( $creds ) ) {
+			return new \WP_Error( 'error_response', __( 'Unable to initialize WP Filesystem.', 'wp-module-staging' ) );
+		}
+
+		if ( $wp_filesystem->exists( $script ) ) {
+			if ( $wp_filesystem->is_writable( $script ) ) {
+				$wp_filesystem->chmod( $script, 0755 );
 			} else {
 				return new \WP_Error( 'error_response', __( 'Unable to execute script (permission error).', 'wp-module-staging' ) );
 			}
@@ -449,6 +514,7 @@ class Staging {
 
 		// Check if we can properly decode the JSON
 		$response = json_decode( $json, true );
+
 		if ( ! $response ) {
 			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'wp-module-staging' ) );
 		}
