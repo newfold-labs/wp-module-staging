@@ -14,40 +14,41 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: includes/Staging.php:255
+#: includes/Staging.php:304
 msgid "Cloning can only be done from the production environment."
 msgstr "Cloning can only be done from the production environment."
 
-#: includes/Staging.php:280
+#: includes/Staging.php:329
 msgid "Staging environment already exists!"
 msgstr "Staging environment already exists!"
 
-#: includes/Staging.php:314
+#: includes/Staging.php:363
 msgid "You must switch to the production environment before destroying staging."
 msgstr "You must switch to the production environment before destroying staging."
 
-#: includes/Staging.php:336
+#: includes/Staging.php:385
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Switch to an environment you are already in, you cannot."
 
-#: includes/Staging.php:373
+#: includes/Staging.php:422
 msgid "Invalid staging CLI command."
 msgstr "Invalid staging CLI command."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:423
+#: includes/Staging.php:472
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Invalid character (%s) in command."
 
-#: includes/Staging.php:432
+#: includes/Staging.php:481
 msgid "Unable to execute script (disabled_function)."
 msgstr "Unable to execute script (disabled_function)."
 
-#: includes/Staging.php:440
+#: includes/Staging.php:505
 msgid "Unable to execute script (permission error)."
 msgstr "Unable to execute script (permission error)."
 
-#: includes/Staging.php:453
+#: includes/Staging.php:519
 msgid "Unable to parse JSON"
 msgstr "Unable to parse JSON"
 
@@ -55,203 +56,199 @@ msgstr "Unable to parse JSON"
 msgid "Invalid JSON response"
 msgstr "Invalid JSON response"
 
-#: includes/StagingMenu.php:49
+#: includes/StagingMenu.php:65
 msgid "Staging Environment"
 msgstr "Staging Environment"
 
-#: includes/StagingMenu.php:51
+#: includes/StagingMenu.php:67
 msgid "Staging Actions"
 msgstr "Staging Actions"
 
-#: components/staging/defaultText.js:4
+#: src/components/App/getAppText.js:4
 msgid "Cancel"
 msgstr "Cancel"
 
-#: components/staging/defaultText.js:5
+#: src/sections/ProductionSite/getProductionSiteText.js:7
 msgid "Clone"
 msgstr "Clone"
 
-#: components/staging/defaultText.js:6
+#: src/sections/ProductionSite/getProductionSiteText.js:8
 msgid "Confirm Clone Action"
 msgstr "Confirm Clone Action"
 
-#: components/staging/defaultText.js:7
+#: src/sections/ProductionSite/getProductionSiteText.js:9
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 msgstr "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 
-#: components/staging/defaultText.js:8
+#: src/components/App/getAppText.js:5
 msgid "Cloned to Staging"
 msgstr "Cloned to Staging"
 
-#: components/staging/defaultText.js:9
+#: src/components/App/getAppText.js:9
 msgid "Cloning production to staging, this should take about a minute."
 msgstr "Cloning production to staging, this should take about a minute."
 
-#: components/staging/defaultText.js:10
+#: src/sections/ProductionSite/getProductionSiteText.js:10
 msgid "Clone to staging"
 msgstr "Clone to staging"
 
-#: components/staging/defaultText.js:11
+#: src/components/App/getAppText.js:21
 msgid "Created"
 msgstr "Created"
 
-#: components/staging/defaultText.js:12
+#: src/components/App/getAppText.js:13
 msgid "Staging Created"
 msgstr "Staging Created"
 
-#: components/staging/defaultText.js:13
+#: src/components/App/getAppText.js:17
 msgid "Creating a staging site, this should take about a minute."
 msgstr "Creating a staging site, this should take about a minute."
 
-#: components/staging/defaultText.js:14
+#: src/sections/StagingSite/getStagingSiteText.js:9
 msgid "Create staging site"
 msgstr "Create staging site"
 
-#: components/staging/defaultText.js:15
+#: src/components/App/getAppText.js:22
+#: src/sections/ProductionSite/getProductionSiteText.js:5
 msgid "Currently editing"
 msgstr "Currently editing"
 
-#: components/staging/defaultText.js:16
+#: src/components/App/getAppText.js:23
 msgid "Delete"
 msgstr "Delete"
 
-#: components/staging/defaultText.js:17
+#: src/components/App/getAppText.js:24
 msgid "Confirm Delete"
 msgstr "Confirm Delete"
 
-#: components/staging/defaultText.js:18
+#: src/sections/StagingSite/getStagingSiteText.js:14
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 
-#: components/staging/defaultText.js:19
+#: src/components/App/getAppText.js:25
+#: src/sections/StagingSite/getStagingSiteText.js:18
 msgid "Deleted Staging"
 msgstr "Deleted Staging"
 
-#: components/staging/defaultText.js:20
+#: src/components/App/getAppText.js:29
+#: src/sections/StagingSite/getStagingSiteText.js:22
 msgid "Deleting the staging site, this should take about a minute."
 msgstr "Deleting the staging site, this should take about a minute."
 
-#: components/staging/defaultText.js:21
+#: src/sections/StagingSite/getStagingSiteText.js:13
 msgid "Delete Staging Site"
 msgstr "Delete Staging Site"
 
-#: components/staging/defaultText.js:22
+#: src/components/App/getAppText.js:33
 msgid "Deploy"
 msgstr "Deploy"
 
-#: components/staging/defaultText.js:23
+#: src/components/App/getAppText.js:34
 msgid "Deploy all changes"
 msgstr "Deploy all changes"
 
-#: components/staging/defaultText.js:24
+#: src/components/App/getAppText.js:35
 msgid "Confirm Deployment"
 msgstr "Confirm Deployment"
 
-#: components/staging/defaultText.js:25
+#: src/components/App/getAppText.js:36
 msgid "Deploy database only"
 msgstr "Deploy database only"
 
-#: components/staging/defaultText.js:26
+#: src/components/App/getAppText.js:37
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 msgstr "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 
-#: components/staging/defaultText.js:27
+#: src/components/App/getAppText.js:41
 msgid "Deploy files only"
 msgstr "Deploy files only"
 
-#: components/staging/defaultText.js:28
+#: src/components/App/getAppText.js:42
 msgid "Deployed"
 msgstr "Deployed"
 
-#: components/staging/defaultText.js:29
+#: src/components/App/getAppText.js:43
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Deploying from staging to production, this should take about a minute."
 
-#: components/staging/defaultText.js:30
+#: src/components/App/getAppText.js:47
 msgid "Deploy Site"
 msgstr "Deploy Site"
 
-#: components/staging/defaultText.js:31
+#: src/components/App/getAppText.js:48
 msgid "Error"
 msgstr "Error"
 
-#: components/staging/defaultText.js:32
+#: src/sections/StagingSite/getStagingSiteText.js:5
 msgid "You don't have a staging site yet."
 msgstr "You don't have a staging site yet."
 
-#: components/staging/defaultText.js:33
+#: src/components/App/getAppText.js:49
+#: src/sections/ProductionSite/getProductionSiteText.js:6
 msgid "Not currently editing"
 msgstr "Not currently editing"
 
-#: components/staging/defaultText.js:34
+#: src/components/App/getAppText.js:58
 msgid "Proceed"
 msgstr "Proceed"
 
-#: components/staging/defaultText.js:35
+#: src/sections/ProductionSite/getProductionSiteText.js:4
 msgid "Production Site"
 msgstr "Production Site"
 
-#: components/staging/defaultText.js:36
+#: src/sections/StagingSite/getStagingSiteText.js:4
 msgid "Staging Site"
 msgstr "Staging Site"
 
-#: components/staging/defaultText.js:37
+#: src/components/App/getAppText.js:53
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 msgstr "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 
-#: components/staging/defaultText.js:38
+#: src/components/App/getAppText.js:59
 msgid "Switch"
 msgstr "Switch"
 
-#: components/staging/defaultText.js:39
+#: src/components/App/getAppText.js:89
 msgid "Switching"
 msgstr "Switching"
 
-#: components/staging/defaultText.js:40
+#: src/components/App/getAppText.js:60
 msgid "Switch to Production"
 msgstr "Switch to Production"
 
-#: components/staging/defaultText.js:41
+#: src/components/App/getAppText.js:64
 msgid "This will navigate you to the production environment"
 msgstr "This will navigate you to the production environment"
 
-#: components/staging/defaultText.js:42
+#: src/components/App/getAppText.js:68
 msgid "Loading the production environment now."
 msgstr "Loading the production environment now."
 
-#: components/staging/defaultText.js:43
+#: src/components/App/getAppText.js:72
 msgid "Switching to the production environment, this should take about a minute."
 msgstr "Switching to the production environment, this should take about a minute."
 
-#: components/staging/defaultText.js:44
+#: src/components/App/getAppText.js:76
 msgid "Switch to Staging"
 msgstr "Switch to Staging"
 
-#: components/staging/defaultText.js:45
+#: src/components/App/getAppText.js:77
 msgid "This will navigate you to the staging environment"
 msgstr "This will navigate you to the staging environment"
 
-#: components/staging/defaultText.js:46
+#: src/components/App/getAppText.js:81
 msgid "Loading the staging environment now."
 msgstr "Loading the staging environment now."
 
-#: components/staging/defaultText.js:47
+#: src/components/App/getAppText.js:85
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Switching to the staging environment, this should take about a minute."
 
-#: components/staging/defaultText.js:48
-msgid "Staging"
-msgstr "Staging"
-
-#: components/staging/defaultText.js:49
+#: src/components/App/getAppText.js:90
 msgid "An unknown error has occurred."
 msgstr "An unknown error has occurred."
 
-#: components/staging/defaultText.js:50
-msgid "Working..."
-msgstr "Working..."
-
-#: includes/StagingMenu.php:30
+#: includes/StagingMenu.php:29
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr "Staging"
@@ -279,3 +276,15 @@ msgstr "Error: "
 #: includes/StagingCLI.php:280
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "Provided $data wasn't a valid array or JSON string."
+
+#: includes/Staging.php:494
+msgid "Filesystem credentials required."
+msgstr ""
+
+#: includes/Staging.php:498
+msgid "Unable to initialize WP Filesystem."
+msgstr ""
+
+#: src/components/App/getAppText.js:94
+msgid "Working…"
+msgstr ""

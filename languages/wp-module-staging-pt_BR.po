@@ -14,40 +14,41 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: includes/Staging.php:255
+#: includes/Staging.php:304
 msgid "Cloning can only be done from the production environment."
 msgstr "A clonagem só pode ser feita a partir do ambiente de produção."
 
-#: includes/Staging.php:280
+#: includes/Staging.php:329
 msgid "Staging environment already exists!"
 msgstr "O ambiente de testes já existe!"
 
-#: includes/Staging.php:314
+#: includes/Staging.php:363
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Você deve mudar para o ambiente de produção antes de excluir o ambiente de testes."
 
-#: includes/Staging.php:336
+#: includes/Staging.php:385
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Você não pode mudar para um ambiente no qual já está."
 
-#: includes/Staging.php:373
+#: includes/Staging.php:422
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de testes inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:423
+#: includes/Staging.php:472
+#, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Caractere inválido (%s) no comando."
 
-#: includes/Staging.php:432
+#: includes/Staging.php:481
 msgid "Unable to execute script (disabled_function)."
 msgstr "Não foi possível executar o script (função desabilitada)."
 
-#: includes/Staging.php:440
+#: includes/Staging.php:505
 msgid "Unable to execute script (permission error)."
 msgstr "Não foi possível executar o script (erro de permissão)."
 
-#: includes/Staging.php:453
+#: includes/Staging.php:519
 msgid "Unable to parse JSON"
 msgstr "Não foi possível interpretar o JSON"
 
@@ -79,203 +80,211 @@ msgstr "Erro: "
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "Os dados fornecidos não eram um array válido ou uma string JSON."
 
-#: includes/StagingMenu.php:30
+#: includes/StagingMenu.php:29
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr "Testes"
 
-#: includes/StagingMenu.php:49
+#: includes/StagingMenu.php:65
 msgid "Staging Environment"
 msgstr "Ambiente de Testes"
 
-#: includes/StagingMenu.php:51
+#: includes/StagingMenu.php:67
 msgid "Staging Actions"
 msgstr "Ações de Testes"
 
-#: components/staging/defaultText.js:4
+#: src/components/App/getAppText.js:4
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: components/staging/defaultText.js:5
+#: src/sections/ProductionSite/getProductionSiteText.js:7
 msgid "Clone"
 msgstr "Clonar"
 
-#: components/staging/defaultText.js:6
+#: src/sections/ProductionSite/getProductionSiteText.js:8
 msgid "Confirm Clone Action"
 msgstr "Confirmar Ação de Clonagem"
 
-#: components/staging/defaultText.js:7
+#: src/sections/ProductionSite/getProductionSiteText.js:9
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 msgstr "Isso substituirá tudo no ambiente de testes e o atualizará como uma cópia exata do site de produção atual. Tem certeza de que deseja continuar?"
 
-#: components/staging/defaultText.js:8
+#: src/components/App/getAppText.js:5
 msgid "Cloned to Staging"
 msgstr "Clonado para o ambiente de testes"
 
-#: components/staging/defaultText.js:9
+#: src/components/App/getAppText.js:9
 msgid "Cloning production to staging, this should take about a minute."
 msgstr "Clonando o ambiente de produção para o ambiente de testes. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:10
+#: src/sections/ProductionSite/getProductionSiteText.js:10
 msgid "Clone to staging"
 msgstr "Clonar para testes"
 
-#: components/staging/defaultText.js:11
+#: src/components/App/getAppText.js:21
 msgid "Created"
 msgstr "Criado"
 
-#: components/staging/defaultText.js:12
+#: src/components/App/getAppText.js:13
 msgid "Staging Created"
 msgstr "Ambiente de testes criado"
 
-#: components/staging/defaultText.js:13
+#: src/components/App/getAppText.js:17
 msgid "Creating a staging site, this should take about a minute."
 msgstr "Criando um site de testes. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:14
+#: src/sections/StagingSite/getStagingSiteText.js:9
 msgid "Create staging site"
 msgstr "Criar site de testes"
 
-#: components/staging/defaultText.js:15
+#: src/components/App/getAppText.js:22
+#: src/sections/ProductionSite/getProductionSiteText.js:5
 msgid "Currently editing"
 msgstr "Editando no momento"
 
-#: components/staging/defaultText.js:16
+#: src/components/App/getAppText.js:23
 msgid "Delete"
 msgstr "Excluir"
 
-#: components/staging/defaultText.js:17
+#: src/components/App/getAppText.js:24
 msgid "Confirm Delete"
 msgstr "Confirmar Exclusão"
 
-#: components/staging/defaultText.js:18
+#: src/sections/StagingSite/getStagingSiteText.js:14
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "Isso excluirá permanentemente o site de testes. Tem certeza de que deseja continuar? Você pode recriar outro site de testes a qualquer momento, mas quaisquer alterações específicas feitas neste site serão perdidas."
 
-#: components/staging/defaultText.js:19
+#: src/components/App/getAppText.js:25
+#: src/sections/StagingSite/getStagingSiteText.js:18
 msgid "Deleted Staging"
 msgstr "Site de testes excluído"
 
-#: components/staging/defaultText.js:20
+#: src/components/App/getAppText.js:29
+#: src/sections/StagingSite/getStagingSiteText.js:22
 msgid "Deleting the staging site, this should take about a minute."
 msgstr "Excluindo o site de testes. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:21
+#: src/sections/StagingSite/getStagingSiteText.js:13
 msgid "Delete Staging Site"
 msgstr "Excluir Site de Testes"
 
-#: components/staging/defaultText.js:22
+#: src/components/App/getAppText.js:33
 msgid "Deploy"
 msgstr "Implantar"
 
-#: components/staging/defaultText.js:23
+#: src/components/App/getAppText.js:34
 msgid "Deploy all changes"
 msgstr "Implantar todas as alterações"
 
-#: components/staging/defaultText.js:24
+#: src/components/App/getAppText.js:35
 msgid "Confirm Deployment"
 msgstr "Confirmar Implantação"
 
-#: components/staging/defaultText.js:25
+#: src/components/App/getAppText.js:36
 msgid "Deploy database only"
 msgstr "Implantar apenas o banco de dados"
 
-#: components/staging/defaultText.js:26
+#: src/components/App/getAppText.js:37
 msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 msgstr "Isso implantará o ambiente de testes na produção e substituirá o site de produção atual. Tem certeza de que deseja continuar?"
 
-#: components/staging/defaultText.js:27
+#: src/components/App/getAppText.js:41
 msgid "Deploy files only"
 msgstr "Implantar apenas os arquivos"
 
-#: components/staging/defaultText.js:28
+#: src/components/App/getAppText.js:42
 msgid "Deployed"
 msgstr "Implantado"
 
-#: components/staging/defaultText.js:29
+#: src/components/App/getAppText.js:43
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Implantando do ambiente de testes para o de produção. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:30
+#: src/components/App/getAppText.js:47
 msgid "Deploy Site"
 msgstr "Implantar Site"
 
-#: components/staging/defaultText.js:31
+#: src/components/App/getAppText.js:48
 msgid "Error"
 msgstr "Erro"
 
-#: components/staging/defaultText.js:32
+#: src/sections/StagingSite/getStagingSiteText.js:5
 msgid "You don't have a staging site yet."
 msgstr "Você ainda não tem um site de testes."
 
-#: components/staging/defaultText.js:33
+#: src/components/App/getAppText.js:49
+#: src/sections/ProductionSite/getProductionSiteText.js:6
 msgid "Not currently editing"
 msgstr "Não está editando no momento"
 
-#: components/staging/defaultText.js:34
+#: src/components/App/getAppText.js:58
 msgid "Proceed"
 msgstr "Prosseguir"
 
-#: components/staging/defaultText.js:35
+#: src/sections/ProductionSite/getProductionSiteText.js:4
 msgid "Production Site"
 msgstr "Site de Produção"
 
-#: components/staging/defaultText.js:36
+#: src/sections/StagingSite/getStagingSiteText.js:4
 msgid "Staging Site"
 msgstr "Site de Testes"
 
-#: components/staging/defaultText.js:37
+#: src/components/App/getAppText.js:53
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 msgstr "Um site de testes é uma cópia do seu site ao vivo, oferecendo um ambiente seguro para experimentar, testar atualizações e implantar quando estiver pronto."
 
-#: components/staging/defaultText.js:38
+#: src/components/App/getAppText.js:59
 msgid "Switch"
 msgstr "Mudar"
 
-#: components/staging/defaultText.js:39
+#: src/components/App/getAppText.js:89
 msgid "Switching"
 msgstr "Mudando"
 
-#: components/staging/defaultText.js:40
+#: src/components/App/getAppText.js:60
 msgid "Switch to Production"
 msgstr "Mudar para Produção"
 
-#: components/staging/defaultText.js:41
+#: src/components/App/getAppText.js:64
 msgid "This will navigate you to the production environment"
 msgstr "Isso o levará para o ambiente de produção"
 
-#: components/staging/defaultText.js:42
+#: src/components/App/getAppText.js:68
 msgid "Loading the production environment now."
 msgstr "Carregando o ambiente de produção agora."
 
-#: components/staging/defaultText.js:43
+#: src/components/App/getAppText.js:72
 msgid "Switching to the production environment, this should take about a minute."
 msgstr "Mudando para o ambiente de produção. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:44
+#: src/components/App/getAppText.js:76
 msgid "Switch to Staging"
 msgstr "Mudar para Testes"
 
-#: components/staging/defaultText.js:45
+#: src/components/App/getAppText.js:77
 msgid "This will navigate you to the staging environment"
 msgstr "Isso o levará para o ambiente de testes"
 
-#: components/staging/defaultText.js:46
+#: src/components/App/getAppText.js:81
 msgid "Loading the staging environment now."
 msgstr "Carregando o ambiente de testes agora."
 
-#: components/staging/defaultText.js:47
+#: src/components/App/getAppText.js:85
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Mudando para o ambiente de testes. Isso deve levar cerca de um minuto."
 
-#: components/staging/defaultText.js:48
-msgid "Staging"
-msgstr "Testes"
-
-#: components/staging/defaultText.js:49
+#: src/components/App/getAppText.js:90
 msgid "An unknown error has occurred."
 msgstr "Ocorreu um erro desconhecido."
 
-#: components/staging/defaultText.js:50
-msgid "Working..."
-msgstr "Trabalhando..."
+#: includes/Staging.php:494
+msgid "Filesystem credentials required."
+msgstr ""
+
+#: includes/Staging.php:498
+msgid "Unable to initialize WP Filesystem."
+msgstr ""
+
+#: src/components/App/getAppText.js:94
+msgid "Working…"
+msgstr ""

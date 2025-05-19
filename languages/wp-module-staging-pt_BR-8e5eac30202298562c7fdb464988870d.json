@@ -1,7 +1,7 @@
 {
     "translation-revision-date": "2025-05-07 14:41+0100",
-    "generator": "WP-CLI\/2.11.0",
-    "source": "components\/staging\/defaultText.js",
+    "generator": "WP-CLI\/2.12.0",
+    "source": "src\/components\/App\/getAppText.js",
     "domain": "messages",
     "locale_data": {
         "messages": {
@@ -13,23 +13,11 @@
             "Cancel": [
                 "Cancelar"
             ],
-            "Clone": [
-                "Clonar"
-            ],
-            "Confirm Clone Action": [
-                "Confirmar A\u00e7\u00e3o de Clonagem"
-            ],
-            "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
-                "Isso substituir\u00e1 tudo no ambiente de testes e o atualizar\u00e1 como uma c\u00f3pia exata do site de produ\u00e7\u00e3o atual. Tem certeza de que deseja continuar?"
-            ],
             "Cloned to Staging": [
                 "Clonado para o ambiente de testes"
             ],
             "Cloning production to staging, this should take about a minute.": [
                 "Clonando o ambiente de produ\u00e7\u00e3o para o ambiente de testes. Isso deve levar cerca de um minuto."
-            ],
-            "Clone to staging": [
-                "Clonar para testes"
             ],
             "Created": [
                 "Criado"
@@ -40,9 +28,6 @@
             "Creating a staging site, this should take about a minute.": [
                 "Criando um site de testes. Isso deve levar cerca de um minuto."
             ],
-            "Create staging site": [
-                "Criar site de testes"
-            ],
             "Currently editing": [
                 "Editando no momento"
             ],
@@ -52,17 +37,11 @@
             "Confirm Delete": [
                 "Confirmar Exclus\u00e3o"
             ],
-            "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
-                "Isso excluir\u00e1 permanentemente o site de testes. Tem certeza de que deseja continuar? Voc\u00ea pode recriar outro site de testes a qualquer momento, mas quaisquer altera\u00e7\u00f5es espec\u00edficas feitas neste site ser\u00e3o perdidas."
-            ],
             "Deleted Staging": [
                 "Site de testes exclu\u00eddo"
             ],
             "Deleting the staging site, this should take about a minute.": [
                 "Excluindo o site de testes. Isso deve levar cerca de um minuto."
-            ],
-            "Delete Staging Site": [
-                "Excluir Site de Testes"
             ],
             "Deploy": [
                 "Implantar"
@@ -94,20 +73,11 @@
             "Error": [
                 "Erro"
             ],
-            "You don't have a staging site yet.": [
-                "Voc\u00ea ainda n\u00e3o tem um site de testes."
-            ],
             "Not currently editing": [
                 "N\u00e3o est\u00e1 editando no momento"
             ],
             "Proceed": [
                 "Prosseguir"
-            ],
-            "Production Site": [
-                "Site de Produ\u00e7\u00e3o"
-            ],
-            "Staging Site": [
-                "Site de Testes"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
                 "Um site de testes \u00e9 uma c\u00f3pia do seu site ao vivo, oferecendo um ambiente seguro para experimentar, testar atualiza\u00e7\u00f5es e implantar quando estiver pronto."
@@ -142,14 +112,11 @@
             "Switching to the staging environment, this should take about a minute.": [
                 "Mudando para o ambiente de testes. Isso deve levar cerca de um minuto."
             ],
-            "Staging": [
-                "Testes"
-            ],
             "An unknown error has occurred.": [
                 "Ocorreu um erro desconhecido."
             ],
-            "Working...": [
-                "Trabalhando..."
+            "Working\u2026": [
+                ""
             ]
         }
     }
