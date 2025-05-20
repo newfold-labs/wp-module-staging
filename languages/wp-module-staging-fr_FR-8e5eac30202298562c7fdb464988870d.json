@@ -1,7 +1,7 @@
 {
     "translation-revision-date": "2025-02-19 13:44",
-    "generator": "WP-CLI\/2.11.0",
-    "source": "components\/staging\/defaultText.js",
+    "generator": "WP-CLI\/2.12.0",
+    "source": "src\/components\/App\/getAppText.js",
     "domain": "messages",
     "locale_data": {
         "messages": {
@@ -13,23 +13,11 @@
             "Cancel": [
                 "Abandonner"
             ],
-            "Clone": [
-                "Cloner"
-            ],
-            "Confirm Clone Action": [
-                "Confirmer l'action de clonage"
-            ],
-            "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
-                "Ceci va \u00e9craser tout ce qui est en cours de pr\u00e9-production et le mettre \u00e0 jour vers un clone exact du site de production actuel. \u00cates-vous s\u00fbr de vouloir continuer ?"
-            ],
             "Cloned to Staging": [
                 "Clon\u00e9 en pr\u00e9-production"
             ],
             "Cloning production to staging, this should take about a minute.": [
                 "Clonage de la production vers la pr\u00e9-production, cela devrait prendre environ une minute."
-            ],
-            "Clone to staging": [
-                "Cloner vers la pr\u00e9-production"
             ],
             "Created": [
                 "Cr\u00e9\u00e9"
@@ -40,9 +28,6 @@
             "Creating a staging site, this should take about a minute.": [
                 "Cr\u00e9er un site de pr\u00e9-production, cela devrait prendre environ une minute."
             ],
-            "Create staging site": [
-                "Cr\u00e9er un site de pr\u00e9-production"
-            ],
             "Currently editing": [
                 "En cours d'\u00e9dition"
             ],
@@ -52,17 +37,11 @@
             "Confirm Delete": [
                 "Confirmer la suppression"
             ],
-            "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
-                "Ceci supprimera d\u00e9finitivement le site de pr\u00e9-production. \u00cates-vous s\u00fbr de vouloir continuer ? Vous pouvez recr\u00e9er un autre site de pr\u00e9-production \u00e0 tout moment, mais toutes les modifications sp\u00e9cifiques que vous avez apport\u00e9es \u00e0 ce site de pr\u00e9-production seront perdues."
-            ],
             "Deleted Staging": [
                 "Environnement de pr\u00e9-production supprim\u00e9"
             ],
             "Deleting the staging site, this should take about a minute.": [
                 "Suppression du site de pr\u00e9-production, cela devrait prendre environ une minute."
-            ],
-            "Delete Staging Site": [
-                "Supprimer le site de pr\u00e9-production"
             ],
             "Deploy": [
                 "D\u00e9ployer"
@@ -94,20 +73,11 @@
             "Error": [
                 "Erreur"
             ],
-            "You don't have a staging site yet.": [
-                "Vous n'avez pas encore de site de pr\u00e9-production."
-            ],
             "Not currently editing": [
                 "Pas d'\u00e9dition pour le moment"
             ],
             "Proceed": [
                 "Proc\u00e9der"
-            ],
-            "Production Site": [
-                "Site de production"
-            ],
-            "Staging Site": [
-                "Site de pr\u00e9-production"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
                 "Un site de pr\u00e9-production est un duplicata de votre site en direct, offrant un environnement s\u00e9curis\u00e9 pour exp\u00e9rimenter, tester les mises \u00e0 jour et d\u00e9ployer quand il est pr\u00eat."
@@ -142,14 +112,11 @@
             "Switching to the staging environment, this should take about a minute.": [
                 "Passage \u00e0 l'environnement de pr\u00e9-production, cela devrait prendre environ une minute."
             ],
-            "Staging": [
-                "Pr\u00e9-production"
-            ],
             "An unknown error has occurred.": [
                 "Une erreur inconnue s'est produite."
             ],
-            "Working...": [
-                "Traitement..."
+            "Working\u2026": [
+                ""
             ]
         }
     }
