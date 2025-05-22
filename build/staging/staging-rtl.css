@@ -112,7 +112,7 @@
     pointer-events: all;
     position: absolute;
     top: 0;
-    left: 0;
+    right: 0;
     -webkit-user-select: none;
        -moz-user-select: none;
             user-select: none;
@@ -132,7 +132,7 @@
     pointer-events: all;
     position: absolute;
     top: 0;
-    left: 0;
+    right: 0;
     -webkit-user-select: none;
        -moz-user-select: none;
             user-select: none;
@@ -572,9 +572,9 @@
 		border-width: 1px;
 		border-radius: 0px;
 		padding-top: 0.5rem;
-		padding-right: 0.75rem;
-		padding-bottom: 0.5rem;
 		padding-left: 0.75rem;
+		padding-bottom: 0.5rem;
+		padding-right: 0.75rem;
 		font-size: 1rem;
 		line-height: 1.5rem;
 		--tw-shadow: 0 0 #0000;
@@ -776,9 +776,9 @@
 		border-width: 1px;
 		border-radius: 0px;
 		padding-top: 0.5rem;
-		padding-right: 0.75rem;
-		padding-bottom: 0.5rem;
 		padding-left: 0.75rem;
+		padding-bottom: 0.5rem;
+		padding-right: 0.75rem;
 		font-size: 1rem;
 		line-height: 1.5rem;
 		--tw-shadow: 0 0 #0000;
@@ -812,9 +812,9 @@
 		border-width: 1px;
 		border-radius: 0px;
 		padding-top: 0.5rem;
-		padding-right: 0.75rem;
-		padding-bottom: 0.5rem;
 		padding-left: 0.75rem;
+		padding-bottom: 0.5rem;
+		padding-right: 0.75rem;
 		font-size: 1rem;
 		line-height: 1.5rem;
 		--tw-shadow: 0 0 #0000;
@@ -833,10 +833,10 @@
 }
 .nfd-root select {
 		background-image: url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e");
-		background-position: right 0.5rem center;
+		background-position: left 0.5rem center;
 		background-repeat: no-repeat;
 		background-size: 1.5em 1.5em;
-		padding-right: 2.5rem;
+		padding-left: 2.5rem;
 		-webkit-print-color-adjust: exact;
 		        print-color-adjust: exact;
 }
@@ -845,7 +845,7 @@
 		background-position: initial;
 		background-repeat: unset;
 		background-size: initial;
-		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		-webkit-print-color-adjust: unset;
 		        print-color-adjust: unset;
 }
@@ -858,9 +858,9 @@
 		border-width: 1px;
 		border-radius: 0px;
 		padding-top: 0.5rem;
-		padding-right: 0.75rem;
-		padding-bottom: 0.5rem;
 		padding-left: 0.75rem;
+		padding-bottom: 0.5rem;
+		padding-right: 0.75rem;
 		font-size: 1rem;
 		line-height: 1.5rem;
 		--tw-shadow: 0 0 #0000;
@@ -1207,8 +1207,8 @@
 		border-width: 1px;
 		--tw-border-opacity: 1;
 		border-color: rgb(203 213 225 / var(--tw-border-opacity, 1));
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		--tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 		--tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
 		box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
@@ -1228,7 +1228,7 @@
 		pointer-events: none;
 		position: absolute;
 		top: 0.6875rem;
-		right: 0.625rem;
+		left: 0.625rem;
 		height: 1.25rem;
 		width: 1.25rem;
 		--tw-text-opacity: 1;
@@ -1241,8 +1241,8 @@
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0px;
-		padding-right: 2.5rem;
+		padding-right: 0px;
+		padding-left: 2.5rem;
 		font-size: .8125rem;
 		--tw-text-opacity: 1;
 		color: rgb(30 41 59 / var(--tw-text-opacity, 1));
@@ -1288,8 +1288,8 @@
 		        user-select: none;
 		align-items: center;
 		justify-content: space-between;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
 		--tw-text-opacity: 1;
@@ -1325,8 +1325,8 @@
 		border-radius: 9999px;
 		--tw-bg-opacity: 1;
 		background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1));
-		padding-left: 0.5rem;
 		padding-right: 0.5rem;
+		padding-left: 0.5rem;
 		padding-top: 0.125rem;
 		padding-bottom: 0.125rem;
 		vertical-align: middle;
@@ -1360,8 +1360,8 @@
 		font-size: 0.675rem;
 }
 .nfd-root .nfd-badge--large {
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		font-size: 1rem;
 }
 .nfd-root .nfd-button {
@@ -1373,8 +1373,8 @@
 		border-width: 1px;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		text-align: center;
 		font-size: .8125rem;
 		font-weight: 500;
@@ -1505,16 +1505,16 @@
 .nfd-root .nfd-button--large {
 		padding-top: 0.75rem;
 		padding-bottom: 0.75rem;
-		padding-left: 1.5rem;
 		padding-right: 1.5rem;
+		padding-left: 1.5rem;
 		font-size: 1rem;
 		line-height: 1.25rem;
 }
 .nfd-root .nfd-button--small {
 		padding-top: 0.375rem;
 		padding-bottom: 0.375rem;
-		padding-left: 0.625rem;
 		padding-right: 0.625rem;
+		padding-left: 0.625rem;
 		font-size: .75rem;
 }
 /* States */
@@ -1561,7 +1561,7 @@
 		content: var(--tw-content);
 }
 .nfd-root .nfd-checkbox__label {
-		margin-left: 0.75rem;
+		margin-right: 0.75rem;
 }
 .nfd-root .nfd-code {
 		margin: 0px;
@@ -1582,8 +1582,8 @@
 		max-width: 100%;
 		overflow-x: auto;
 		white-space: nowrap;
-		padding-left: 0.5rem;
 		padding-right: 0.5rem;
+		padding-left: 0.5rem;
 		padding-top: 0.25rem;
 		padding-bottom: 0.25rem;
 }
@@ -1596,8 +1596,8 @@
 		border-color: rgb(203 213 225 / var(--tw-border-opacity, 1));
 		--tw-bg-opacity: 1;
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-		padding-left: 1.5rem;
 		padding-right: 1.5rem;
+		padding-left: 1.5rem;
 		padding-top: 1.25rem;
 		padding-bottom: 1.5rem;
 		transition-property: all;
@@ -1627,8 +1627,8 @@
 		border-color: rgb(203 213 225 / var(--tw-border-opacity, 1));
 		--tw-bg-opacity: 1;
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-		padding-left: 1.5rem;
 		padding-right: 1.5rem;
+		padding-left: 1.5rem;
 		padding-top: 1.25rem;
 		padding-bottom: 1.5rem;
 		text-align: center;
@@ -1674,8 +1674,8 @@
 		text-align: center;
 }
 .nfd-root .nfd-file-input__icon {
-		margin-left: auto;
 		margin-right: auto;
+		margin-left: auto;
 		height: 3rem;
 		width: 3rem;
 		transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
@@ -1806,7 +1806,7 @@
 		color: rgb(30 41 59 / var(--tw-text-opacity, 1));
 }
 .nfd-root .nfd-label__required {
-		margin-left: 0.125rem;
+		margin-right: 0.125rem;
 		--tw-text-opacity: 1;
 		color: rgb(239 68 68 / var(--tw-text-opacity, 1));
 }
@@ -1971,7 +1971,7 @@
 		position: relative;
 }
 .nfd-root .nfd-radio--inline-block .nfd-radio__label {
-		margin-left: 0px;
+		margin-right: 0px;
 		display: flex;
 		height: 3.5rem;
 		width: 3.5rem;
@@ -2007,7 +2007,7 @@
 		visibility: hidden;
 		position: absolute;
 		top: 0.125rem;
-		right: 0.125rem;
+		left: 0.125rem;
 		height: 1.25rem;
 		width: 1.25rem;
 		--tw-text-opacity: 1;
@@ -2027,7 +2027,7 @@
 		--tw-ring-color: rgb(242 113 33 / var(--tw-ring-opacity, 1));
 }
 .nfd-root .nfd-radio__label {
-		margin-left: 0.75rem;
+		margin-right: 0.75rem;
 }
 .nfd-root .nfd-select {
 		position: relative;
@@ -2052,9 +2052,9 @@
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
-		text-align: left;
+		padding-left: 0.75rem;
+		text-align: right;
 		line-height: 1.5rem;
 		--tw-text-opacity: 1;
 		color: rgb(30 41 59 / var(--tw-text-opacity, 1));
@@ -2077,7 +2077,7 @@
 		pointer-events: none;
 		position: absolute;
 		top: 0.625rem;
-		right: 0.625rem;
+		left: 0.625rem;
 		height: 1.25rem;
 		width: 1.25rem;
 		--tw-text-opacity: 1;
@@ -2116,8 +2116,8 @@
 		        user-select: none;
 		align-items: center;
 		justify-content: space-between;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
 		--tw-text-opacity: 1;
@@ -2160,8 +2160,8 @@
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		font-size: .8125rem;
 		line-height: 1.5rem;
 		--tw-text-opacity: 1;
@@ -2327,8 +2327,8 @@
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		font-size: .8125rem;
 		--tw-text-opacity: 1;
 		color: rgb(30 41 59 / var(--tw-text-opacity, 1));
@@ -2375,8 +2375,8 @@
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		padding-left: 0.75rem;
 		padding-right: 0.75rem;
+		padding-left: 0.75rem;
 		font-size: .8125rem;
 		--tw-text-opacity: 1;
 		color: rgb(30 41 59 / var(--tw-text-opacity, 1));
@@ -2546,7 +2546,7 @@
 .nfd-root .nfd-validation-input--success .nfd-validation-input__input {
 		--tw-border-opacity: 1;
 		border-color: rgb(134 239 172 / var(--tw-border-opacity, 1));
-		padding-right: 2.5rem;
+		padding-left: 2.5rem;
 }
 .nfd-root .nfd-validation-input--success .nfd-validation-input__input:focus-within {
 		--tw-border-opacity: 1;
@@ -2563,7 +2563,7 @@
 .nfd-root .nfd-validation-input--info .nfd-validation-input__input {
 		--tw-border-opacity: 1;
 		border-color: rgb(147 197 253 / var(--tw-border-opacity, 1));
-		padding-right: 2.5rem;
+		padding-left: 2.5rem;
 }
 .nfd-root .nfd-validation-input--info .nfd-validation-input__input:focus-within {
 		--tw-border-opacity: 1;
@@ -2580,7 +2580,7 @@
 .nfd-root .nfd-validation-input--warning .nfd-validation-input__input {
 		--tw-border-opacity: 1;
 		border-color: rgb(252 211 77 / var(--tw-border-opacity, 1));
-		padding-right: 2.5rem;
+		padding-left: 2.5rem;
 }
 .nfd-root .nfd-validation-input--warning .nfd-validation-input__input:focus-within {
 		--tw-border-opacity: 1;
@@ -2597,7 +2597,7 @@
 .nfd-root .nfd-validation-input--error .nfd-validation-input__input {
 		--tw-border-opacity: 1;
 		border-color: rgb(252 165 165 / var(--tw-border-opacity, 1));
-		padding-right: 2.5rem;
+		padding-left: 2.5rem;
 }
 .nfd-root .nfd-validation-input--error .nfd-validation-input__input:focus-within {
 		--tw-border-opacity: 1;
@@ -2616,7 +2616,7 @@
 .nfd-root .nfd-validation-input__icon {
 		position: absolute;
 		top: 0.6875rem;
-		right: 0.625rem;
+		left: 0.625rem;
 		height: 1.25rem;
 		width: 1.25rem;
 }
@@ -2679,8 +2679,8 @@
 }
 .nfd-root .nfd-card__header {
 		position: relative;
-		margin-left: -1.5rem;
 		margin-right: -1.5rem;
+		margin-left: -1.5rem;
 		margin-top: -1.5rem;
 		display: flex;
 		height: 6rem;
@@ -2771,10 +2771,10 @@
 		border-radius: 0.5rem;
 }
 .nfd-root .nfd-drawer.nfd-drawer--right .nfd-drawer__content {
-		right: 0px;
+		left: 0px;
 }
 .nfd-root .nfd-drawer.nfd-drawer--left .nfd-drawer__content {
-		left: 0px;
+		right: 0px;
 }
 .nfd-root .nfd-drawer__overlay {
 		position: fixed;
@@ -2911,8 +2911,8 @@
 		border-color: rgb(203 213 225 / var(--tw-border-opacity, 1));
 		--tw-bg-opacity: 1;
 		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-		padding-left: 1.25rem;
 		padding-right: 1.25rem;
+		padding-left: 1.25rem;
 		padding-top: 1.25rem;
 		padding-bottom: 18px;
 		--tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -2932,7 +2932,7 @@
 		visibility: hidden;
 		position: absolute;
 		top: 0.125rem;
-		right: 0.125rem;
+		left: 0.125rem;
 		height: 1.25rem;
 		width: 1.25rem;
 		--tw-text-opacity: 1;
@@ -2965,8 +2965,8 @@
 }
 .nfd-root .nfd-file-import__feedback-header > :not([hidden]) ~ :not([hidden]) {
 		--tw-space-x-reverse: 0;
-		margin-right: calc(1rem * var(--tw-space-x-reverse));
-		margin-left: calc(1rem * calc(1 - var(--tw-space-x-reverse)));
+		margin-left: calc(1rem * var(--tw-space-x-reverse));
+		margin-right: calc(1rem * calc(1 - var(--tw-space-x-reverse)));
 }
 .nfd-root .nfd-file-import__feedback-figure {
 		display: flex;
@@ -3122,7 +3122,7 @@
 .nfd-root .nfd-modal__close {
 		position: absolute;
 		top: 1rem;
-		right: 1rem;
+		left: 1rem;
 		display: block;
 }
 .nfd-root .nfd-modal__close-button {
@@ -3163,7 +3163,7 @@
 }
 .nfd-root .nfd-notifications--bottom-left {
 		bottom: 2rem;
-		left: 2rem;
+		right: 2rem;
 }
 .nfd-root .nfd-notifications--top-center {
 		top: 2rem;
@@ -3315,7 +3315,7 @@
 		gap: 0.25rem;
 }
 .nfd-root .nfd-toggle-field__description {
-		margin-right: 4.25rem;
+		margin-left: 4.25rem;
 }
 .nfd-root .nfd-title {
 		color: var(--nfd-color-title);
@@ -3362,8 +3362,8 @@
 }
 .nfd-root .nfd-button {
 		gap: 0.5rem;
-		padding-left: 1rem;
 		padding-right: 1rem;
+		padding-left: 1rem;
 }
 .nfd-root .nfd-button:focus {
 		--tw-ring-color: var(--nfd-color-primary);
@@ -3437,11 +3437,11 @@
 }
 .nfd-root .nfd-toggle-field__description {
 		margin-top: 0.75rem;
-		margin-right: 0.5rem;
+		margin-left: 0.5rem;
 }
 @media (min-width: 640px) {
 		.nfd-root .nfd-toggle-field__description {
-				margin-right: 10.5rem;
+				margin-left: 10.5rem;
 				margin-top: 0px;
 		}
 }
@@ -3459,11 +3459,11 @@
 }
 .nfd-root .nfd-radio-group .nfd-radio__description {
 		margin-bottom: 0.5rem;
-		margin-left: 1.75rem;
+		margin-right: 1.75rem;
 }
 @media (min-width: 1024px) {
 		.nfd-root .nfd-radio-group .nfd-radio__description {
-				margin-right: 10.5rem;
+				margin-left: 10.5rem;
 		}
 }
 .nfd-root .nfd-radio__input {
@@ -3499,19 +3499,19 @@
 		width: 6rem;
 }
 .nfd-root .nfd-select-field__spaced .nfd-select__options {
-		right: 0px;
+		left: 0px;
 		width: 10rem;
 }
 @media (min-width: 1024px) {
 		.nfd-root .nfd-select-field__spaced .nfd-select-field__description {
-				margin-right: 10.5rem;
+				margin-left: 10.5rem;
 		}
 }
 .nfd-root .nfd-notifications {
 			z-index: 9991;
 		}
 .nfd-root .nfd-notifications--bottom-left {
-		left: 12%;
+		right: 12%;
 }
 .nfd-root .nfd-text-input:focus, .nfd-root .nfd-textarea:focus {
 		border-color: var(--nfd-color-primary);
@@ -3541,7 +3541,7 @@
 		inset: 0px !important;
 }
 .nfd-right-0 {
-		right: 0px !important;
+		left: 0px !important;
 }
 .nfd-top-0 {
 		top: 0px !important;
@@ -3565,10 +3565,10 @@
 		margin: auto !important;
 }
 .nfd--ml-1 {
-		margin-left: -0.25rem !important;
+		margin-right: -0.25rem !important;
 }
 .nfd--mr-14 {
-		margin-right: -3.5rem !important;
+		margin-left: -3.5rem !important;
 }
 .nfd-mb-2 {
 		margin-bottom: 0.5rem !important;
@@ -3580,16 +3580,16 @@
 		margin-bottom: 1px !important;
 }
 .nfd-ml-4 {
-		margin-left: 1rem !important;
+		margin-right: 1rem !important;
 }
 .nfd-ml-8 {
-		margin-left: 2rem !important;
+		margin-right: 2rem !important;
 }
 .nfd-mr-2 {
-		margin-right: 0.5rem !important;
+		margin-left: 0.5rem !important;
 }
 .nfd-mr-4 {
-		margin-right: 1rem !important;
+		margin-left: 1rem !important;
 }
 .nfd-mt-1 {
 		margin-top: 0.25rem !important;
@@ -3739,7 +3739,7 @@
 }
 @keyframes nfd-spin {
 		to {
-				transform: rotate(360deg);
+				transform: rotate(-360deg);
 		}
 }
 .nfd-animate-spin {
@@ -3826,7 +3826,7 @@
 		border-bottom-width: 1px !important;
 }
 .nfd-border-r {
-		border-right-width: 1px !important;
+		border-left-width: 1px !important;
 }
 .nfd-border-\[\#CBD5E1\] {
 		--tw-border-opacity: 1 !important;
@@ -3838,7 +3838,7 @@
 }
 .nfd-border-r-slate-200 {
 		--tw-border-opacity: 1 !important;
-		border-right-color: rgb(226 232 240 / var(--tw-border-opacity, 1)) !important;
+		border-left-color: rgb(226 232 240 / var(--tw-border-opacity, 1)) !important;
 }
 .nfd-bg-slate-100 {
 		--tw-bg-opacity: 1 !important;
@@ -3870,16 +3870,16 @@
 		padding: 0.25rem !important;
 }
 .nfd-px-2 {
-		padding-left: 0.5rem !important;
 		padding-right: 0.5rem !important;
+		padding-left: 0.5rem !important;
 }
 .nfd-px-3 {
-		padding-left: 0.75rem !important;
 		padding-right: 0.75rem !important;
+		padding-left: 0.75rem !important;
 }
 .nfd-px-4 {
-		padding-left: 1rem !important;
 		padding-right: 1rem !important;
+		padding-left: 1rem !important;
 }
 .nfd-py-2 {
 		padding-top: 0.5rem !important;
@@ -3903,13 +3903,13 @@
 		padding-top: 0.25rem !important;
 }
 .nfd-text-left {
-		text-align: left !important;
+		text-align: right !important;
 }
 .nfd-text-center {
 		text-align: center !important;
 }
 .nfd-text-right {
-		text-align: right !important;
+		text-align: left !important;
 }
 .nfd-text-2xl {
 		font-size: 1.5rem !important;
