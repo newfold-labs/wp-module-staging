@@ -70,10 +70,7 @@ class Staging {
 		);
 
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
-
-		if ( 'bluehost' === container()->plugin()->brand && isset( $_GET['page'] ) && self::PAGE_SLUG === $_GET['page'] ) {
-			add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
-		}
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 
 		new Constants( $container );
 	}
