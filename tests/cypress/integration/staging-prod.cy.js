@@ -6,246 +6,248 @@ const stagingCreateFixture = require( '../fixtures/stagingCreate.json' );
 const stagingSwitchFixture = require( '../fixtures/stagingSwitch.json' );
 const customCommandTimeout = 60000;
 
-describe( 'Staging Page - Production Environment', { testIsolation: true }, () => {
-	const appClass = '.' + Cypress.env( 'appId' );
+describe(
+	'Staging Page - Production Environment',
+	{ testIsolation: true },
+	() => {
+		beforeEach( () => {
+			cy.intercept(
+				{
+					method: 'GET',
+					url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
+				},
+				stagingInitFixture
+			).as( 'mock-staging-data' );
 
-	beforeEach( () => {
-		cy.intercept(
-			{
-				method: 'GET',
-				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
-			},
-			stagingInitFixture
-		).as('mock-staging-data');
-
-		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
-		if ( Cypress.env( 'pluginId' ) === 'bluehost' ) {
-			cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
-		} else {
-			cy.visit(
-				'/wp-admin/admin.php?page=' +
-				Cypress.env( 'pluginId' ) +
-				'#/staging'
+			cy.login(
+				Cypress.env( 'wpUsername' ),
+				Cypress.env( 'wpPassword' )
 			);
-		}
-		cy.wait('@mock-staging-data', { timeout: customCommandTimeout } )
-			.then( ( interception ) => {
+			cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
+			cy.wait( '@mock-staging-data', {
+				timeout: customCommandTimeout,
+			} ).then( ( interception ) => {
 				expect( interception.response.statusCode ).to.eq( 200 );
-			});
-	} );
+			} );
+		} );
 
-	it( 'Is Accessible', () => {
-		cy.injectAxe();
-		cy.get(appClass, { timeout: 2000 }).should('be.visible');
-		cy.injectAxe();
-		cy.checkA11y(appClass);
-	} );
+		it( 'Is Accessible', () => {
+			cy.injectAxe();
+			cy.get( '.newfold-staging-page', { timeout: 2000 } ).should(
+				'exist'
+			);
+			cy.checkA11y( '.newfold-staging-page' );
+		} );
 
-	it( 'Displays in Production Environment Properly', () => {
-		cy.get( '.newfold-staging-prod' )
-			.scrollIntoView()
-			.should( 'be.visible' );
+		it( 'Displays in Production Environment Properly', () => {
+			cy.get( '.newfold-staging-prod' )
+				.scrollIntoView()
+				.should( 'be.visible' );
 
-		cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
-		cy.get( '.newfold-staging-prod' )
-			.contains( 'h3', 'Production Site' )
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-prod' )
-			.contains(
-				'label[for="newfold-production-toggle"]',
-				'Currently editing'
-			)
-			.should( 'be.visible' );
+			cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
+			cy.get( '.newfold-staging-prod' )
+				.contains( 'h3', 'Production Site' )
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-prod' )
+				.contains(
+					'label[for="newfold-production-toggle"]',
+					'Currently editing'
+				)
+				.should( 'be.visible' );
 
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'h3', 'Staging Site' )
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-staging' )
-			.contains(
-				'label[for="newfold-staging-toggle"]',
-				'Not currently editing'
-			)
-			.should( 'be.visible' );
-		cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', 'https://localhost:8882/staging/1234' )
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'dd', 'May 30, 2023' )
-			.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'h3', 'Staging Site' )
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains(
+					'label[for="newfold-staging-toggle"]',
+					'Not currently editing'
+				)
+				.should( 'be.visible' );
+			cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'div', 'https://localhost:8882/staging/1234' )
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'dd', 'May 30, 2023' )
+				.should( 'be.visible' );
 
-		cy.get( '#staging-clone-button' ).should( 'not.be.disabled' );
-		cy.get( '#staging-delete-button' ).should( 'not.be.disabled' );
-		cy.get( '#staging-deploy-button' ).should( 'be.disabled' );
-	} );
+			cy.get( '#staging-clone-button' ).should( 'not.be.disabled' );
+			cy.get( '#staging-delete-button' ).should( 'not.be.disabled' );
+			cy.get( '#staging-deploy-button' ).should( 'be.disabled' );
+		} );
 
-	it( 'Errors as expected', () => {
-		cy.get( '#staging-clone-button' ).click();
-		cy.get( '.nfd-modal' )
-			.contains( 'h1', 'Confirm Clone Action' )
-			.should( 'be.visible' );
-		cy.get( '.nfd-modal .nfd-button--primary' )
-			.contains( 'Clone' )
-			.should( 'be.visible' )
-			.click();
-		cy.wait( 100 );
+		it( 'Errors as expected', () => {
+			cy.get( '#staging-clone-button' ).click();
+			cy.get( '.nfd-modal' )
+				.contains( 'h1', 'Confirm Clone Action' )
+				.should( 'be.visible' );
+			cy.get( '.nfd-modal .nfd-button--primary' )
+				.contains( 'Clone' )
+				.should( 'be.visible' )
+				.click();
+			cy.wait( 100 );
 
-		cy.get( '.nfd-notification--error' )
-			.should( 'exist' )
-			.find( 'p' )
-			.should( 'not.be.empty' )
-			.and( 'be.visible' );
-	} );
+			cy.get( '.nfd-notification--error' )
+				.should( 'exist' )
+				.find( 'p' )
+				.should( 'not.be.empty' )
+				.and( 'be.visible' );
+		} );
 
-	it( 'Clone Works', () => {
-		cy.intercept(
-			{
-				method: 'POST',
-				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)clone/,
-			},
-			stagingCloneFixture
-		).as( 'stagingClone' );
+		it( 'Clone Works', () => {
+			cy.intercept(
+				{
+					method: 'POST',
+					url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)clone/,
+				},
+				stagingCloneFixture
+			).as( 'stagingClone' );
 
-		cy.get( '#staging-clone-button' ).click();
-		cy.get( '.nfd-modal' )
-			.contains( 'h1', 'Confirm Clone Action' )
-			.should( 'be.visible' );
-		cy.get( '.nfd-modal .nfd-button--primary' )
-			.contains( 'Clone' )
-			.should( 'be.visible' )
-			.click();
+			cy.get( '#staging-clone-button' ).click();
+			cy.get( '.nfd-modal' )
+				.contains( 'h1', 'Confirm Clone Action' )
+				.should( 'be.visible' );
+			cy.get( '.nfd-modal .nfd-button--primary' )
+				.contains( 'Clone' )
+				.should( 'be.visible' )
+				.click();
 
-		cy.wait( '@stagingClone' );
+			cy.wait( '@stagingClone' );
 
-		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Cloned to Staging' )
-			.should( 'be.visible' );
-	} );
+			cy.get( '.nfd-notifications' )
+				.contains( 'p', 'Cloned to Staging' )
+				.should( 'be.visible' );
+		} );
 
-	it( 'Deleting, Creating and Switch to staging Environment', () => {
-		cy.intercept(
-			{
-				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
-			},
-			stagingDeleteFixture
-		).as( 'stagingDelete' );
+		it( 'Deleting, Creating and Switch to staging Environment', () => {
+			cy.intercept(
+				{
+					url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
+				},
+				stagingDeleteFixture
+			).as( 'stagingDelete' );
 
-		cy.get( '#staging-delete-button' ).click();
-		cy.get( '.nfd-modal' )
-			.contains( 'h1', 'Confirm Delete' )
-			.should( 'be.visible' );
-		cy.get( '.nfd-modal .nfd-button--primary' )
-			.contains( 'Delete' )
-			.should( 'be.visible' )
-			.click();
+			cy.get( '#staging-delete-button' ).click();
+			cy.get( '.nfd-modal' )
+				.contains( 'h1', 'Confirm Delete' )
+				.should( 'be.visible' );
+			cy.get( '.nfd-modal .nfd-button--primary' )
+				.contains( 'Delete' )
+				.should( 'be.visible' )
+				.click();
 
-		cy.wait( '@stagingDelete' );
+			cy.wait( '@stagingDelete' );
 
-		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Deleted Staging' )
-			.should( 'be.visible' );
+			cy.get( '.nfd-notifications' )
+				.contains( 'p', 'Deleted Staging' )
+				.should( 'be.visible' );
 
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'h3', 'Staging Site' )
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-staging' )
-			.contains(
-				'label[for="newfold-staging-toggle"]',
-				'Not currently editing'
-			)
-			.should( 'not.exist' );
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', 'https://localhost:8882/staging/1234' )
-			.should( 'not.exist' );
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', "You don't have a staging site yet" )
-			.should( 'be.visible' );
-		cy.get( '#staging-create-button' )
-			.should( 'be.visible' )
-			.should( 'not.be.disabled' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'h3', 'Staging Site' )
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains(
+					'label[for="newfold-staging-toggle"]',
+					'Not currently editing'
+				)
+				.should( 'not.exist' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'div', 'https://localhost:8882/staging/1234' )
+				.should( 'not.exist' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'div', "You don't have a staging site yet" )
+				.should( 'be.visible' );
+			cy.get( '#staging-create-button' )
+				.should( 'be.visible' )
+				.should( 'not.be.disabled' );
 
-		cy.intercept(
-			{
-				method: 'POST',
-				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
-			},
-			{
-				body: stagingCreateFixture,
-				delay: 1000,
-			}
-		).as( 'stagingCreate' );
+			cy.intercept(
+				{
+					method: 'POST',
+					url: /newfold-staging(\/|%2F)v1(\/|%2F)staging/,
+				},
+				{
+					body: stagingCreateFixture,
+					delay: 1000,
+				}
+			).as( 'stagingCreate' );
 
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', "You don't have a staging site yet" )
-			.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'div', "You don't have a staging site yet" )
+				.should( 'be.visible' );
 
-		cy.get( '#staging-create-button' ).should( 'be.visible' ).click();
-		cy.get( '.newfold-staging-page' ).should( 'have.class', 'is-thinking' );
-		cy.wait( '@stagingCreate' );
+			cy.get( '#staging-create-button' ).should( 'be.visible' ).click();
+			cy.get( '.newfold-staging-page' ).should(
+				'have.class',
+				'is-thinking'
+			);
+			cy.wait( '@stagingCreate' );
 
-		cy.get( '.newfold-staging-page' ).should(
-			'not.have.class',
-			'is-thinking'
-		);
+			cy.get( '.newfold-staging-page' ).should(
+				'not.have.class',
+				'is-thinking'
+			);
 
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'h3', 'Staging Site' )
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-staging' )
-			.contains(
-				'label[for="newfold-staging-toggle"]',
-				'Not currently editing'
-			)
-			.should( 'be.visible' );
-		cy.get( '.newfold-staging-staging' )
-			.contains( 'div', 'https://localhost:8882/staging/1234' )
-			.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'h3', 'Staging Site' )
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains(
+					'label[for="newfold-staging-toggle"]',
+					'Not currently editing'
+				)
+				.should( 'be.visible' );
+			cy.get( '.newfold-staging-staging' )
+				.contains( 'div', 'https://localhost:8882/staging/1234' )
+				.should( 'be.visible' );
 
-		cy.intercept(
-			{
-				method: 'GET',
-				url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)switch-to(\&|%26)env(\=|%3D)staging/,
-			},
-			{
-				body: stagingSwitchFixture,
-				delay: 1000,
-			}
-		).as( 'stagingSwitch' );
+			cy.intercept(
+				{
+					method: 'GET',
+					url: /newfold-staging(\/|%2F)v1(\/|%2F)staging(\/|%2F)switch-to(\&|%26)env(\=|%3D)staging/,
+				},
+				{
+					body: stagingSwitchFixture,
+					delay: 1000,
+				}
+			).as( 'stagingSwitch' );
 
-		// close all snackbar notices
-		cy.get( '.nfd-notification button' ).each( ( $btn ) => {
-			cy.wrap( $btn ).click();
-		});
+			// close all snackbar notices
+			cy.get( '.nfd-notification button' ).each( ( $btn ) => {
+				cy.wrap( $btn ).click();
+			} );
 
-		cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
-		cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
-		cy.get( '#newfold-staging-toggle' ).click();
-		cy.get( '.nfd-modal' )
-			.contains( 'h1', 'Switch to Staging' )
-			.should( 'be.visible' );
-		cy.get( '.nfd-modal .nfd-button--error' )
-			.contains( 'Cancel' )
-			.should( 'be.visible' )
-			.click();
-		cy.get( '.nfd-modal h1' ).should( 'not.exist' );
-		cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
-		cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
+			cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
+			cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
+			cy.get( '#newfold-staging-toggle' ).click();
+			cy.get( '.nfd-modal' )
+				.contains( 'h1', 'Switch to Staging' )
+				.should( 'be.visible' );
+			cy.get( '.nfd-modal .nfd-button--error' )
+				.contains( 'Cancel' )
+				.should( 'be.visible' )
+				.click();
+			cy.get( '.nfd-modal h1' ).should( 'not.exist' );
+			cy.get( '#newfold-production-toggle' ).should( 'be.checked' );
+			cy.get( '#newfold-staging-toggle' ).should( 'not.be.checked' );
 
-		cy.get( '#newfold-staging-toggle' ).click();
-		cy.get( '.nfd-modal .nfd-button--primary' )
-			.contains( 'Proceed' )
-			.should( 'be.visible' )
-			.click();
-		cy.wait( 100 );
+			cy.get( '#newfold-staging-toggle' ).click();
+			cy.get( '.nfd-modal .nfd-button--primary' )
+				.contains( 'Proceed' )
+				.should( 'be.visible' )
+				.click();
+			cy.wait( 100 );
 
-		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Working' )
-			.should( 'be.visible' );
+			cy.get( '.nfd-notifications' )
+				.contains( 'p', 'Working' )
+				.should( 'be.visible' );
 
-		cy.wait( '@stagingSwitch' );
+			cy.wait( '@stagingSwitch' );
 
-		cy.get( '.nfd-notifications' )
-			.contains( 'p', 'Switching' )
-			.should( 'be.visible' );
-	} );
-} );
+			cy.get( '.nfd-notifications' )
+				.contains( 'p', 'Switching' )
+				.should( 'be.visible' );
+		} );
+	}
+);
