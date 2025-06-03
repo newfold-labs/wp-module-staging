@@ -14,41 +14,41 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: includes/Staging.php:304
+#: includes/Staging.php:301
 msgid "Cloning can only be done from the production environment."
 msgstr "A clonagem só pode ser feita a partir do ambiente de produção."
 
-#: includes/Staging.php:329
+#: includes/Staging.php:326
 msgid "Staging environment already exists!"
 msgstr "O ambiente de testes já existe!"
 
-#: includes/Staging.php:363
+#: includes/Staging.php:360
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Você deve mudar para o ambiente de produção antes de excluir o ambiente de testes."
 
-#: includes/Staging.php:385
+#: includes/Staging.php:382
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Você não pode mudar para um ambiente no qual já está."
 
-#: includes/Staging.php:422
+#: includes/Staging.php:419
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de testes inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:472
+#: includes/Staging.php:469
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Caractere inválido (%s) no comando."
 
-#: includes/Staging.php:481
+#: includes/Staging.php:478
 msgid "Unable to execute script (disabled_function)."
 msgstr "Não foi possível executar o script (função desabilitada)."
 
-#: includes/Staging.php:505
+#: includes/Staging.php:502
 msgid "Unable to execute script (permission error)."
 msgstr "Não foi possível executar o script (erro de permissão)."
 
-#: includes/Staging.php:519
+#: includes/Staging.php:516
 msgid "Unable to parse JSON"
 msgstr "Não foi possível interpretar o JSON"
 
@@ -277,11 +277,11 @@ msgstr "Mudando para o ambiente de testes. Isso deve levar cerca de um minuto."
 msgid "An unknown error has occurred."
 msgstr "Ocorreu um erro desconhecido."
 
-#: includes/Staging.php:494
+#: includes/Staging.php:491
 msgid "Filesystem credentials required."
 msgstr ""
 
-#: includes/Staging.php:498
+#: includes/Staging.php:495
 msgid "Unable to initialize WP Filesystem."
 msgstr ""
 

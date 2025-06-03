@@ -14,41 +14,41 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: includes/Staging.php:304
+#: includes/Staging.php:301
 msgid "Cloning can only be done from the production environment."
 msgstr "Cloning can only be done from the production environment."
 
-#: includes/Staging.php:329
+#: includes/Staging.php:326
 msgid "Staging environment already exists!"
 msgstr "Staging environment already exists!"
 
-#: includes/Staging.php:363
+#: includes/Staging.php:360
 msgid "You must switch to the production environment before destroying staging."
 msgstr "You must switch to the production environment before destroying staging."
 
-#: includes/Staging.php:385
+#: includes/Staging.php:382
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Switch to an environment you are already in, you cannot."
 
-#: includes/Staging.php:422
+#: includes/Staging.php:419
 msgid "Invalid staging CLI command."
 msgstr "Invalid staging CLI command."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:472
+#: includes/Staging.php:469
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Invalid character (%s) in command."
 
-#: includes/Staging.php:481
+#: includes/Staging.php:478
 msgid "Unable to execute script (disabled_function)."
 msgstr "Unable to execute script (disabled_function)."
 
-#: includes/Staging.php:505
+#: includes/Staging.php:502
 msgid "Unable to execute script (permission error)."
 msgstr "Unable to execute script (permission error)."
 
-#: includes/Staging.php:519
+#: includes/Staging.php:516
 msgid "Unable to parse JSON"
 msgstr "Unable to parse JSON"
 
@@ -277,11 +277,11 @@ msgstr "Error: "
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "Provided $data wasn't a valid array or JSON string."
 
-#: includes/Staging.php:494
+#: includes/Staging.php:491
 msgid "Filesystem credentials required."
 msgstr ""
 
-#: includes/Staging.php:498
+#: includes/Staging.php:495
 msgid "Unable to initialize WP Filesystem."
 msgstr ""
 
