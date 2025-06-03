@@ -3,8 +3,6 @@ const stagingStagingFixture = require( '../fixtures/stagingStaging.json' );
 const stagingDeployFixture = require( '../fixtures/stagingDeploy.json' );
 
 describe( 'Staging Page - Staging Environmant', { testIsolation: true }, () => {
-	const appClass = '.' + Cypress.env( 'appId' );
-
 	beforeEach( () => {
 		cy.intercept(
 			{
@@ -14,10 +12,8 @@ describe( 'Staging Page - Staging Environmant', { testIsolation: true }, () => {
 			stagingStagingFixture
 		);
 
-		cy.login( Cypress.env( "wpUsername" ), Cypress.env( "wpPassword" ) );
-		cy.visit(
-			'/wp-admin/admin.php?page=nfd-staging'
-		);
+		cy.login( Cypress.env( 'wpUsername' ), Cypress.env( 'wpPassword' ) );
+		cy.visit( '/wp-admin/admin.php?page=nfd-staging' );	
 	} );
 
 	it( 'Displays staging environemnt properly', () => {

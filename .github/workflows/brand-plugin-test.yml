@@ -31,6 +31,7 @@ jobs:
       module-repo: ${{ github.repository }}
       module-branch: ${{ needs.setup.outputs.branch }}
       plugin-repo: 'newfold-labs/wp-plugin-bluehost'
+      plugin-branch: 'update/staging-module'
     secrets: inherit
 
   hostgator:
@@ -41,4 +42,5 @@ jobs:
       module-repo: ${{ github.repository }}
       module-branch: ${{ needs.setup.outputs.branch }}
       plugin-repo: 'newfold-labs/wp-plugin-hostgator'
+      plugin-branch: 'update/plugin-parity'
     secrets: inherit
