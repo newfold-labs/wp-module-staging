@@ -19,41 +19,41 @@ msgstr ""
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
 
-#: includes/Staging.php:304
+#: includes/Staging.php:301
 msgid "Cloning can only be done from the production environment."
 msgstr "La clonación sólo puede hacerse desde el entorno de producción."
 
-#: includes/Staging.php:329
+#: includes/Staging.php:326
 msgid "Staging environment already exists!"
 msgstr "¡El entorno de preproducción ya existe!"
 
-#: includes/Staging.php:363
+#: includes/Staging.php:360
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
 
-#: includes/Staging.php:385
+#: includes/Staging.php:382
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Cambiar a un entorno en el que ya está, no puede."
 
-#: includes/Staging.php:422
+#: includes/Staging.php:419
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de preproducción inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:472
+#: includes/Staging.php:469
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Carácter inválido (%s) en el comando."
 
-#: includes/Staging.php:481
+#: includes/Staging.php:478
 msgid "Unable to execute script (disabled_function)."
 msgstr "No se puede ejecutar el script (disabled_function)."
 
-#: includes/Staging.php:505
+#: includes/Staging.php:502
 msgid "Unable to execute script (permission error)."
 msgstr "No se puede ejecutar el script (error de permisos)."
 
-#: includes/Staging.php:519
+#: includes/Staging.php:516
 msgid "Unable to parse JSON"
 msgstr "No se pudo procesar el JSON"
 
@@ -282,11 +282,11 @@ msgstr "Error: "
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "El $data proporcionado no era un array válido ni una cadena JSON válida."
 
-#: includes/Staging.php:494
+#: includes/Staging.php:491
 msgid "Filesystem credentials required."
 msgstr ""
 
-#: includes/Staging.php:498
+#: includes/Staging.php:495
 msgid "Unable to initialize WP Filesystem."
 msgstr ""
 
