@@ -4,7 +4,7 @@ import '../../styles/styles.css';
 import '../../store';
 
 import {Container, Root, Page, Modal, Button} from '@newfold/ui-component-library';
-import classNames from "classnames";
+import classNames from 'classnames';
 // Components
 import ProductionSite from '../../sections/ProductionSite';
 import StagingSite from '../../sections/StagingSite';
