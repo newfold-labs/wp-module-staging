@@ -311,29 +311,34 @@ const App = () => {
 	 *
 	 * @param {string} type One of 'all', 'files', or 'db'
 	 */
-	const deployStaging = ( type ) => {
-		// console.log('Deploy', type);
-		makeNotice( 'deploying', working, deployNoticeStartText, 'info', 8000 );
-		stagingApiFetch(
+	const deployType = async (deployType) => {
+		await stagingApiFetch(
 			'staging/deploy',
-			{'type': type},
+			{ type: deployType },
 			'POST',
 			(response) => {
-				// console.log('Deploy Callback', response);
-				// validate response data
-				if ( response.hasOwnProperty('status') ) {
-					// setup with fresh data
-					if ( response.status === 'success' ){
-						makeNotice( 'deployed', deployNoticeCompleteText, response.message );
+				if (response.hasOwnProperty('status')) {
+					if (response.status === 'success') {
+						makeNotice('deployed', deployNoticeCompleteText, response.message);
 					} else {
-						setError( response.message );
+						setError(response.message);
 					}
 				} else {
-					setError( unknownErrorMsg ); // report unknown error
+					setError(unknownErrorMsg);
 				}
-				setIsThinking( false );
+				setIsThinking(false);
 			}
 		);
+	};
+
+	const deployStaging = async (type) => {
+		makeNotice('deploying', working, deployNoticeStartText, 'info', 8000);
+		if (type === 'all') {
+			await deployType('files');
+			await deployType('db');
+		} else {
+			await deployType(type);
+		}
 	};
 
 	/**
