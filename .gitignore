@@ -13,3 +13,6 @@ cypress.env.json
 /tests/cypress/downloads
 /tests/cypress/screenshots
 /tests/cypress/videos
+
+# GitHub Action related files and directories
+/translation-action-scripts
