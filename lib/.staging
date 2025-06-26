@@ -78,9 +78,15 @@ function create {
 	wp core config --dbhost=$DB_HOST --dbname=$DB_NAME --dbuser=$DB_USER --dbpass=$DB_PASS --dbprefix=staging_$DB_PREFIX --skip-themes --skip-plugins --quiet || {
 		delete_temp_staging 2 "Unable to configure WordPress.";
 	}
-	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || {
+
+	tmpfile=$(mktemp)
+  while IFS= read -r line; do
+      echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
+  done < "$STAGING_DIR/.export-sql"
+  mv "$tmpfile" "$STAGING_DIR/.export-sql" || {
 		delete_temp_staging 2 "Unable to update database prefix.";
 	}
+
 	wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || {
 		delete_temp_staging 2 "Unable to import database."
 	}
@@ -118,7 +124,12 @@ function clone {
 	wp db export $STAGING_DIR/.export-sql --add-drop-table --skip-themes --skip-plugins --quiet || {
 		delete_temp_staging 5 "Unable to export database.";
 	}
-	sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" $STAGING_DIR/.export-sql || {
+
+	tmpfile=$(mktemp)
+    while IFS= read -r line; do
+        echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
+    done < "$STAGING_DIR/.export-sql"
+    mv "$tmpfile" "$STAGING_DIR/.export-sql"  || {
 		delete_temp_staging 5 "Unable to update database prefix.";
 	}
 	cd $STAGING_DIR || {
