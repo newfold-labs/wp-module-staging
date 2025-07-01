@@ -3,15 +3,21 @@ import '../../styles/styles.css';
 
 import '../../store';
 
-import {Container, Root, Page, Modal, Button} from '@newfold/ui-component-library';
-import classNames from "classnames";
+import {
+	Container,
+	Root,
+	Page,
+	Modal,
+	Button,
+} from '@newfold/ui-component-library';
+import classNames from 'classnames';
 // Components
 import ProductionSite from '../../sections/ProductionSite';
 import StagingSite from '../../sections/StagingSite';
 import NotificationFeed from '../NotificationFeed';
 
 import getAppText from './getAppText';
-import {CheckIcon, XMarkIcon} from "@heroicons/react/24/outline";
+import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import { useState, useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
@@ -45,7 +51,7 @@ const App = () => {
 		switchToStagingNoticeStartText,
 		switching,
 		unknownErrorMessage,
-		working
+		working,
 	} = getAppText();
 
 	const apiNamespace = '/newfold-staging/v1/';
@@ -82,7 +88,6 @@ const App = () => {
 
 	// Setup values from response
 	const setup = ( response ) => {
-
 		if ( response.hasOwnProperty( 'stagingExists' ) ) {
 			setHasStaging( response.stagingExists );
 		}
@@ -104,148 +109,143 @@ const App = () => {
 		if ( response.hasOwnProperty( 'creationDate' ) ) {
 			setCreationDate( response.creationDate );
 		}
-
 	};
 
 	const setError = ( error ) => {
 		// console.log('setError', error);
 		setIsLoading( false );
 		setIsThinking( false );
-		setIsError(true);
+		setIsError( true );
 		makeNotice( 'error', error, error, 'error' );
 	};
 
-	const catchError = (error) => {
+	const catchError = ( error ) => {
 		if ( error.hasOwnProperty( 'message' ) ) {
-			setError(error.message);
+			setError( error.message );
 		} else if ( error.hasOwnProperty( 'code' ) ) {
-			setError(error.code);
+			setError( error.code );
 		} else if ( error.hasOwnProperty( 'status' ) ) {
-			setError(error.status);
-		} else if ( error.hasOwnProperty( 'data' ) && error.data.hasOwnProperty('status') ) {
-			setError(error.data.status);
+			setError( error.status );
+		} else if (
+			error.hasOwnProperty( 'data' ) &&
+			error.data.hasOwnProperty( 'status' )
+		) {
+			setError( error.data.status );
 		} else {
-			setError(unknownErrorMessage);
+			setError( unknownErrorMessage );
 		}
-
 	};
-
 
 	/**
 	 * on mount load staging data from module api
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		init();
 	}, [] );
 
 	const init = () => {
 		// console.log('Init - Loading Staging Data');
-		setIsError(false);
-		setIsLoading(true);
-		stagingApiFetch(
-			'staging',
-			null,
-			'GET',
-			(response) => {
-				// console.log('Init Staging Data:', response);
-				// validate response data
-				if ( response.hasOwnProperty('currentEnvironment') ) {
-					//setup with fresh data
-					setup( response );
-				} else if ( response.hasOwnProperty('code') && response.code === 'error_response' ) {
-					setError( response.message ); // report known error
-				} else {
-					setError( unknownErrorMsg ); // report unknown error
-				}
-				setIsThinking( false );
-				setIsLoading( false );
+		setIsError( false );
+		setIsLoading( true );
+		stagingApiFetch( 'staging', null, 'GET', ( response ) => {
+			// console.log('Init Staging Data:', response);
+			// validate response data
+			if ( response.hasOwnProperty( 'currentEnvironment' ) ) {
+				//setup with fresh data
+				setup( response );
+			} else if (
+				response.hasOwnProperty( 'code' ) &&
+				response.code === 'error_response'
+			) {
+				setError( response.message ); // report known error
+			} else {
+				setError( unknownErrorMsg ); // report unknown error
 			}
-		);
-	}
+			setIsThinking( false );
+			setIsLoading( false );
+		} );
+	};
 
 	const createStaging = () => {
 		//console.log('create staging');
 		makeNotice( 'creating', working, createNoticeStartText, 'info', 8000 );
 		// setIsCreatingStaging(true);
-		stagingApiFetch(
-			'staging',
-			null,
-			'POST',
-			(response) => {
-				// console.log('Create Staging Callback', response);
-				if ( response.hasOwnProperty('status') ) {
-					if ( response.status === 'success' ){
-						//setup with fresh data
-						setup( response );
-						makeNotice( 'created', createNoticeCompleteText, response.message );
-					} else {
-						setError( response.message ); // report known error
-					}
+		stagingApiFetch( 'staging', null, 'POST', ( response ) => {
+			// console.log('Create Staging Callback', response);
+			if ( response.hasOwnProperty( 'status' ) ) {
+				if ( response.status === 'success' ) {
+					//setup with fresh data
+					setup( response );
+					makeNotice(
+						'created',
+						createNoticeCompleteText,
+						response.message
+					);
 				} else {
-					setError( unknownErrorMsg ); // report unknown error
+					setError( response.message ); // report known error
 				}
-				setIsThinking( false );
-				// setIsCreatingStaging(false);
+			} else {
+				setError( unknownErrorMsg ); // report unknown error
 			}
-		);
+			setIsThinking( false );
+			// setIsCreatingStaging(false);
+		} );
 	};
 
 	const deleteStaging = () => {
 		// console.log('delete staging');
 		makeNotice( 'deleting', working, deleteNoticeStartText, 'info', 8000 );
-		stagingApiFetch(
-			'staging',
-			null,
-			'DELETE',
-			(response) => {
-				// console.log('Delete staging callback', response);
-				// validate response data
-				if ( response.hasOwnProperty('status') ) {
-					if ( response.status === 'success' ){
-						// setup with fresh data
-						setHasStaging( false );
-						makeNotice( 'deleted', deleteNoticeCompleteText, response.message );
-					} else {
-						setError( response.message );
-					}
+		stagingApiFetch( 'staging', null, 'DELETE', ( response ) => {
+			// console.log('Delete staging callback', response);
+			// validate response data
+			if ( response.hasOwnProperty( 'status' ) ) {
+				if ( response.status === 'success' ) {
+					// setup with fresh data
+					setHasStaging( false );
+					makeNotice(
+						'deleted',
+						deleteNoticeCompleteText,
+						response.message
+					);
 				} else {
-					setError( unknownErrorMsg ); // report unknown error
+					setError( response.message );
 				}
-				setIsThinking( false );
+			} else {
+				setError( unknownErrorMsg ); // report unknown error
 			}
-		);
+			setIsThinking( false );
+		} );
 	};
 
 	const clone = () => {
 		// console.log('clone production to staging');
 		makeNotice( 'cloning', working, cloneNoticeStartText, 'info', 8000 );
-		stagingApiFetch(
-			'staging/clone',
-			null,
-			'POST',
-			(response) => {
-				// console.log('Clone Callback', response);
-				// validate response data
-				if ( response.hasOwnProperty('status') ) {
-					// setup with fresh data
-					if ( response.status === 'success' ){
-						setHasStaging( true );
-						makeNotice( 'cloned', cloneNoticeCompleteText, response.message );
-					} else {
-						setError( response.message );
-						setHasStaging( false );
-					}
+		stagingApiFetch( 'staging/clone', null, 'POST', ( response ) => {
+			// console.log('Clone Callback', response);
+			// validate response data
+			if ( response.hasOwnProperty( 'status' ) ) {
+				// setup with fresh data
+				if ( response.status === 'success' ) {
+					setHasStaging( true );
+					makeNotice(
+						'cloned',
+						cloneNoticeCompleteText,
+						response.message
+					);
 				} else {
-					setError( unknownErrorMsg ); // report unknown error
+					setError( response.message );
 					setHasStaging( false );
 				}
-				setIsThinking( false );
+			} else {
+				setError( unknownErrorMsg ); // report unknown error
+				setHasStaging( false );
 			}
-		);
+			setIsThinking( false );
+		} );
 	};
 
 	const switchToStaging = () => {
-		if ( !isProduction ) {
+		if ( ! isProduction ) {
 			// console.log('Already on staging.');
 		} else {
 			setModal(
@@ -281,68 +281,99 @@ const App = () => {
 		// setSwitchingTo( env );
 		setIsThinking( true );
 		if ( env === 'production' ) {
-			makeNotice( 'switching', working, switchToProductionNoticeStartText, 'info', 8000 );
+			makeNotice(
+				'switching',
+				working,
+				switchToProductionNoticeStartText,
+				'info',
+				8000
+			);
 		} else {
-			makeNotice( 'switching', working, switchToStagingNoticeStartText, 'info', 8000 );
+			makeNotice(
+				'switching',
+				working,
+				switchToStagingNoticeStartText,
+				'info',
+				8000
+			);
 		}
 
-		stagingApiFetch(
-			'staging/switch-to',
-			{'env': env},
-			'GET',
-			(response) => {
-				// console.log('Switch Callback', response);
-				// validate response data
-				if ( response.hasOwnProperty( 'load_page' ) ) {
-					window.location.href = response.load_page;
-					// navigate(response.load_page);
-					const notifyMessageText = env === "production" ? switchToProductionNoticeCompleteText : switchToStagingNoticeCompleteText;
-					makeNotice( 'redirecting', switching, notifyMessageText, 'success', 8000 );
-				} else if ( response.hasOwnProperty('status') && response.status === 'error' ) {
-					setError(response.message);
-				} else {
-					setError( unknownErrorMsg ); // report unknown error
-				}
+		stagingApiFetch( 'staging/switch-to', { env }, 'GET', ( response ) => {
+			// console.log('Switch Callback', response);
+			// validate response data
+			if ( response.hasOwnProperty( 'load_page' ) ) {
+				window.location.href = response.load_page;
+				// navigate(response.load_page);
+				const notifyMessageText =
+					env === 'production'
+						? switchToProductionNoticeCompleteText
+						: switchToStagingNoticeCompleteText;
+				makeNotice(
+					'redirecting',
+					switching,
+					notifyMessageText,
+					'success',
+					8000
+				);
+			} else if (
+				response.hasOwnProperty( 'status' ) &&
+				response.status === 'error'
+			) {
+				setError( response.message );
+			} else {
+				setError( unknownErrorMsg ); // report unknown error
 			}
-		);
+		} );
 	};
 
 	/**
 	 *
-	 * @param {string} type One of 'all', 'files', or 'db'
+	 * @param {string} type       One of 'all', 'files', or 'db'
+	 * @param          deployType
 	 */
-	const deployStaging = ( type ) => {
-		// console.log('Deploy', type);
-		makeNotice( 'deploying', working, deployNoticeStartText, 'info', 8000 );
-		stagingApiFetch(
+	const deployType = async ( deployType ) => {
+		await stagingApiFetch(
 			'staging/deploy',
-			{'type': type},
+			{ type: deployType },
 			'POST',
-			(response) => {
-				// console.log('Deploy Callback', response);
-				// validate response data
-				if ( response.hasOwnProperty('status') ) {
-					// setup with fresh data
-					if ( response.status === 'success' ){
-						makeNotice( 'deployed', deployNoticeCompleteText, response.message );
+			( response ) => {
+				if ( response.hasOwnProperty( 'status' ) ) {
+					if ( response.status === 'success' ) {
+						makeNotice(
+							'deployed',
+							deployNoticeCompleteText,
+							response.message
+						);
 					} else {
 						setError( response.message );
 					}
 				} else {
-					setError( unknownErrorMsg ); // report unknown error
+					setError( unknownErrorMsg );
 				}
 				setIsThinking( false );
 			}
 		);
 	};
 
+	const deployStaging = async ( type ) => {
+		makeNotice( 'deploying', working, deployNoticeStartText, 'info', 8000 );
+		if ( type === 'all' ) {
+			await deployType( 'files' );
+			await deployType( 'db' );
+		} else {
+			await deployType( type );
+		}
+	};
+
 	/**
 	 * Wrapper method to interface with staging endpoints
 	 *
-	 * @param path append to the end of the apiNamespace
-	 * @param method GET or POST, default GET
-	 * @param thenCallback method to call in promise then
-	 * @param passError setter for the error in component
+	 * @param path          append to the end of the apiNamespace
+	 * @param qs
+	 * @param method        GET or POST, default GET
+	 * @param thenCallback  method to call in promise then
+	 * @param passError     setter for the error in component
+	 * @param errorCallback
 	 * @return apiFetch promise
 	 */
 	const stagingApiFetch = (
@@ -353,43 +384,57 @@ const App = () => {
 		errorCallback = catchError
 	) => {
 		setIsThinking( true );
-		return apiFetch({
-			url: NewfoldRuntime.createApiUrl( apiNamespace + path, qs),
+		return apiFetch( {
+			url: NewfoldRuntime.createApiUrl( apiNamespace + path, qs ),
 			method,
-		}).then( (response) => {
-			thenCallback( response );
-		}).catch( (error) => {
-			errorCallback( error );
-		})
+		} )
+			.then( ( response ) => {
+				thenCallback( response );
+			} )
+			.catch( ( error ) => {
+				errorCallback( error );
+			} );
 	};
 	const modalClose = () => {
-		setModalOpen(false);
-	}
-	const setModal = (title, description, callback, callbackParams=null, ctaText=proceed) => {
+		setModalOpen( false );
+	};
+	const setModal = (
+		title,
+		description,
+		callback,
+		callbackParams = null,
+		ctaText = proceed
+	) => {
 		setModalChildren(
 			<Modal.Panel>
-				<Modal.Title className="nfd-text-2xl nfd-font-medium nfd-text-title">{title}</Modal.Title>
-				<Modal.Description className="nfd-mt-8 nfd-mb-8">{description}</Modal.Description>
+				<Modal.Title className="nfd-text-2xl nfd-font-medium nfd-text-title">
+					{ title }
+				</Modal.Title>
+				<Modal.Description className="nfd-mt-8 nfd-mb-8">
+					{ description }
+				</Modal.Description>
 				<div className="nfd-flex nfd-justify-between nfd-items-center nfd-flex-wrap nfd-gap-3">
 					<Button
 						variant="error"
-						onClick={ () => { setModalOpen(false); }}
+						onClick={ () => {
+							setModalOpen( false );
+						} }
 					>
-						<XMarkIcon /> {cancelSite}
+						<XMarkIcon /> { cancelSite }
 					</Button>
 					<Button
 						variant="primary"
 						onClick={ () => {
-							setModalOpen(false);
-							callback(callbackParams);
-						}}
+							setModalOpen( false );
+							callback( callbackParams );
+						} }
 					>
-						<CheckIcon /> {ctaText}
+						<CheckIcon /> { ctaText }
 					</Button>
 				</div>
 			</Modal.Panel>
 		);
-		setModalOpen(true);
+		setModalOpen( true );
 	};
 
 	const getClasses = () => {
@@ -416,37 +461,44 @@ const App = () => {
 	return (
 		<Root context={ { isRTL: false } }>
 			<NotificationFeed />
-			<Page id='wppbh-app"' title={ pageTitle } className={classNames(['newfold-staging-page', 'wppbh', 'wppbh_app'],  getClasses())}>
-				<Container className='newfold-staging-container'>
+			<Page
+				id='wppbh-app"'
+				title={ pageTitle }
+				className={ classNames(
+					[ 'newfold-staging-page', 'wppbh', 'wppbh_app' ],
+					getClasses()
+				) }
+			>
+				<Container className="newfold-staging-container">
 					<Container.Header
 						title={ pageTitle }
 						description={ pageDescription }
 						className="newfold-staging-header"
 					/>
 
-					<Container.Block separator className="newfold-staging-prod" >
+					<Container.Block separator className="newfold-staging-prod">
 						<ProductionSite
-							hasStaging={hasStaging}
-							isProduction={isProduction}
-							productionUrl={productionUrl}
-							cloneMe={clone}
-							switchToMe={switchToProduction}
-							setModal={setModal}
+							hasStaging={ hasStaging }
+							isProduction={ isProduction }
+							productionUrl={ productionUrl }
+							cloneMe={ clone }
+							switchToMe={ switchToProduction }
+							setModal={ setModal }
 						/>
 					</Container.Block>
 
 					<Container.Block className="newfold-staging-staging">
 						<StagingSite
-							getAppText={getAppText}
-							isProduction={isProduction}
-							hasStaging={hasStaging}
-							createMe={createStaging}
-							deleteMe={deleteStaging}
-							deployMe={deployStaging}
-							switchToMe={switchToStaging}
-							stagingUrl={stagingUrl}
-							creationDate={creationDate}
-							setModal={setModal}
+							getAppText={ getAppText }
+							isProduction={ isProduction }
+							hasStaging={ hasStaging }
+							createMe={ createStaging }
+							deleteMe={ deleteStaging }
+							deployMe={ deployStaging }
+							switchToMe={ switchToStaging }
+							stagingUrl={ stagingUrl }
+							creationDate={ creationDate }
+							setModal={ setModal }
 						/>
 					</Container.Block>
 					<Modal
