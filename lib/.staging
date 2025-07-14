@@ -212,12 +212,11 @@ destroy() {
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   if test -d "$STAGING_DIR"; then
     STAGING_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
-    wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to drop staging tables.'
-    wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to reset staging environment in production.'
-    wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to remove global staging config.'
-    rm -rf "$STAGING_DIR" --force > /dev/null 2>&1 || error 'Unable to remove staging files.'
+    run_or_fail "destroy:drop_tables" "Unable to drop staging tables." wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+    run_or_fail "destroy:delete_env" "Unable to reset staging environment in production." wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    run_or_fail "destroy:delete_config" "Unable to remove global staging config." wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    run_or_fail "destroy:rm_dir" "Unable to remove staging files." rm -rf "$STAGING_DIR" --force
     log "SUCCESS" "destroy:end" "Staging website destroyed."
-    # Only this echo should go to stdout for JSON parsing
     echo '{"status":"success","message":"Staging website destroyed.","reload":"true"}'
   else
     log "INFO" "destroy:skip" "Staging directory does not exist, nothing to destroy."
@@ -249,26 +248,26 @@ clone() {
   if [ "0" != "$USER_ID" ]; then
     SESSIONS=$(wp user meta get $USER_ID session_tokens --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
   fi
-  wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to drop staging database tables."
-  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to export database."
-  sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" "$STAGING_DIR/.export-sql" || delete_temp_staging 5 "Unable to update database prefix."
+  run_or_fail "clone:drop_tables" "Unable to drop staging database tables." wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:sed_prefix" "Unable to update database prefix." sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" "$STAGING_DIR/.export-sql"
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
-  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to import database."
+  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
   if [ "0" != "$USER_ID" ]; then
-    wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
+    run_or_fail "clone:user_meta" "Unable to update user session tokens." wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
   fi
-  wp option update staging_environment staging --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to set environment."
+  run_or_fail "clone:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
   move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
   if [ -L "$PRODUCTION_DIR/index.php" ]; then
     echo "path=$STAGING_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
   else
     WP_VER=$(wp core version)
-    wp core download --version="$WP_VER" --force || delete_temp_staging 5 "Unable to install WordPress in staging directory."
+    run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
   fi
-  wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to update URLs on staging."
-  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to import global config on staging."
-  wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to turn on Coming Soon page in staging."
-  wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to flush rewrite rules."
+  run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
   rewrite_htaccess "$STAGING_DIR"
   echo '{"status":"success","message":"Website cloned successfully."}'
@@ -280,7 +279,7 @@ deploy_files() {
     echo "path=$PRODUCTION_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
   else
     WP_VER=$(wp core version)
-    wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to move WordPress files.'
+    run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   fi
   move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
   echo '{"status":"success","message":"Files deployed successfully."}'
@@ -288,15 +287,15 @@ deploy_files() {
 
 deploy_db() {
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
-  wp db query "DROP TABLE $PRODUCTION_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to drop staging tables.'
-  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet || error 'Unable to export database.'
-  sed -i -e "s/staging_$DB_PREFIX/$DB_PREFIX/g" "$STAGING_DIR/.export-sql" || error 'Unable to update prefix.'
-  wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to import database.'
-  wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to update URL on production.'
+  run_or_fail "deploy_db:drop_tables" "Unable to drop staging tables." wp db query "DROP TABLE $PRODUCTION_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "deploy_db:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
+  run_or_fail "deploy_db:sed_prefix" "Unable to update prefix." sed -i -e "s/staging_$DB_PREFIX/$DB_PREFIX/g" "$STAGING_DIR/.export-sql"
+  run_or_fail "deploy_db:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "deploy_db:search_replace" "Unable to update URL on production." wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
-  wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to set environment.'
-  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to import global config on production.'
-  wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to turn off Coming Soon page.'
+  run_or_fail "deploy_db:set_env_prod" "Unable to set environment." wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "deploy_db:import_config" "Unable to import global config on production." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "deploy_db:coming_soon_off" "Unable to turn off Coming Soon page." wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   rewrite_htaccess "$PRODUCTION_DIR"
   echo '{"status":"success","message":"Database deployed successfully."}'
 }
