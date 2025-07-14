@@ -195,6 +195,26 @@ create() {
   echo '{"status":"success","message":"Staging website created successfully.","reload":"true"}'
 }
 
+destroy() {
+  log "INFO" "destroy:start" "Starting destruction of staging site."
+  cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+  if test -d "$STAGING_DIR"; then
+    STAGING_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
+    wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to drop staging tables.'
+    wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to reset staging environment in production.'
+    wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to remove global staging config.'
+    rm -r "$STAGING_DIR" --force > /dev/null 2>&1 || error 'Unable to remove staging files.'
+    mkdir -p "$STAGING_DIR" > /dev/null 2>&1
+    echo "<script type='text/javascript'>window.location = '$PRODUCTION_URL';</script>" > "$STAGING_DIR/index.php"
+    log "SUCCESS" "destroy:end" "Staging website destroyed."
+    # Only this echo should go to stdout for JSON parsing
+    echo '{"status":"success","message":"Staging website destroyed.","reload":"true"}'
+  else
+    log "INFO" "destroy:skip" "Staging directory does not exist, nothing to destroy."
+    echo '{"status":"success","message":"Staging directory does not exist, nothing to destroy."}'
+  fi
+}
+
 # --- Other main functions (clone, deploy_files, deploy_db, destroy, etc.) would follow the same refactored pattern as create ---
 # For brevity, only create is shown fully here. I can continue with the rest if you confirm this structure is what you want.
 
@@ -223,7 +243,7 @@ case "$1" in
   # clone) clone "$@";;
   # deploy_files) deploy_files "$@";;
   # deploy_db) deploy_db "$@";;
-  # destroy) destroy "$@";;
+  destroy) destroy "$@";;
   # ... add other commands as needed ...
   *) echo "Unknown command: $1"; exit 1;;
 esac
