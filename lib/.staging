@@ -27,7 +27,8 @@ DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-pl
 DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_PREFIX=$(wp eval 'global $wpdb;echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
 LOG_FILE="$PRODUCTION_DIR/wp-content/uploads/nfd-staging.log"  # Log file always in production uploads
@@ -185,7 +186,10 @@ create() {
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
   wp option update staging_environment staging --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to set environment."
   wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to update URLs on staging."
-  wp option update staging_config "$CONFIG" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to import global config on staging."
+  # --- PATCH: aggiorno staging_config come JSON ---
+  STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to import global config on staging."
+  # --- FINE PATCH ---
   wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 4 "Unable to turn on Coming Soon page in staging."
   wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to flush rewrite rules."
   rewrite_htaccess "$STAGING_DIR"
@@ -215,8 +219,23 @@ destroy() {
   fi
 }
 
-# --- Other main functions (clone, deploy_files, deploy_db, destroy, etc.) would follow the same refactored pattern as create ---
-# For brevity, only create is shown fully here. I can continue with the rest if you confirm this structure is what you want.
+sso_staging() {
+  if [ -z "$1" ]; then
+    error 'No user provided.'
+  fi
+  wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
+  LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
+  echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
+}
+
+sso_production() {
+  if [ -z "$1" ]; then
+    error 'No user provided.'
+  fi
+  wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
+  LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+  echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
+}
 
 # --- Rewrite .htaccess ---
 rewrite_htaccess() {
@@ -235,17 +254,15 @@ fi
 compatibility_check "$1"
 auth_action $2
 lock_check
-CONFIG=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+
 wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 case "$1" in
   create) create "$@";;
-  # clone) clone "$@";;
-  # deploy_files) deploy_files "$@";;
-  # deploy_db) deploy_db "$@";;
   destroy) destroy "$@";;
-  # ... add other commands as needed ...
-  *) echo "Unknown command: $1"; exit 1;;
+  sso_staging) sso_staging "$@";;
+  sso_production) sso_production "$@";;
+  *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
 esac
 
 # The lock will be cleaned up by the trap on exit
