@@ -277,6 +277,7 @@ clone() {
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
   rewrite_htaccess "$STAGING_DIR"
+  log "SUCCESS" "clone:end" "Website cloned successfully."
   echo '{"status":"success","message":"Website cloned successfully."}'
 }
 
@@ -289,6 +290,7 @@ deploy_files() {
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   fi
   move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
+  log "SUCCESS" "deploy_files:end" "Files deployed successfully."
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
 
@@ -304,6 +306,7 @@ deploy_db() {
   run_or_fail "deploy_db:import_config" "Unable to import global config on production." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "deploy_db:coming_soon_off" "Unable to turn off Coming Soon page." wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   rewrite_htaccess "$PRODUCTION_DIR"
+  log "SUCCESS" "deploy_db:end" "Database deployed successfully."
   echo '{"status":"success","message":"Database deployed successfully."}'
 }
 
