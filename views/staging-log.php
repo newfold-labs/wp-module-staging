@@ -1,0 +1,94 @@
+<?php
+/**
+ * View: layour for the log page on admin side.
+ */
+?>
+<div class="wrap">
+	<h1><?php echo esc_html__( 'Log Staging', 'wp-module-staging' ); ?></h1>
+	<form method="get" style="margin-bottom: 1em;">
+		<?php wp_nonce_field( 'nfd_staging_log_filter', 'nfd_staging_log_nonce' ); ?>
+		<input type="hidden" name="page" value="nfd-staging-log" />
+		<label for="log_date"><?php echo esc_html__( 'Filter by date (YYYY-MM-DD):', 'wp-module-staging' ); ?></label>
+		<input type="date" id="log_date" name="log_date" value="<?php echo esc_attr( $filter_date ); ?>" /> 
+		<label for="per_page" style="margin-left:1em;"><?php echo esc_html__( 'Items per page:', 'wp-module-staging' ); ?></label>
+		<select id="per_page" name="per_page">
+			<?php foreach ( array( 10, 20, 30, 50, 100 ) as $opt ) : ?>
+				<option value="<?php echo esc_html( $opt ); ?>"<?php selected( $per_page, $opt ); ?>><?php echo esc_html( $opt ); ?></option>
+			<?php endforeach; ?>
+		</select> 
+		<input type="submit" class="button button-primary" value="<?php echo esc_attr__( 'Filter', 'wp-module-staging' ); ?>" />
+		<button type="button" class="button" style="margin-left:8px;" onclick="window.location.href='admin.php?page=nfd-staging-log'">
+			<?php echo esc_html__( 'Reset filters', 'wp-module-staging' ); ?>
+		</button>
+	</form>
+
+	<?php if ( ! empty( $logs_to_show ) ) : ?>
+		<table class="widefat fixed striped"><thead><tr><th><?php echo esc_html__( 'Log', 'wp-module-staging' ); ?></th></tr></thead><tbody>
+		<?php foreach ( $logs_to_show as $log ) : ?>
+			<tr><td style="font-family:monospace;"><?php echo esc_html( $log ); ?></td></tr>
+		<?php endforeach; ?>
+		</tbody></table>
+
+		<?php if ( $total_pages > 1 ) : ?>
+			<div class="tablenav"><div class="tablenav-pages" style="margin: 16px 0; font-size: 1.15em;">
+				<?php $base_url = remove_query_arg( array( 'paged' ) ); ?>
+				<?php // Prev button. ?>
+				<?php if ( $page > 1 ) : ?>
+					<?php
+					$prev_url = add_query_arg(
+						array(
+							'paged'    => $page - 1,
+							'per_page' => $per_page,
+							'log_date' => $filter_date,
+						),
+						$base_url
+					);
+					?>
+					<a href="<?php echo esc_url( $prev_url ); ?>" style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></a>
+				<?php else : ?>
+					<span style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></span>
+				<?php endif; ?>
+
+				<?php // Page links. ?>
+				<?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
+					<?php
+					$url = add_query_arg(
+						array(
+							'paged'    => $i,
+							'per_page' => $per_page,
+							'log_date' => $filter_date,
+						),
+						$base_url
+					);
+					?>
+					<span class="pagination-links">
+						<?php if ( $i == $page ) : ?>
+							<span style="font-weight:bold;margin:0 4px;padding:6px 14px;border-radius:4px;background:#2271b1;color:#fff;"><?php echo esc_html( $i ); ?></span>
+						<?php else : ?>
+							<a href="<?php echo esc_url( $url ); ?>" style="margin:0 4px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html( $i ); ?></a>
+						<?php endif; ?>
+					</span>
+				<?php endfor; ?>
+
+				<?php // Next button. ?>
+				<?php if ( $page < $total_pages ) : ?>
+					<?php
+					$next_url = add_query_arg(
+						array(
+							'paged'    => $page + 1,
+							'per_page' => $per_page,
+							'log_date' => $filter_date,
+						),
+						$base_url
+					);
+					?>
+					<a href="<?php echo esc_url( $next_url ); ?>" style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</a>
+				<?php else : ?>
+					<span style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</span>
+				<?php endif; ?>
+			</div></div>
+		<?php endif; ?>
+	<?php else : ?>
+		<p><?php echo esc_html__( 'No log found for selected date.', 'wp-module-staging' ); ?></p>
+	<?php endif; ?>
+</div> 

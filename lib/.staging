@@ -56,11 +56,18 @@ run_or_fail() {
   # run_or_fail "step" "error message" command args...
   local step="$1"; shift
   local errmsg="$1"; shift
-  # Esegue il comando, logga stderr su file
-  "$@" 2> >(tee -a "$LOG_FILE" >&2)
+  # Esegue il comando, logga stderr su file temporaneo
+  local TMP_ERR=$(mktemp)
+  "$@" 2> "$TMP_ERR"
   local status=$?
+  if [ -s "$TMP_ERR" ]; then
+    while IFS= read -r line; do
+      log "ERROR" "$step" "$line"
+    done < "$TMP_ERR"
+  fi
+  rm -f "$TMP_ERR"
   if [ $status -ne 0 ]; then
-    log "ERROR" "$step" "$errmsg (see above for details)"
+    log "ERROR" "$step" "$errmsg"
     error "$errmsg"
   fi
 }

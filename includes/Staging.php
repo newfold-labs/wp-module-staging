@@ -72,6 +72,8 @@ class Staging {
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 
+		add_action( 'admin_menu', array( $this, 'add_log_admin_page' ) );
+
 		new Constants( $container );
 	}
 
@@ -525,5 +527,65 @@ class Staging {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Add the log admin page to the Tools menu.
+	 */
+	public function add_log_admin_page() {
+		add_submenu_page(
+			'tools.php',
+			__( 'Log Staging', 'wp-module-staging' ),
+			__( 'Log Staging', 'wp-module-staging' ),
+			'manage_options',
+			'nfd-staging-log',
+			array( $this, 'render_log_admin_page' )
+		);
+	}
+
+	/**
+	 * Render the log admin page.
+	 */
+	public function render_log_admin_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( "Don't have capabilities to access this page", 'wp-module-staging' ) );
+		}
+
+		if (
+			( isset(
+				$_GET['log_date']
+			) || isset( $_GET['per_page'] ) || isset( $_GET['paged'] ) )
+			&& ( ! isset( $_GET['nfd_staging_log_nonce'] ) || ! wp_verify_nonce( $_GET['nfd_staging_log_nonce'], 'nfd_staging_log_filter' ) )
+		) {
+			wp_die( esc_html__( 'Nonce check failed', 'wp-module-staging' ) );
+		}
+
+		$log_file = $this->getProductionDir() . 'wp-content/uploads/nfd-staging.log';
+
+		$logs        = array();
+		$filter_date = isset( $_GET['log_date'] ) ? sanitize_text_field( $_GET['log_date'] ) : '';
+		$per_page    = isset( $_GET['per_page'] ) ? max( 1, intval( $_GET['per_page'] ) ) : 30;
+		$page        = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
+
+		if ( file_exists( $log_file ) ) {
+			$lines = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+			foreach ( $lines as $line ) {
+				$log_date = substr( $line, 0, 19 );
+				if ( $filter_date ) {
+					if ( strpos( $log_date, $filter_date ) === 0 ) {
+						$logs[] = $line;
+					}
+				} else {
+					$logs[] = $line;
+				}
+			}
+		}
+
+		$total_logs   = count( $logs );
+		$total_pages  = $per_page > 0 ? ceil( $total_logs / $per_page ) : 1;
+		$start        = ( $page - 1 ) * $per_page;
+		$logs_to_show = array_slice( $logs, $start, $per_page );
+
+		include __DIR__ . '/../views/staging-log.php';
 	}
 }
