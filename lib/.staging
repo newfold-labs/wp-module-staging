@@ -54,7 +54,15 @@ error() {
 
 run_or_fail() {
   # run_or_fail "step" "error message" command args...
-  "$@" || { log "ERROR" "$1" "$2"; error "$2"; }
+  local step="$1"; shift
+  local errmsg="$1"; shift
+  # Esegue il comando, logga stderr su file
+  "$@" 2> >(tee -a "$LOG_FILE" >&2)
+  local status=$?
+  if [ $status -ne 0 ]; then
+    log "ERROR" "$step" "$errmsg (see above for details)"
+    error "$errmsg"
+  fi
 }
 
 # --- Cleanup on exit ---
@@ -165,33 +173,33 @@ create() {
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   WP_VER=$(wp core version)
   mkdir -p "$STAGING_DIR" || error 'Unable to create staging directory.'
-  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" || delete_temp_staging 1 "Unable to export database."
-  wp option update staging_environment production --skip-themes --skip-plugins --quiet || delete_temp_staging 1 "Unable to set environment."
+  run_or_fail "create:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES"
+  run_or_fail "create:set_env_prod" "Unable to set environment." wp option update staging_environment production --skip-themes --skip-plugins --quiet
   cd "$STAGING_DIR" || delete_temp_staging 2 "Unable to move to staging directory."
   move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
   if [ -L "$PRODUCTION_DIR/index.php" ]; then
     echo "path=$STAGING_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
     echo "SetEnv WP_ABSPATH $STAGING_DIR" > .htaccess
   else
-    wp core download --version="$WP_VER" --force || delete_temp_staging 2 "Unable to install WordPress in staging directory."
+    run_or_fail "create:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
   fi
-  wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet || delete_temp_staging 2 "Unable to configure WordPress."
+  run_or_fail "create:core_config" "Unable to configure WordPress." wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet
   # Update DB prefix in SQL
   tmpfile=$(mktemp)
   while IFS= read -r line; do
     echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
   done < "$STAGING_DIR/.export-sql"
   mv "$tmpfile" "$STAGING_DIR/.export-sql" > /dev/null 2>&1 || delete_temp_staging 2 "Unable to update database prefix."
-  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to import database."
+  run_or_fail "create:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
-  wp option update staging_environment staging --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to set environment."
-  wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to update URLs on staging."
+  run_or_fail "create:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
+  run_or_fail "create:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
   # --- PATCH: aggiorno staging_config come JSON ---
   STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to import global config on staging."
+  run_or_fail "create:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   # --- FINE PATCH ---
-  wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 4 "Unable to turn on Coming Soon page in staging."
-  wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to flush rewrite rules."
+  run_or_fail "create:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  run_or_fail "create:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rewrite_htaccess "$STAGING_DIR"
 
   log "SUCCESS" "create:end" "Staging website created successfully."
