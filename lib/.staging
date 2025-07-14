@@ -237,6 +237,64 @@ sso_production() {
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
 
+clone() {
+  cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+  STAGING_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
+  if [ "0" != "$USER_ID" ]; then
+    SESSIONS=$(wp user meta get $USER_ID session_tokens --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
+  fi
+  wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to drop staging database tables."
+  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to export database."
+  sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" "$STAGING_DIR/.export-sql" || delete_temp_staging 5 "Unable to update database prefix."
+  cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
+  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to import database."
+  if [ "0" != "$USER_ID" ]; then
+    wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
+  fi
+  wp option update staging_environment staging --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to set environment."
+  move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
+  if [ -L "$PRODUCTION_DIR/index.php" ]; then
+    echo "path=$STAGING_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
+  else
+    WP_VER=$(wp core version)
+    wp core download --version="$WP_VER" --force || delete_temp_staging 5 "Unable to install WordPress in staging directory."
+  fi
+  wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to update URLs on staging."
+  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to import global config on staging."
+  wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to turn on Coming Soon page in staging."
+  wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || delete_temp_staging 5 "Unable to flush rewrite rules."
+  rm "$STAGING_DIR/.export-sql" --force
+  rewrite_htaccess "$STAGING_DIR"
+  echo '{"status":"success","message":"Website cloned successfully."}'
+}
+
+deploy_files() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+  if [ -L "$PRODUCTION_DIR/index.php" ]; then
+    echo "path=$PRODUCTION_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
+  else
+    WP_VER=$(wp core version)
+    wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to move WordPress files.'
+  fi
+  move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
+  echo '{"status":"success","message":"Files deployed successfully."}'
+}
+
+deploy_db() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+  wp db query "DROP TABLE $PRODUCTION_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to drop staging tables.'
+  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet || error 'Unable to export database.'
+  sed -i -e "s/staging_$DB_PREFIX/$DB_PREFIX/g" "$STAGING_DIR/.export-sql" || error 'Unable to update prefix.'
+  wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to import database.'
+  wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to update URL on production.'
+  rm "$STAGING_DIR/.export-sql" --force
+  wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to set environment.'
+  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to import global config on production.'
+  wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || error 'Unable to turn off Coming Soon page.'
+  rewrite_htaccess "$PRODUCTION_DIR"
+  echo '{"status":"success","message":"Database deployed successfully."}'
+}
+
 # --- Rewrite .htaccess ---
 rewrite_htaccess() {
   local LOCATION="$1"
@@ -260,6 +318,9 @@ wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-theme
 case "$1" in
   create) create "$@";;
   destroy) destroy "$@";;
+  clone) clone "$@";;
+  deploy_files) deploy_files "$@";;
+  deploy_db) deploy_db "$@";;
   sso_staging) sso_staging "$@";;
   sso_production) sso_production "$@";;
   *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
