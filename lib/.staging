@@ -119,6 +119,7 @@ auth_action() {
     error 'Unable to authenticate the action.'
   fi
   wp transient delete staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet
+  log "SUCCESS" "auth_action" "Authentication successful."
 }
 
 # --- Lock check ---
@@ -237,6 +238,7 @@ sso_staging() {
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$STAGING_DIR --skip-themes --skip-plugins --quiet
   LINK=$(wp newfold sso --url-only --id=$1 --path=$STAGING_DIR)
+  log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
 
@@ -246,6 +248,7 @@ sso_production() {
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
   LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+  log "SUCCESS" "sso_production" "SSO to production successful for user $1."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
 
