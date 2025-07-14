@@ -289,7 +289,7 @@ deploy_files() {
     WP_VER=$(wp core version)
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   fi
-  move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
+  run_or_fail "deploy_files:move_content_dirs" "Unable to move content directories." move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
   log "SUCCESS" "deploy_files:end" "Files deployed successfully."
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
