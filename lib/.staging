@@ -182,7 +182,7 @@ create() {
     echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
   done < "$STAGING_DIR/.export-sql"
   mv "$tmpfile" "$STAGING_DIR/.export-sql" > /dev/null 2>&1 || delete_temp_staging 2 "Unable to update database prefix."
-  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet || delete_temp_staging 2 "Unable to import database."
+  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to import database."
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
   wp option update staging_environment staging --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to set environment."
   wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet || delete_temp_staging 3 "Unable to update URLs on staging."
