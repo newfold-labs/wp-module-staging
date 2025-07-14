@@ -207,9 +207,7 @@ destroy() {
     wp db query "DROP TABLE $STAGING_TABLES;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to drop staging tables.'
     wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to reset staging environment in production.'
     wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet > /dev/null || error 'Unable to remove global staging config.'
-    rm -r "$STAGING_DIR" --force > /dev/null 2>&1 || error 'Unable to remove staging files.'
-    mkdir -p "$STAGING_DIR" > /dev/null 2>&1
-    echo "<script type='text/javascript'>window.location = '$PRODUCTION_URL';</script>" > "$STAGING_DIR/index.php"
+    rm -rf "$STAGING_DIR" --force > /dev/null 2>&1 || error 'Unable to remove staging files.'
     log "SUCCESS" "destroy:end" "Staging website destroyed."
     # Only this echo should go to stdout for JSON parsing
     echo '{"status":"success","message":"Staging website destroyed.","reload":"true"}'
