@@ -56,7 +56,7 @@ run_or_fail() {
   # run_or_fail "step" "error message" command args...
   local step="$1"; shift
   local errmsg="$1"; shift
-  # Esegue il comando, logga stderr su file temporaneo
+  # Perform command, log stderr on temporary file
   local TMP_ERR=$(mktemp)
   "$@" 2> "$TMP_ERR"
   local status=$?
@@ -202,10 +202,10 @@ create() {
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
   run_or_fail "create:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
   run_or_fail "create:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
-  # --- PATCH: aggiorno staging_config come JSON ---
+
   STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
   run_or_fail "create:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
-  # --- FINE PATCH ---
+
   run_or_fail "create:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "create:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rewrite_htaccess "$STAGING_DIR"
