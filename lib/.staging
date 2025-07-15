@@ -31,7 +31,7 @@ DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR -
 STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
-LOG_FILE="$PRODUCTION_DIR/wp-content/uploads/nfd-staging.log"  # Log file always in production uploads
+LOG_FILE="$PRODUCTION_DIR/nfd-staging.log"  # Log file always in production uploads
 CONTENT_DIRS=(uploads themes plugins)
 
 # --- Logging ---
