@@ -80,43 +80,36 @@ trap cleanup EXIT
 move_content_dirs() {
   local FROM="$1"; local TO="$2"
   log "INFO" "move_content_dirs" "START: Moving content dirs from $FROM to $TO"
-  for DIR in "${CONTENT_DIRS[@]}"; do
-    log "INFO" "move_content_dirs:$DIR" "Attempting to remove $TO/wp-content/$DIR"
-    rm -rf "$TO/wp-content/$DIR" || error "Unable to remove $DIR directory."
-    log "INFO" "move_content_dirs:$DIR" "Removed $TO/wp-content/$DIR (if existed)"
-    log "INFO" "move_content_dirs:$DIR" "Attempting to create $TO/wp-content/$DIR"
-    mkdir -p "$TO/wp-content/$DIR" || error "Unable to create $DIR folder."
-    log "INFO" "move_content_dirs:$DIR" "Created $TO/wp-content/$DIR"
+  for DIR in uploads themes plugins; do
     local SRC="$FROM/wp-content/$DIR"
     local DEST="$TO/wp-content/$DIR"
+    log "INFO" "move_content_dirs:$DIR" "Clean destination dir: removing $DEST"
+    rm -rf "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to remove $DEST"; error "Unable to remove $DIR directory."; }
+    log "INFO" "move_content_dirs:$DIR" "Create destination: $DEST"
+    mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; error "Unable to create $DIR folder."; }
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
       log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
-      local RSYNC_LOG=$(mktemp)
-      rsync -r --exclude=.git "$SRC/" "$DEST" 2> "$RSYNC_LOG"
-      local RSYNC_EXIT=$?
-      if [ $RSYNC_EXIT -ne 0 ]; then
-        log "ERROR" "move_content_dirs:$DIR" "First rsync failed. Log output:"
-        while IFS= read -r line; do
-          log "ERROR" "move_content_dirs:$DIR" "$line"
-        done < "$RSYNC_LOG"
-        grep "Permission denied" "$RSYNC_LOG" | awk -F"open \"" '{print $2}' | awk -F"\"" '{print $1}' | while read -r FILE; do
-          if [ -n "$FILE" ]; then
-            log "ERROR" "move_content_dirs:$DIR" "Permission denied on file: $FILE. Trying to fix permissions."
-            chmod 644 "$FILE" 2>/dev/null
-            chown $(whoami) "$FILE" 2>/dev/null
-          fi
-        done
-        log "INFO" "move_content_dirs:$DIR" "Retrying rsync after permission fix."
-        rsync -r --exclude=.git "$SRC/" "$DEST" 2>> "$RSYNC_LOG" || {
-          log "ERROR" "move_content_dirs:$DIR" "Second rsync failed. Log output:"
-          while IFS= read -r line; do
-            log "ERROR" "move_content_dirs:$DIR" "$line"
-          done < "$RSYNC_LOG"
-          error "Unable to move $DIR folder (even after fixing permissions)."
-        }
+      log "DEBUG" "move_content_dirs:$DIR" "Performed by user: $(whoami)"
+      log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
+      set +e
+      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
+      RSYNC_EXIT=$?
+      set -e
+      log "DEBUG" "move_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
+      if [ -n "$RSYNC_OUTPUT" ]; then
+        log "ERROR" "move_content_dirs:$DIR" "Output rsync:" 
+        while IFS= read -r line; do log "ERROR" "move_content_dirs:$DIR" "RSYNC: $line"; done <<< "$RSYNC_OUTPUT"
       fi
-      log "INFO" "move_content_dirs:$DIR" "Rsync completed successfully."
-      rm -f "$RSYNC_LOG"
+      if [ $RSYNC_EXIT -ne 0 ]; then
+        PERM_DENIED_FILE=$(echo "$RSYNC_OUTPUT" | grep "Permission denied" | awk -F'open "' '{print $2}' | awk -F'"' '{print $1}' | head -n1)
+        if [ -n "$PERM_DENIED_FILE" ]; then
+          log "ERROR" "move_content_dirs:$DIR" "Permission denied on file: $PERM_DENIED_FILE"
+          error "Permission denied on file: $PERM_DENIED_FILE"
+        else
+          error "Unable to move $DIR folder (rsync failed)."
+        fi
+      fi
+      log "INFO" "move_content_dirs:$DIR" "Rsync completed with success."
     else
       log "INFO" "move_files:$DIR" "No files to copy in $DIR, skipping rsync."
     fi
@@ -180,7 +173,9 @@ delete_temp_staging() {
     log "INFO" "delete_temp_staging:step3" "Removed all staging tables."
   fi
   if [ "$step" -ge 2 ]; then
+    wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
     wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    log "INFO" "delete_temp_staging:step4" "Removed option staging_config."
     log "INFO" "delete_temp_staging:step2" "Removed option staging_environment."
   fi
   if [ "$step" -ge 1 ]; then
@@ -267,24 +262,30 @@ create() {
   mkdir -p "$STAGING_DIR" || error 'Unable to create staging directory.'
   log "INFO" "create" "[STEP] Export database."
   TMP_EXPORT_LOG=$(mktemp)
+  log "DEBUG" "create:db_export" "TMP_EXPORT_LOG creato: $TMP_EXPORT_LOG"
   wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" >"$TMP_EXPORT_LOG" 2>&1
   EXPORT_STATUS=$?
-  EXPORT_ERROR=$(cat "$TMP_EXPORT_LOG" | grep -v '^0$' | grep -v '^$')
-  rm -f "$TMP_EXPORT_LOG"
+  log "DEBUG" "create:db_export" "Export status: $EXPORT_STATUS"
   if [ $EXPORT_STATUS -ne 0 ]; then
+    EXPORT_ERROR=$(cat "$TMP_EXPORT_LOG")
     log "ERROR" "create:db_export" "Export error: $EXPORT_ERROR"
-    error "Unable to export database."
+    delete_temp_staging 1 "Unable to export database."
   fi
+  rm -f "$TMP_EXPORT_LOG"
+  log "DEBUG" "create:db_export" "Export completato, procedo con step successivo."
   log "INFO" "create" "[STEP] Set env prod."
   TMP_ENV_LOG=$(mktemp)
+  log "DEBUG" "create:set_env_prod" "TMP_ENV_LOG creato: $TMP_ENV_LOG"
   wp option update staging_environment production --skip-themes --skip-plugins --quiet >"$TMP_ENV_LOG" 2>&1
   ENV_STATUS=$?
-  ENV_ERROR=$(cat "$TMP_ENV_LOG" | grep -v '^0$' | grep -v '^$')
-  rm -f "$TMP_ENV_LOG"
+  log "DEBUG" "create:set_env_prod" "ENV_STATUS: $ENV_STATUS"
   if [ $ENV_STATUS -ne 0 ]; then
+    ENV_ERROR=$(cat "$TMP_ENV_LOG")
     log "ERROR" "create:set_env_prod" "Set env prod error: $ENV_ERROR"
-    error "Unable to set environment."
+    delete_temp_staging 2 "Unable to set environment."
   fi
+  rm -f "$TMP_ENV_LOG"
+  log "DEBUG" "create:set_env_prod" "Set env prod completato, procedo con step successivo."
   log "INFO" "create" "[STEP] Move to staging directory."
   cd "$STAGING_DIR" || delete_temp_staging 2 "Unable to move to staging directory."
   log "INFO" "create" "[STEP] Move WP Content dir."
@@ -301,7 +302,7 @@ create() {
     rm -f "$TMP_CORE_LOG"
     if [ $CORE_STATUS -ne 0 ]; then
       log "ERROR" "create:core_download" "Core download error: $CORE_ERROR"
-      error "Unable to install WordPress in staging directory."
+      delete_temp_staging 2 "Unable to install WordPress in staging directory."
     fi
   fi
   log "INFO" "create" "[STEP] Set core config."
@@ -312,7 +313,7 @@ create() {
   rm -f "$TMP_CONFIG_LOG"
   if [ $CONFIG_STATUS -ne 0 ]; then
     log "ERROR" "create:core_config" "Core config error: $CONFIG_ERROR"
-    error "Unable to configure WordPress."
+    delete_temp_staging 2 "Unable to configure WordPress."
   fi
   log "INFO" "create" "[STEP] Update prefix SQL."
   tmpfile=$(mktemp)
@@ -328,7 +329,7 @@ create() {
   rm -f "$TMP_IMPORT_LOG"
   if [ $IMPORT_STATUS -ne 0 ]; then
     log "ERROR" "create:db_import" "Import error: $IMPORT_ERROR"
-    error "Unable to import database."
+    delete_temp_staging 3 "Unable to import database."
   fi
   log "INFO" "create" "[STEP] Delete SQL export."
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
@@ -340,7 +341,7 @@ create() {
   rm -f "$TMP_ENV2_LOG"
   if [ $ENV2_STATUS -ne 0 ]; then
     log "ERROR" "create:set_env_staging" "Set env staging error: $ENV2_ERROR"
-    error "Unable to set environment."
+    delete_temp_staging 3 "Unable to set environment."
   fi
   log "INFO" "create" "[STEP] Search replace URLs."
   TMP_SR_LOG=$(mktemp)
@@ -350,7 +351,7 @@ create() {
   rm -f "$TMP_SR_LOG"
   if [ $SR_STATUS -ne 0 ]; then
     log "ERROR" "create:search_replace" "Search replace error: $SR_ERROR"
-    error "Unable to update URLs on staging."
+    delete_temp_staging 4 "Unable to update URLs on staging."
   fi
 
   STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -362,7 +363,7 @@ create() {
   rm -f "$TMP_CONFIG2_LOG"
   if [ $CONFIG2_STATUS -ne 0 ]; then
     log "ERROR" "create:import_config" "Import config error: $CONFIG2_ERROR"
-    error "Unable to import global config on staging."
+    delete_temp_staging 4 "Unable to import global config on staging."
   fi
 
   log "INFO" "create" "[STEP] Coming soon ON."
@@ -373,7 +374,7 @@ create() {
   rm -f "$TMP_CS_LOG"
   if [ $CS_STATUS -ne 0 ]; then
     log "ERROR" "create:coming_soon" "Coming soon error: $CS_ERROR"
-    error "Unable to turn on Coming Soon page in staging."
+    delete_temp_staging 4 "Unable to turn on Coming Soon page in staging."
   fi
   log "INFO" "create" "[STEP] Flush rewrite."
   TMP_RF_LOG=$(mktemp)
@@ -383,7 +384,7 @@ create() {
   rm -f "$TMP_RF_LOG"
   if [ $RF_STATUS -ne 0 ]; then
     log "ERROR" "create:rewrite_flush" "Flush rewrite error: $RF_ERROR"
-    error "Unable to flush rewrite rules."
+    delete_temp_staging 5 "Unable to flush rewrite rules."
   fi
   log "INFO" "create" "[STEP] Rewrite htaccess."
   TMP_HTA_LOG=$(mktemp)
@@ -393,7 +394,7 @@ create() {
   rm -f "$TMP_HTA_LOG"
   if [ $HTA_STATUS -ne 0 ]; then
     log "ERROR" "create:rewrite_htaccess" "Rewrite htaccess error: $HTA_ERROR"
-    error "Unable to rewrite .htaccess."
+    delete_temp_staging 5 "Unable to rewrite .htaccess."
   fi
 
   log "SUCCESS" "create:end" "Staging website created successfully."
