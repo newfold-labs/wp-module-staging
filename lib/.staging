@@ -79,13 +79,18 @@ trap cleanup EXIT
 # --- Utility: Move/copy content dirs robustly ---
 move_content_dirs() {
   local FROM="$1"; local TO="$2"
+  log "INFO" "move_content_dirs" "START: Moving content dirs from $FROM to $TO"
   for DIR in "${CONTENT_DIRS[@]}"; do
+    log "INFO" "move_content_dirs:$DIR" "Attempting to remove $TO/wp-content/$DIR"
     rm -rf "$TO/wp-content/$DIR" || error "Unable to remove $DIR directory."
+    log "INFO" "move_content_dirs:$DIR" "Removed $TO/wp-content/$DIR (if existed)"
+    log "INFO" "move_content_dirs:$DIR" "Attempting to create $TO/wp-content/$DIR"
     mkdir -p "$TO/wp-content/$DIR" || error "Unable to create $DIR folder."
+    log "INFO" "move_content_dirs:$DIR" "Created $TO/wp-content/$DIR"
     local SRC="$FROM/wp-content/$DIR"
     local DEST="$TO/wp-content/$DIR"
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
-      # Try rsync, fix permissions if needed
+      log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
       local RSYNC_LOG=$(mktemp)
       rsync -r --exclude=.git "$SRC/" "$DEST" 2> "$RSYNC_LOG"
       local RSYNC_EXIT=$?
@@ -101,6 +106,7 @@ move_content_dirs() {
             chown $(whoami) "$FILE" 2>/dev/null
           fi
         done
+        log "INFO" "move_content_dirs:$DIR" "Retrying rsync after permission fix."
         rsync -r --exclude=.git "$SRC/" "$DEST" 2>> "$RSYNC_LOG" || {
           log "ERROR" "move_content_dirs:$DIR" "Second rsync failed. Log output:"
           while IFS= read -r line; do
@@ -109,11 +115,13 @@ move_content_dirs() {
           error "Unable to move $DIR folder (even after fixing permissions)."
         }
       fi
+      log "INFO" "move_content_dirs:$DIR" "Rsync completed successfully."
       rm -f "$RSYNC_LOG"
     else
       log "INFO" "move_files:$DIR" "No files to copy in $DIR, skipping rsync."
     fi
   done
+  log "INFO" "move_content_dirs" "END: Finished moving content dirs from $FROM to $TO"
 }
 
 # --- Authentication ---
