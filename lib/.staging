@@ -54,9 +54,9 @@ run_or_fail() {
   # run_or_fail "step" "error message" command args...
   local step="$1"; shift
   local errmsg="$1"; shift
-  # Perform command, log stderr on temporary file
+  # Perform command, log all output on temporary file
   local TMP_ERR=$(mktemp)
-  "$@" 2> "$TMP_ERR"
+  "$@" > "$TMP_ERR" 2>&1
   local status=$?
   if [ -s "$TMP_ERR" ]; then
     while IFS= read -r line; do
@@ -203,41 +203,146 @@ drop_views_and_tables() {
 
 # --- Main Functions ---
 create() {
-  log "INFO" "create:start" "Starting staging creation."
+  set +e
+  log "INFO" "create" "[STEP] Start."
+  log "INFO" "create" "[STEP] Move to production directory."
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+  log "INFO" "create" "[STEP] Get WP Version."
   WP_VER=$(wp core version)
+  log "INFO" "create" "[STEP] Create staging directory."
   mkdir -p "$STAGING_DIR" || error 'Unable to create staging directory.'
-  run_or_fail "create:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES"
-  run_or_fail "create:set_env_prod" "Unable to set environment." wp option update staging_environment production --skip-themes --skip-plugins --quiet
+  log "INFO" "create" "[STEP] Export database."
+  TMP_EXPORT_LOG=$(mktemp)
+  wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" >"$TMP_EXPORT_LOG" 2>&1
+  EXPORT_STATUS=$?
+  EXPORT_ERROR=$(cat "$TMP_EXPORT_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_EXPORT_LOG"
+  if [ $EXPORT_STATUS -ne 0 ]; then
+    log "ERROR" "create:db_export" "Export error: $EXPORT_ERROR"
+    error "Unable to export database."
+  fi
+  log "INFO" "create" "[STEP] Set env prod."
+  TMP_ENV_LOG=$(mktemp)
+  wp option update staging_environment production --skip-themes --skip-plugins --quiet >"$TMP_ENV_LOG" 2>&1
+  ENV_STATUS=$?
+  ENV_ERROR=$(cat "$TMP_ENV_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_ENV_LOG"
+  if [ $ENV_STATUS -ne 0 ]; then
+    log "ERROR" "create:set_env_prod" "Set env prod error: $ENV_ERROR"
+    error "Unable to set environment."
+  fi
+  log "INFO" "create" "[STEP] Move to staging directory."
   cd "$STAGING_DIR" || delete_temp_staging 2 "Unable to move to staging directory."
+  log "INFO" "create" "[STEP] Move WP Content dir."
   move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
+  log "INFO" "create" "[STEP] Core download/check symlink."
   if [ -L "$PRODUCTION_DIR/index.php" ]; then
     echo "path=$STAGING_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
     echo "SetEnv WP_ABSPATH $STAGING_DIR" > .htaccess
   else
-    run_or_fail "create:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
+    TMP_CORE_LOG=$(mktemp)
+    wp core download --version="$WP_VER" --force >"$TMP_CORE_LOG" 2>&1
+    CORE_STATUS=$?
+    CORE_ERROR=$(cat "$TMP_CORE_LOG" | grep -v '^0$' | grep -v '^$')
+    rm -f "$TMP_CORE_LOG"
+    if [ $CORE_STATUS -ne 0 ]; then
+      log "ERROR" "create:core_download" "Core download error: $CORE_ERROR"
+      error "Unable to install WordPress in staging directory."
+    fi
   fi
-  run_or_fail "create:core_config" "Unable to configure WordPress." wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet
-  # Update DB prefix in SQL
+  log "INFO" "create" "[STEP] Set core config."
+  TMP_CONFIG_LOG=$(mktemp)
+  wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet >"$TMP_CONFIG_LOG" 2>&1
+  CONFIG_STATUS=$?
+  CONFIG_ERROR=$(cat "$TMP_CONFIG_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_CONFIG_LOG"
+  if [ $CONFIG_STATUS -ne 0 ]; then
+    log "ERROR" "create:core_config" "Core config error: $CONFIG_ERROR"
+    error "Unable to configure WordPress."
+  fi
+  log "INFO" "create" "[STEP] Update prefix SQL."
   tmpfile=$(mktemp)
   while IFS= read -r line; do
     echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
   done < "$STAGING_DIR/.export-sql"
   mv "$tmpfile" "$STAGING_DIR/.export-sql" > /dev/null 2>&1 || delete_temp_staging 2 "Unable to update database prefix."
-  run_or_fail "create:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
+  log "INFO" "create" "[STEP] Import database."
+  TMP_IMPORT_LOG=$(mktemp)
+  wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet >"$TMP_IMPORT_LOG" 2>&1
+  IMPORT_STATUS=$?
+  IMPORT_ERROR=$(cat "$TMP_IMPORT_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_IMPORT_LOG"
+  if [ $IMPORT_STATUS -ne 0 ]; then
+    log "ERROR" "create:db_import" "Import error: $IMPORT_ERROR"
+    error "Unable to import database."
+  fi
+  log "INFO" "create" "[STEP] Delete SQL export."
   rm "$STAGING_DIR/.export-sql" --force > /dev/null 2>&1  # Suppress unwanted output
-  run_or_fail "create:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
-  run_or_fail "create:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
+  log "INFO" "create" "[STEP] Set env staging."
+  TMP_ENV2_LOG=$(mktemp)
+  wp option update staging_environment staging --skip-themes --skip-plugins --quiet >"$TMP_ENV2_LOG" 2>&1
+  ENV2_STATUS=$?
+  ENV2_ERROR=$(cat "$TMP_ENV2_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_ENV2_LOG"
+  if [ $ENV2_STATUS -ne 0 ]; then
+    log "ERROR" "create:set_env_staging" "Set env staging error: $ENV2_ERROR"
+    error "Unable to set environment."
+  fi
+  log "INFO" "create" "[STEP] Search replace URLs."
+  TMP_SR_LOG=$(mktemp)
+  wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet >"$TMP_SR_LOG" 2>&1
+  SR_STATUS=$?
+  SR_ERROR=$(cat "$TMP_SR_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_SR_LOG"
+  if [ $SR_STATUS -ne 0 ]; then
+    log "ERROR" "create:search_replace" "Search replace error: $SR_ERROR"
+    error "Unable to update URLs on staging."
+  fi
 
   STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-  run_or_fail "create:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  log "INFO" "create" "[STEP] Import config."
+  TMP_CONFIG2_LOG=$(mktemp)
+  wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet >"$TMP_CONFIG2_LOG" 2>&1
+  CONFIG2_STATUS=$?
+  CONFIG2_ERROR=$(cat "$TMP_CONFIG2_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_CONFIG2_LOG"
+  if [ $CONFIG2_STATUS -ne 0 ]; then
+    log "ERROR" "create:import_config" "Import config error: $CONFIG2_ERROR"
+    error "Unable to import global config on staging."
+  fi
 
-  run_or_fail "create:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
-  run_or_fail "create:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
-  rewrite_htaccess "$STAGING_DIR"
+  log "INFO" "create" "[STEP] Coming soon ON."
+  TMP_CS_LOG=$(mktemp)
+  wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet >"$TMP_CS_LOG" 2>&1
+  CS_STATUS=$?
+  CS_ERROR=$(cat "$TMP_CS_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_CS_LOG"
+  if [ $CS_STATUS -ne 0 ]; then
+    log "ERROR" "create:coming_soon" "Coming soon error: $CS_ERROR"
+    error "Unable to turn on Coming Soon page in staging."
+  fi
+  log "INFO" "create" "[STEP] Flush rewrite."
+  TMP_RF_LOG=$(mktemp)
+  wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet >"$TMP_RF_LOG" 2>&1
+  RF_STATUS=$?
+  RF_ERROR=$(cat "$TMP_RF_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_RF_LOG"
+  if [ $RF_STATUS -ne 0 ]; then
+    log "ERROR" "create:rewrite_flush" "Flush rewrite error: $RF_ERROR"
+    error "Unable to flush rewrite rules."
+  fi
+  log "INFO" "create" "[STEP] Rewrite htaccess."
+  TMP_HTA_LOG=$(mktemp)
+  rewrite_htaccess "$STAGING_DIR" >"$TMP_HTA_LOG" 2>&1
+  HTA_STATUS=$?
+  HTA_ERROR=$(cat "$TMP_HTA_LOG" | grep -v '^0$' | grep -v '^$')
+  rm -f "$TMP_HTA_LOG"
+  if [ $HTA_STATUS -ne 0 ]; then
+    log "ERROR" "create:rewrite_htaccess" "Rewrite htaccess error: $HTA_ERROR"
+    error "Unable to rewrite .htaccess."
+  fi
 
   log "SUCCESS" "create:end" "Staging website created successfully."
-  # Only this echo should go to stdout for JSON parsing
   echo '{"status":"success","message":"Staging website created successfully.","reload":"true"}'
 }
 
