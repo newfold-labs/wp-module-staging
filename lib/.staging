@@ -194,24 +194,70 @@ delete_temp_staging() {
 
 # --- Utility: Drop all views and tables robustly ---
 drop_views_and_tables() {
+  set -e
   local WP_PATH="$1"
-  # Get all views
-  VIEWS=$(wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE();" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet)
-  # Get all tables
-  TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$WP_PATH" --skip-themes --skip-plugins --quiet)
-  if [ -n "$VIEWS" ]; then
-    log "INFO" "drop_views_and_tables" "Dropping views: $VIEWS"
-    wp db query "DROP VIEW IF EXISTS $VIEWS;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet
+  log "INFO" "drop_views_and_tables" "About to query views in $WP_PATH"
+  TMP_VIEWS_LOG=$(mktemp)
+  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ..."
+  wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE();" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
+  VIEWS_STATUS=$?
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $VIEWS_STATUS"
+  VIEWS=$(cat "$TMP_VIEWS_LOG")
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, VIEWS_RAW: $VIEWS"
+  if [ $VIEWS_STATUS -ne 0 ]; then
+    log "ERROR" "drop_views_and_tables" "Error querying views: $VIEWS"
   fi
+  rm -f "$TMP_VIEWS_LOG"
+  # Query tables
+  log "INFO" "drop_views_and_tables" "About to query tables in $WP_PATH"
+  TMP_TABLES_LOG=$(mktemp)
+  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db tables ..."
+  wp db tables --all-tables-with-prefix --format=csv --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_TABLES_LOG" 2>&1
+  TABLES_STATUS=$?
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $TABLES_STATUS"
+  TABLES=$(cat "$TMP_TABLES_LOG")
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, TABLES_RAW: $TABLES"
+  if [ $TABLES_STATUS -ne 0 ]; then
+    log "ERROR" "drop_views_and_tables" "Error querying tables: $TABLES"
+  fi
+  rm -f "$TMP_TABLES_LOG"
+  # Drop each view individually
+  if [ -n "$VIEWS" ]; then
+    for VIEW in $VIEWS; do
+      log "INFO" "drop_views_and_tables" "Dropping view: $VIEW"
+      TMP_DROP_VIEW_LOG=$(mktemp)
+      wp db query "DROP VIEW IF EXISTS \`$VIEW\`;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_DROP_VIEW_LOG" 2>&1
+      DROP_VIEW_STATUS=$?
+      DROP_VIEW_OUT=$(cat "$TMP_DROP_VIEW_LOG")
+      if [ $DROP_VIEW_STATUS -ne 0 ]; then
+        log "ERROR" "drop_views_and_tables" "Error dropping view $VIEW: $DROP_VIEW_OUT"
+      else
+        log "INFO" "drop_views_and_tables" "Dropped view $VIEW: $DROP_VIEW_OUT"
+      fi
+      rm -f "$TMP_DROP_VIEW_LOG"
+    done
+  fi
+  # Drop each table individually
   if [ -n "$TABLES" ]; then
-    log "INFO" "drop_views_and_tables" "Dropping tables: $TABLES"
-    wp db query "DROP TABLE IF EXISTS $TABLES;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet
+    for TABLE in $TABLES; do
+      log "INFO" "drop_views_and_tables" "Dropping table: $TABLE"
+      TMP_DROP_TABLE_LOG=$(mktemp)
+      wp db query "DROP TABLE IF EXISTS \`$TABLE\`;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_DROP_TABLE_LOG" 2>&1
+      DROP_TABLE_STATUS=$?
+      DROP_TABLE_OUT=$(cat "$TMP_DROP_TABLE_LOG")
+      if [ $DROP_TABLE_STATUS -ne 0 ]; then
+        log "ERROR" "drop_views_and_tables" "Error dropping table $TABLE: $DROP_TABLE_OUT"
+      else
+        log "INFO" "drop_views_and_tables" "Dropped table $TABLE: $DROP_TABLE_OUT"
+      fi
+      rm -f "$TMP_DROP_TABLE_LOG"
+    done
   fi
 }
 
 # --- Main Functions ---
 create() {
-  set +e
+  set -e
   log "INFO" "create" "[STEP] Start."
   log "INFO" "create" "[STEP] Move to production directory."
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
@@ -355,20 +401,29 @@ create() {
 }
 
 destroy() {
-  log "INFO" "destroy:start" "Starting destruction of staging site."
+  log "INFO" "destroy" "[STEP] Start destroy."
+  log "INFO" "destroy" "[STEP] Move to production directory."
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   if test -d "$STAGING_DIR"; then
-    # Drop views and tables
+    log "INFO" "destroy" "[STEP] Drop views and tables in $STAGING_DIR."
     drop_views_and_tables "$STAGING_DIR"
+    log "INFO" "destroy" "[STEP] Dropped views and tables."
+    log "INFO" "destroy" "[STEP] Delete staging_environment option."
     run_or_fail "destroy:delete_env" "Unable to reset staging environment in production." wp option delete staging_environment --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    log "INFO" "destroy" "[STEP] Deleted staging_environment option."
+    log "INFO" "destroy" "[STEP] Delete staging_config option."
     run_or_fail "destroy:delete_config" "Unable to remove global staging config." wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    log "INFO" "destroy" "[STEP] Deleted staging_config option."
+    log "INFO" "destroy" "[STEP] Remove staging directory $STAGING_DIR."
     run_or_fail "destroy:rm_dir" "Unable to remove staging files." rm -rf "$STAGING_DIR" --force
+    log "INFO" "destroy" "[STEP] Removed staging directory."
     log "SUCCESS" "destroy:end" "Staging website destroyed."
     echo '{"status":"success","message":"Staging website destroyed.","reload":"true"}'
   else
     log "INFO" "destroy:skip" "Staging directory does not exist, nothing to destroy."
     echo '{"status":"success","message":"Staging directory does not exist, nothing to destroy."}'
   fi
+  log "INFO" "destroy" "[STEP] End destroy."
 }
 
 sso_staging() {
