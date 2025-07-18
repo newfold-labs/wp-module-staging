@@ -550,16 +550,7 @@ class Staging {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( "Don't have capabilities to access this page", 'wp-module-staging' ) );
 		}
-
-		if (
-			( isset(
-				$_GET['log_date']
-			) || isset( $_GET['per_page'] ) || isset( $_GET['paged'] ) )
-			&& ( ! isset( $_GET['nfd_staging_log_nonce'] ) || ! wp_verify_nonce( $_GET['nfd_staging_log_nonce'], 'nfd_staging_log_filter' ) )
-		) {
-			wp_die( esc_html__( 'Nonce check failed', 'wp-module-staging' ) );
-		}
-
+        
 		$log_file = $this->getProductionDir() . 'nfd-staging.log';
 
 		$logs        = array();
