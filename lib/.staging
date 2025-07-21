@@ -82,15 +82,15 @@ trap cleanup EXIT
 
 # --- Utility: Move/copy content dirs robustly ---
 move_content_dirs() {
-  local FROM="$1"; local TO="$2"
+  local FROM="$1"; local TO="$2"; local ON_ERROR="$3"
   log "INFO" "move_content_dirs" "START: Moving content dirs from $FROM to $TO"
   for DIR in uploads themes plugins; do
     local SRC="$FROM/wp-content/$DIR"
     local DEST="$TO/wp-content/$DIR"
     log "INFO" "move_content_dirs:$DIR" "Clean destination dir: removing $DEST"
-    rm -rf "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to remove $DEST"; error "Unable to remove $DIR directory."; }
+    rm -rf "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to remove $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove $DIR directory."; }
     log "INFO" "move_content_dirs:$DIR" "Create destination: $DEST"
-    mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; error "Unable to create $DIR folder."; }
+    mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create $DIR folder."; }
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
       log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
       log "DEBUG" "move_content_dirs:$DIR" "Performed by user: $(whoami)"
@@ -108,9 +108,9 @@ move_content_dirs() {
         PERM_DENIED_FILE=$(echo "$RSYNC_OUTPUT" | grep "Permission denied" | awk -F'open "' '{print $2}' | awk -F'"' '{print $1}' | head -n1)
         if [ -n "$PERM_DENIED_FILE" ]; then
           log "ERROR" "move_content_dirs:$DIR" "Permission denied on file: $PERM_DENIED_FILE"
-          error "Permission denied on file: $PERM_DENIED_FILE"
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Permission denied on file: $PERM_DENIED_FILE"
         else
-          error "Unable to move $DIR folder (rsync failed)."
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to move $DIR folder (rsync failed)."
         fi
       fi
       log "INFO" "move_content_dirs:$DIR" "Rsync completed with success."
@@ -342,7 +342,7 @@ create() {
 
   # Move WP Content dir
   log "INFO" "create" "[STEP] Move WP Content dir."
-  move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
+  move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR" "delete_temp_staging 4 'Unable to move content dirs.'"
 
   # Core download/check symlink
   log "INFO" "create" "[STEP] Core download/check symlink."
