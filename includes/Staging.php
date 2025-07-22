@@ -42,6 +42,9 @@ class Staging {
 		);
 		add_action( 'wp_loaded', array( StagingMenu::class, 'init' ), 100 );
 
+		// Mark Safe Mode as confirmed so the banner never re-appears
+		add_action( 'init', array( $this, 'confirm_jetpack_safe_mode' ), 20 );
+
 		// add isStaging as computed value to container
 		$this->container->set(
 			'isStaging',
@@ -75,6 +78,20 @@ class Staging {
 		new Constants( $container );
 	}
 
+	/**
+	 * Confirms Jetpack Safe Mode programmatically to suppress the banner.
+	 *
+	 * When a staging site is detected, this method sets the internal Jetpack option
+	 * `safe_mode_confirmed` to `true`, which tells Jetpack that the user has already
+	 * acknowledged Safe Mode. This prevents repeated prompts or blocked rendering on admin pages.
+	 *
+	 * @return void
+	 */
+	public function confirm_jetpack_safe_mode() {
+		if ( $this->isStaging() && class_exists( 'Jetpack_Options' ) ) {
+			\Jetpack_Options::update_option( 'safe_mode_confirmed', true );
+		}
+	}
 
 	/**
 	 * Initializes the Staging module by registering and enqueuing its assets.
