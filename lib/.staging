@@ -173,7 +173,11 @@ delete_temp_staging() {
     log "INFO" "delete_temp_staging:step4" "Removed option staging_config."
   fi
   if [ "$step" -ge 3 ]; then
-    wp db query "DROP TABLE IF EXISTS $(wp db tables --all-tables-with-prefix --format=csv --path=\"$STAGING_DIR\" | grep '^staging_' | tr '\n' ',' | sed 's/,$//')" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+    TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$STAGING_DIR" | grep '^staging_')
+    for TABLE in $TABLES; do
+      log "INFO" "delete_temp_staging:step3" "Dropping table: $TABLE"
+      wp db query "DROP TABLE IF EXISTS $TABLE;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+    done
     log "INFO" "delete_temp_staging:step3" "Removed all staging tables."
   fi
   if [ "$step" -ge 2 ]; then
@@ -242,7 +246,7 @@ drop_views_and_tables() {
       log "INFO" "drop_views_and_tables" "Dropping table: $TABLE"
       TMP_DROP_TABLE_LOG=$(mktemp)
       set +e
-      wp db query "DROP TABLE IF EXISTS \`$TABLE\`;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_DROP_TABLE_LOG" 2>&1
+      wp db query "DROP TABLE IF EXISTS $TABLE;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_DROP_TABLE_LOG" 2>&1
       DROP_TABLE_STATUS=$?
       set -e
       log "DEBUG" "drop_views_and_tables" "DROP TABLE exit code: $DROP_TABLE_STATUS"
