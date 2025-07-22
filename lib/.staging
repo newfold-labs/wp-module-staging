@@ -398,9 +398,7 @@ create() {
     delete_temp_staging 2 "SQL export file not found."
   fi
   set +e
-  while IFS= read -r line; do
-    echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >> "$tmpfile"
-  done < "$STAGING_DIR/.export-sql"
+  sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$tmpfile"
   PREFIX_STATUS=$?
   set -e
   log "DEBUG" "create:update_prefix_sql" "Table prefix updated, exit code: $PREFIX_STATUS"
@@ -665,8 +663,8 @@ deploy_db() {
     error "Unable to export database."
   fi
 
-  log "INFO" "deploy_db" "Execution: sed -i -e s/staging_$DB_PREFIX/$DB_PREFIX/g $STAGING_DIR/.export-sql"
-  OUTPUT=$(sed -i -e "s/staging_$DB_PREFIX/$DB_PREFIX/g" "$STAGING_DIR/.export-sql" 2>&1)
+  log "INFO" "deploy_db" "Execution: sed -i -E s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g $STAGING_DIR/.export-sql"
+  OUTPUT=$(sed -i -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" 2>&1)
   if [ $? -ne 0 ]; then
     if [ -z "$OUTPUT" ]; then
       log "ERROR" "deploy_db" "Error command: (no output) - command executed: sed -i -e s/staging_$DB_PREFIX/$DB_PREFIX/g $STAGING_DIR/.export-sql"
