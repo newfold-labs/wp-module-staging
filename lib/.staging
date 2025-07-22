@@ -601,15 +601,33 @@ clone() {
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
+  log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
   if [ "0" != "$USER_ID" ]; then
-    SESSIONS=$(wp user meta get $USER_ID session_tokens --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet)
+    log "INFO" "clone:get_sessions" "Fetching session tokens for user $USER_ID"
+    set +e
+    SESSIONS=$(wp user meta get "$USER_ID" session_tokens --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    STATUS=$?
+    set -e
+    log "DEBUG" "clone:get_sessions" "Exit code: $STATUS"
+    if [ $STATUS -ne 0 ]; then
+      log "ERROR" "clone:get_sessions" "Failed to fetch session tokens. Output: $SESSIONS"
+      SESSIONS=""
+    fi
   fi
   run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
   run_or_fail "clone:sed_prefix" "Unable to update database prefix." sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" "$STAGING_DIR/.export-sql"
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
-  if [ "0" != "$USER_ID" ]; then
-    run_or_fail "clone:user_meta" "Unable to update user session tokens." wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
+  if [ "0" != "$USER_ID" ] && [ -n "$SESSIONS" ]; then
+    log "DEBUG" "clone:user_meta" "Updating user session tokens with value: $SESSIONS"
+    echo "$SESSIONS" | jq empty 2>/dev/null
+    if [ $? -eq 0 ]; then
+      run_or_fail "clone:user_meta" "Unable to update user session tokens." wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
+    else
+      log "ERROR" "clone:user_meta" "Invalid JSON in session_tokens, skipping update."
+    fi
+  else
+    log "INFO" "clone:user_meta" "No session tokens to update, skipping."
   fi
   run_or_fail "clone:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
   move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
