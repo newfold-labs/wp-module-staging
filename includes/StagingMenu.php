@@ -3,6 +3,8 @@
 namespace NewfoldLabs\WP\Module\Staging;
 
 use function NewfoldLabs\WP\ModuleLoader\container;
+use function NewfoldLabs\WP\Module\LinkTracker\Functions\build_link as buildLink;
+
 
 /**
  * Class StagingMenu
@@ -61,7 +63,7 @@ class StagingMenu {
 			if ( container()->get( 'isStaging' ) ) {
 				$args = array(
 					'id'    => 'newfold-staging',
-					'href'  => admin_url( 'admin.php?page=' . container()->plugin()->id . '#/staging' ),
+					'href'  => buildLink( admin_url( 'admin.php?page=' . container()->plugin()->id . '#/staging' ) ),
 					'title' => '<div style="background-color: #ce0000; padding: 0 10px;color:#fff;">' . esc_html__( 'Staging Environment', 'wp-module-staging' ) . '</div>',
 					'meta'  => array(
 						'title' => esc_attr__( 'Staging Actions', 'wp-module-staging' ),
