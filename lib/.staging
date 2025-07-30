@@ -599,6 +599,7 @@ sso_production() {
 clone() {
   log "DEBUG" "Performed by user : $(whoami)"
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
   log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
@@ -615,7 +616,7 @@ clone() {
     fi
   fi
   run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
-  run_or_fail "clone:sed_prefix" "Unable to update database prefix." sed -i -e "s/$DB_PREFIX/staging_$DB_PREFIX/g" "$STAGING_DIR/.export-sql"
+  run_or_fail "clone:sed_prefix" "Unable to update database prefix." sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql"
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
   if [ "0" != "$USER_ID" ] && [ -n "$SESSIONS" ]; then
@@ -642,6 +643,7 @@ clone() {
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
+
   rewrite_htaccess "$STAGING_DIR"
   log "SUCCESS" "clone:end" "Website cloned successfully."
   echo '{"status":"success","message":"Website cloned successfully."}'
