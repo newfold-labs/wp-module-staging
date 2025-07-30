@@ -599,7 +599,7 @@ sso_production() {
 clone() {
   log "DEBUG" "Performed by user : $(whoami)"
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
-
+  trap 'delete_temp_staging 5 "Clone failed unexpectedly."' ERR
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
   log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
@@ -643,7 +643,7 @@ clone() {
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
-
+  trap - ERR
   rewrite_htaccess "$STAGING_DIR"
   log "SUCCESS" "clone:end" "Website cloned successfully."
   echo '{"status":"success","message":"Website cloned successfully."}'
