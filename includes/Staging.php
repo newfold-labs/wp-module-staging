@@ -576,6 +576,7 @@ class Staging {
 		$total_pages  = $per_page > 0 ? ceil( $total_logs / $per_page ) : 1;
 		$start        = ( $page - 1 ) * $per_page;
 		$logs_to_show = array_slice( $logs, $start, $per_page );
+        $instance = $this;
 
 		include __DIR__ . '/../views/staging-log.php';
 	}

@@ -2,9 +2,19 @@
 /**
  * View: layour for the log page on admin side.
  */
+$staging_config = $instance->getConfig();
 ?>
 <div class="wrap">
 	<h1><?php echo esc_html__( 'Log Staging', 'wp-module-staging' ); ?></h1>
+    <div style="margin-top: 1em; margin-bottom: 2em; padding: 1em; background: #fff; border-left: 4px solid #2271b1; box-shadow: 0 1px 1px rgba(0,0,0,0.04);">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li><strong><?php echo esc_html__( 'Production DIR:', 'wp-module-staging' ); ?></strong> <span class="prod-dir"><?php echo esc_html( $instance->getProductionDir() ) ?></span></li>
+            <li><strong><?php echo esc_html__( 'Production URL:', 'wp-module-staging' ); ?></strong> <span class="prod-url"><?php echo esc_html( $instance->getProductionUrl() ); ?></span></li>
+            <li><strong><?php echo esc_html__( 'Staging DIR:', 'wp-module-staging' ); ?></strong> <span class="staging-dir"><?php echo esc_html( $instance->getStagingDir() ); ?></span></li>
+            <li><strong><?php echo esc_html__( 'Staging URL:', 'wp-module-staging' ); ?></strong> <span class="staging-url"><?php echo esc_html( $instance->getStagingUrl() ); ?></span></li>
+            <li><strong><?php echo esc_html__( 'Staging environment:', 'wp-module-staging' ); ?></strong> <span class="staging-env"><?php echo esc_html( $instance->getEnvironment() ); ?></span></li>
+        </ul>
+    </div>
 	<form method="get" style="margin-bottom: 1em;">
 		<?php wp_nonce_field( 'nfd_staging_log_filter', 'nfd_staging_log_nonce' ); ?>
 		<input type="hidden" name="page" value="nfd-staging-log" />
@@ -16,9 +26,9 @@
 				<option value="<?php echo esc_html( $opt ); ?>"<?php selected( $per_page, $opt ); ?>><?php echo esc_html( $opt ); ?></option>
 			<?php endforeach; ?>
 		</select> 
-		<input type="submit" class="button button-primary" value="<?php echo esc_attr__( 'Filter', 'wp-module-staging' ); ?>" />
+		<input type="submit" class="button button-primary" value="<?php echo esc_attr__( 'Save', 'wp-module-staging' ); ?>" />
 		<button type="button" class="button" style="margin-left:8px;" onclick="window.location.href='admin.php?page=nfd-staging-log'">
-			<?php echo esc_html__( 'Reset filters', 'wp-module-staging' ); ?>
+			<?php echo esc_html__( 'Reset', 'wp-module-staging' ); ?>
 		</button>
 	</form>
 
