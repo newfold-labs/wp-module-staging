@@ -98,13 +98,13 @@ const App = () => {
 			setProductionDir( response.productionDir );
 		}
 		if ( response.hasOwnProperty( 'productionUrl' ) ) {
-			setProductionUrl( window?.NewfoldRuntime?.linkTracker?.addUtmParams( response.productionUrl) || response.productionUrl );
+			setProductionUrl( response.productionUrl );
 		}
 		if ( response.hasOwnProperty( 'stagingDir' ) ) {
 			setStagingDir( response.stagingDir );
 		}
 		if ( response.hasOwnProperty( 'stagingUrl' ) ) {
-			setStagingUrl( window?.NewfoldRuntime?.linkTracker?.addUtmParams( response.stagingUrl ) || response.stagingUrl );
+			setStagingUrl( response.stagingUrl );
 		}
 		if ( response.hasOwnProperty( 'creationDate' ) ) {
 			setCreationDate( response.creationDate );
