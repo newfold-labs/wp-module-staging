@@ -31,6 +31,7 @@ const App = () => {
 		deleteNoticeStartText,
 		deployNoticeCompleteText,
 		deployNoticeStartText,
+		errorLabel,
 		pageDescription,
 		pageTitle,
 		proceed,
@@ -45,7 +46,7 @@ const App = () => {
 		switchToStagingNoticeStartText,
 		switching,
 		unknownErrorMessage,
-		working
+		working,
 	} = getAppText();
 
 	const apiNamespace = '/newfold-staging/v1/';
@@ -68,7 +69,7 @@ const App = () => {
 		title,
 		description,
 		variant = 'success',
-		duration = false
+		duration = 4000
 	) => {
 		pushNotification( id, {
 			title,
@@ -107,12 +108,12 @@ const App = () => {
 
 	};
 
-	const setError = ( error ) => {
+	const setError = ( msgError ) => {
 		// console.log('setError', error);
 		setIsLoading( false );
 		setIsThinking( false );
 		setIsError(true);
-		makeNotice( 'error', error, error, 'error' );
+		makeNotice( 'error', errorLabel, msgError, 'error' );
 	};
 
 	const catchError = (error) => {

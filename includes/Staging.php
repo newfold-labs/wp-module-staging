@@ -518,7 +518,7 @@ class Staging {
 		$response = json_decode( $json, true );
 
 		if ( ! $response ) {
-			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'wp-module-staging' ) );
+			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
 		}
 
 		// Check if response is an error response.
