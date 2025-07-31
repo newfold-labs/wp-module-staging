@@ -263,6 +263,136 @@ drop_views_and_tables() {
   fi
 }
 
+# --- Utility: Cleanup failed new content dirs (with logging) ---
+cleanup_failed_new_content_dirs() {
+  local TO="$1"
+  log "INFO" "cleanup_failed_new_content_dirs" "START: Cleaning up failed new content dirs in $TO"
+  for DIR in uploads themes plugins; do
+    local NEW="$TO/wp-content/$DIR-new"
+    if [ -d "$NEW" ]; then
+      log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Attempting to remove $NEW"
+      rm -rf "$NEW"
+      if [ $? -eq 0 ]; then
+        log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removed $NEW successfully"
+      else
+        log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $NEW"
+      fi
+    else
+      log "DEBUG" "cleanup_failed_new_content_dirs:$DIR" "No $NEW to remove"
+    fi
+  done
+  log "INFO" "cleanup_failed_new_content_dirs" "END: Cleanup of failed new content dirs in $TO"
+}
+
+# --- Utility: Prepare new content dirs robustly (with logging) ---
+prepare_new_content_dirs() {
+  local FROM="$1"; local TO="$2"
+  # Disabilitiamo il comportamento globale `set -e` per gestire errori manualmente qui
+  set +e
+  log "INFO" "prepare_new_content_dirs" "START: Preparing new content dirs from $FROM to $TO"
+
+  # Trap locale: se la funzione esce con codice != 0 e non ha già fatto cleanup, lo facciamo
+  local CLEANED=0
+  _do_cleanup() {
+    if [ "$CLEANED" -eq 0 ]; then
+      log "DEBUG" "prepare_new_content_dirs" "Auto-invoking cleanup_failed_new_content_dirs due to unexpected exit"
+      cleanup_failed_new_content_dirs "$TO"
+      CLEANED=1
+    fi
+  }
+  trap '_do_cleanup' EXIT
+
+  for DIR in uploads themes plugins; do
+    local SRC="$FROM/wp-content/$DIR"
+    local DEST="$TO/wp-content/$DIR-new"
+    log "INFO" "prepare_new_content_dirs:$DIR" "Preparing to copy $SRC to $DEST"
+    log "DEBUG" "prepare_new_content_dirs:$DIR" "Performed by user: $(whoami)"
+
+    # Clean destination
+    log "INFO" "prepare_new_content_dirs:$DIR" "Cleaning destination dir: removing $DEST"
+    rm -rf "$DEST"
+    if [ $? -ne 0 ]; then
+      log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to remove $DEST"
+      _do_cleanup
+      trap - EXIT
+      return 1
+    fi
+
+    # Create destination
+    log "INFO" "prepare_new_content_dirs:$DIR" "Creating destination: $DEST"
+    mkdir -p "$DEST"
+    if [ $? -ne 0 ]; then
+      log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to create $DEST"
+      _do_cleanup
+      trap - EXIT
+      return 1
+    fi
+
+    # Copy if source has content
+    if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+      log "INFO" "prepare_new_content_dirs:$DIR" "Copying to $DEST"
+      log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
+      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
+      RSYNC_EXIT=$?
+      log "DEBUG" "prepare_new_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
+
+      if [ -n "$RSYNC_OUTPUT" ]; then
+        log "ERROR" "prepare_new_content_dirs:$DIR" "Output rsync:"
+        while IFS= read -r line; do
+          log "ERROR" "prepare_new_content_dirs:$DIR" "RSYNC: $line"
+        done <<< "$RSYNC_OUTPUT"
+      fi
+
+      if [ $RSYNC_EXIT -ne 0 ]; then
+        PERM_DENIED_FILE=$(echo "$RSYNC_OUTPUT" | grep "Permission denied" | awk -F'open \"' '{print $2}' | awk -F'\"' '{print $1}' | head -n1)
+        if [ -n "$PERM_DENIED_FILE" ]; then
+          log "ERROR" "prepare_new_content_dirs:$DIR" "Permission denied on file: $PERM_DENIED_FILE"
+        else
+          log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to copy $DIR folder (rsync failed)."
+        fi
+        log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
+        _do_cleanup
+        trap - EXIT
+        return 1
+      fi
+
+      log "INFO" "prepare_new_content_dirs:$DIR" "Rsync completed with success."
+    else
+      log "INFO" "prepare_new_content_dirs:$DIR" "No files to copy in $DIR, skipping rsync."
+    fi
+
+    log "DEBUG" "prepare_new_content_dirs:$DIR" "Post-copy permissions: $(ls -ld "$DEST")"
+  done
+
+  # Success: disinnesca il trap e esci pulito
+  CLEANED=1
+  trap - EXIT
+  log "INFO" "prepare_new_content_dirs" "END: Finished preparing new content dirs from $FROM to $TO"
+  return 0
+}
+
+# --- Utility: Finalize new content dirs (with logging) ---
+finalize_new_content_dirs() {
+  local TO="$1"; local ON_ERROR="$2"
+  log "INFO" "finalize_new_content_dirs" "START: Finalizing new content dirs in $TO"
+  for DIR in uploads themes plugins; do
+    local ORIG="$TO/wp-content/$DIR"
+    local NEW="$TO/wp-content/$DIR-new"
+    log "INFO" "finalize_new_content_dirs:$DIR" "Preparing to remove $ORIG"
+    if [ -d "$ORIG" ]; then
+      rm -rf "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to remove $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove $DIR directory during finalize."; }
+      log "INFO" "finalize_new_content_dirs:$DIR" "Removed old $ORIG"
+    else
+      log "INFO" "finalize_new_content_dirs:$DIR" "No existing $ORIG to remove"
+    fi
+    log "INFO" "finalize_new_content_dirs:$DIR" "Renaming $NEW to $ORIG"
+    mv "$NEW" "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to move $NEW to $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to finalize $DIR-new folder."; }
+    log "INFO" "finalize_new_content_dirs:$DIR" "Moved $NEW to $ORIG"
+    log "DEBUG" "finalize_new_content_dirs:$DIR" "Permissions after move: $(ls -ld "$ORIG")"
+  done
+  log "INFO" "finalize_new_content_dirs" "END: Finalized new content dirs in $TO"
+}
+
 # --- Main Functions ---
 create() {
   log "DEBUG" "Performed by user : $(whoami)"
@@ -667,7 +797,17 @@ deploy_files() {
     WP_VER=$(wp core version)
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   fi
-  run_or_fail "deploy_files:move_content_dirs" "Unable to move content directories." move_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR"
+
+  prepare_new_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR" || {
+    cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+    error "Unable to prepare new content directories."
+  }
+
+  finalize_new_content_dirs "$PRODUCTION_DIR" || {
+    cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+    error "Unable to finalize new content directories."
+  }
+
   log "SUCCESS" "deploy_files:end" "Files deployed successfully."
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
