@@ -158,12 +158,11 @@ compatibility_check() {
 
 # --- Rollback/Cleanup for failed staging creation ---
 delete_temp_staging() {
-  # Usage: delete_temp_staging <step> <message>
-  # Rolls back partial staging creation if a step fails, cleaning up files, tables, and options.
   local step="${1:-0}"
   local message="${2:-Cleanup after failure}"
   step=$((step + 0))
 
+  set +e
   if [ "$step" -ge 5 ]; then
     wp option update nfd_coming_soon 'false' --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
     log "INFO" "delete_temp_staging:step5" "Reverted nfd_coming_soon option."
@@ -190,7 +189,7 @@ delete_temp_staging() {
     rm -rf "$STAGING_DIR"
     log "INFO" "delete_temp_staging:step1" "Removed staging directory."
   fi
-
+  set -e
   log "ERROR" "delete_temp_staging" "$message"
   error "$message"
 }
@@ -423,7 +422,7 @@ create() {
   IMPORT_STATUS=$?
   set -e
   log "DEBUG" "create:db_import" "wp db import exit code: $IMPORT_STATUS"
-  if [ $IMPORT_STATUS -ne 0 ]; then
+  if [ $IMPORT_STATUS -ne 0 ] || echo "$IMPORT_OUTPUT" | grep -qE "ERROR [0-9]+ \(.*\)"; then
     while IFS= read -r line; do
       [ "$line" != "0" ] && [ -n "$line" ] && log "ERROR" "create:db_import" "Output: $line"
     done <<< "$IMPORT_OUTPUT"
