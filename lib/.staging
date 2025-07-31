@@ -541,7 +541,7 @@ create() {
   log "DEBUG" "create:after_rewrite_htaccess" "Completato rewrite htaccess"
 
   log "SUCCESS" "create:end" "Staging website created successfully."
-  log "DEBUG" "create:final_echo" "Starting print of JSON finale"
+  log "DEBUG" "create:final_echo" "Starting print of final JSON"
   echo '{"status":"success","message":"Staging website created successfully.","reload":"true"}'
   log "DEBUG" "create:final_echo" "JSON printed"
 }
