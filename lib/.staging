@@ -970,6 +970,7 @@ deploy_db() {
 # --- Rewrite .htaccess ---
 rewrite_htaccess() {
   log "DEBUG" "Performed by user : $(whoami)"
+  log "INFO" "rewrite_htaccess" "Rewriting .htaccess"
   local LOCATION="$1"
   # Run in a subshell and redirect all output to /dev/null to avoid polluting stdout
   ( wp eval 'global $wp_rewrite; echo $wp_rewrite->mod_rewrite_rules();' --path="$LOCATION" --skip-themes --skip-plugins --quiet > "$LOCATION/.htaccess" ) > /dev/null 2>&1 || error 'Unable to create .htaccess file.'
