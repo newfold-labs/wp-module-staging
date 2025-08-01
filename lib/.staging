@@ -213,6 +213,10 @@ drop_views_and_tables() {
   set -e
   local WP_PATH="$1"
   log "INFO" "drop_views_and_tables" "About to query views in $WP_PATH"
+
+  # --------------------
+  # VIEWS
+  # --------------------
   TMP_VIEWS_LOG=$(mktemp)
   log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ..."
   wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE();" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
@@ -224,20 +228,7 @@ drop_views_and_tables() {
     log "ERROR" "drop_views_and_tables" "Error querying views: $VIEWS"
   fi
   rm -f "$TMP_VIEWS_LOG"
-  # Query tables
-  log "INFO" "drop_views_and_tables" "About to query tables in $WP_PATH"
-  TMP_TABLES_LOG=$(mktemp)
-  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db tables ..."
-  wp db tables --all-tables-with-prefix --format=csv --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_TABLES_LOG" 2>&1
-  TABLES_STATUS=$?
-  log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $TABLES_STATUS"
-  TABLES=$(cat "$TMP_TABLES_LOG")
-  log "INFO" "drop_views_and_tables" "AFTER QUERY, TABLES_RAW: $TABLES"
-  if [ $TABLES_STATUS -ne 0 ]; then
-    log "ERROR" "drop_views_and_tables" "Error querying tables: $TABLES"
-  fi
-  rm -f "$TMP_TABLES_LOG"
-  # Drop each view individually
+
   if [ -n "$VIEWS" ]; then
     for VIEW in $VIEWS; do
       log "INFO" "drop_views_and_tables" "Dropping view: $VIEW"
@@ -253,27 +244,74 @@ drop_views_and_tables() {
       rm -f "$TMP_DROP_VIEW_LOG"
     done
   fi
-  # Drop each table individually
-  if [ -n "$TABLES" ]; then
-    for TABLE in $TABLES; do
-      log "INFO" "drop_views_and_tables" "Dropping table: $TABLE"
+
+  # --------------------
+  # TABLES (con retry)
+  # --------------------
+  log "INFO" "drop_views_and_tables" "About to query tables in $WP_PATH"
+  TMP_TABLES_LOG=$(mktemp)
+  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db tables ..."
+  wp db tables --all-tables-with-prefix --format=csv --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_TABLES_LOG" 2>&1
+  TABLES_STATUS=$?
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $TABLES_STATUS"
+  raw_tables=$(cat "$TMP_TABLES_LOG")
+  log "INFO" "drop_views_and_tables" "AFTER QUERY, TABLES_RAW: $raw_tables"
+  if [ $TABLES_STATUS -ne 0 ]; then
+    log "ERROR" "drop_views_and_tables" "Error querying tables: $raw_tables"
+  fi
+  rm -f "$TMP_TABLES_LOG"
+
+  # Convert CSV string to array
+  IFS=',' read -r -a remaining_tables <<< "$raw_tables"
+
+  # Retry up to 2 volte per ciascuna tabella
+  local attempt
+  declare -A first_attempt_errors=()
+  for attempt in 1 2; do
+    if [ ${#remaining_tables[@]} -eq 0 ]; then
+      break
+    fi
+    log "INFO" "drop_views_and_tables" "Attempt #$attempt to drop tables: ${remaining_tables[*]}"
+    local new_remaining=()
+    for TABLE in "${remaining_tables[@]}"; do
+      log "INFO" "drop_views_and_tables" "Dropping table: $TABLE (attempt $attempt)"
       TMP_DROP_TABLE_LOG=$(mktemp)
       set +e
       wp db query "DROP TABLE IF EXISTS $TABLE;" --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_DROP_TABLE_LOG" 2>&1
       DROP_TABLE_STATUS=$?
       set -e
-      log "DEBUG" "drop_views_and_tables" "DROP TABLE exit code: $DROP_TABLE_STATUS"
       DROP_TABLE_OUT=$(cat "$TMP_DROP_TABLE_LOG")
       if [ -n "$DROP_TABLE_OUT" ]; then
-        log "ERROR" "drop_views_and_tables" "DROP TABLE output: $DROP_TABLE_OUT"
+        log "ERROR" "drop_views_and_tables" "DROP TABLE output for $TABLE: $DROP_TABLE_OUT"
       fi
       if [ $DROP_TABLE_STATUS -ne 0 ]; then
-        log "ERROR" "drop_views_and_tables" "Error dropping table $TABLE"
+        log "ERROR" "drop_views_and_tables" "Error dropping table $TABLE on attempt $attempt"
+        # Se è il primo tentativo, segnalo l'errore ma lascio in lista per retry
+        if [ "$attempt" -eq 1 ]; then
+          first_attempt_errors["$TABLE"]=1
+          new_remaining+=("$TABLE")
+        else
+          # Secondo tentativo fallito: rimane nella lista definitiva
+          new_remaining+=("$TABLE")
+        fi
       else
-        log "INFO" "drop_views_and_tables" "Dropped table $TABLE"
+        log "INFO" "drop_views_and_tables" "Dropped table $TABLE successfully on attempt $attempt"
+        # Se era presente un errore del primo tentativo, ora è risolto: non fare nulla, cioè lo rimuoviamo
+        unset first_attempt_errors["$TABLE"]
       fi
       rm -f "$TMP_DROP_TABLE_LOG"
     done
+    remaining_tables=("${new_remaining[@]}")
+    # Se non ci sono più rimanenti, esco
+    if [ ${#remaining_tables[@]} -eq 0 ]; then
+      break
+    fi
+  done
+
+  if [ ${#remaining_tables[@]} -ne 0 ]; then
+    log "ERROR" "drop_views_and_tables" "Could not drop tables after retries: ${remaining_tables[*]}"
+  else
+    log "INFO" "drop_views_and_tables" "All tables dropped successfully (eventuali errori del primo tentativo sono stati risolti)."
   fi
 }
 
@@ -769,7 +807,28 @@ clone() {
     fi
   fi
   run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
-  run_or_fail "clone:sed_prefix" "Unable to update database prefix." sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql"
+
+  # Aggiornamento del prefisso delle tabelle nel file SQL
+  log "INFO" "clone:sed_prefix" "Updating table prefixes in .export-sql"
+  tmpfile=$(mktemp)
+  if [ $? -ne 0 ] || [ -z "$tmpfile" ]; then
+    log "ERROR" "clone:sed_prefix" "Unable to create temp file for prefix update."
+    delete_temp_staging 2 "Unable to create temp file for prefix update."
+  fi
+
+  sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$tmpfile"
+  if [ $? -ne 0 ]; then
+    log "ERROR" "clone:sed_prefix" "Unable to update database prefix."
+    delete_temp_staging 2 "Unable to update database prefix."
+  fi
+
+  mv "$tmpfile" "$STAGING_DIR/.export-sql"
+  if [ $? -ne 0 ]; then
+    log "ERROR" "clone:sed_prefix" "Unable to overwrite SQL file with temp file."
+    delete_temp_staging 2 "Unable to update database prefix."
+  fi
+
+
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
   if [ "0" != "$USER_ID" ] && [ -n "$SESSIONS" ]; then
@@ -908,14 +967,30 @@ deploy_db() {
       fail_and_exit "Unable to replace staging SQL with updated prefix file."
     fi
 
-    # 5. Import staging in produzione
+    # 5. Import staging in produzione (con debug più ricco)
     log "INFO" "deploy_db" "Importing staging DB into production"
-    OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
-    RC=$?
-    log "DEBUG" "deploy_db" "import exit code: $RC; output: $OUTPUT"
+    # Usa --debug per avere più informazioni da WP-CLI e cattura output
+    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
+    OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
+    RC=${RC:-0}
+    log "DEBUG" "deploy_db" "import exit code: $RC; raw output length: ${#OUTPUT}"
+    if [ -n "$OUTPUT" ]; then
+      # spezzalo per loggare linee significative
+      while IFS= read -r line; do
+        log "DEBUG" "deploy_db:import_output" "$line"
+      done <<< "$OUTPUT"
+    fi
     if [ $RC -ne 0 ]; then
+      # Prova a pescare qualche indicazione aggiuntiva dal log MySQL se accessibile (opzionale)
+      if [ -f /var/log/mysql/error.log ]; then
+        log "DEBUG" "deploy_db" "Tail delle ultime 20 righe del log MySQL:"
+        tail -n20 /var/log/mysql/error.log | while IFS= read -r l; do
+          log "DEBUG" "deploy_db:mysql_error_log" "$l"
+        done
+      fi
       fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
     fi
+
 
     # 6. Search-replace URL
     log "INFO" "deploy_db" "Running search-replace $STAGING_URL -> $PRODUCTION_URL"
