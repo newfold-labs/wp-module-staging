@@ -287,11 +287,11 @@ cleanup_failed_new_content_dirs() {
 # --- Utility: Prepare new content dirs robustly (with logging) ---
 prepare_new_content_dirs() {
   local FROM="$1"; local TO="$2"
-  # Disabilitiamo il comportamento globale `set -e` per gestire errori manualmente qui
+  # Disable global behaviour `set -e` to mhandle error manually here
   set +e
   log "INFO" "prepare_new_content_dirs" "START: Preparing new content dirs from $FROM to $TO"
 
-  # Trap locale: se la funzione esce con codice != 0 e non ha già fatto cleanup, lo facciamo
+  # Trap local: do cleanup if function exit with code != 0 and no cleanup has been executed
   local CLEANED=0
   _do_cleanup() {
     if [ "$CLEANED" -eq 0 ]; then
@@ -364,7 +364,7 @@ prepare_new_content_dirs() {
     log "DEBUG" "prepare_new_content_dirs:$DIR" "Post-copy permissions: $(ls -ld "$DEST")"
   done
 
-  # Success: disinnesca il trap e esci pulito
+  # Success: stop trap and exit
   CLEANED=1
   trap - EXIT
   log "INFO" "prepare_new_content_dirs" "END: Finished preparing new content dirs from $FROM to $TO"
@@ -812,97 +812,148 @@ deploy_files() {
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
 
+# Helper: restore from backup and log
+_restore_db_from_backup() {
+  local BACKUP="$1"
+  log "INFO" "deploy_db:restore" "Restoring original production database from backup $BACKUP"
+  set +e
+  if gzip -d < "$BACKUP" | wp db import - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1; then
+    log "INFO" "deploy_db:restore" "Database restored successfully from backup."
+  else
+    log "ERROR" "deploy_db:restore" "Failed to restore database from backup. Manual intervention needed."
+  fi
+  set -e
+}
+
 deploy_db() {
   log "DEBUG" "Performed by user : $(whoami)"
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
-  trap 'log "ERROR" "deploy_db" "Unexpected error on line $LINENO"; error "Unexpected error in deploy_db."' ERR
 
-  # Drop views and tables in production
-  log "INFO" "deploy_db" "Command: drop_views_and_tables $PRODUCTION_DIR"
+  # Disable global set -e and handle errors manually
+  set +e
+
+  TIMESTAMP=$(date +%s)
+  BACKUP_FILE="$PRODUCTION_DIR/.db_backup_before_deploy_$TIMESTAMP.sql"
+  COMPRESSED_BACKUP="$BACKUP_FILE.gz"
+  RESTORED=0
+
+  # Trap for automatic rollback in case of unexpected exit
+  _on_exit() {
+    rc=$?
+    if [ $rc -ne 0 ] && [ "$RESTORED" -eq 0 ]; then
+      log "INFO" "deploy_db" "Unexpected exit (code $rc), performing rollback."
+      _restore_db_from_backup "$COMPRESSED_BACKUP"
+      RESTORED=1
+    fi
+    exit $rc
+  }
+  trap _on_exit EXIT
+
+  fail_and_exit() {
+    local msg="$1"
+    log "ERROR" "deploy_db" "$msg"
+    if [ "$RESTORED" -eq 0 ]; then
+      log "INFO" "deploy_db" "Triggering rollback from backup due to failure."
+      _restore_db_from_backup "$COMPRESSED_BACKUP"
+      RESTORED=1
+    else
+      log "DEBUG" "deploy_db" "Rollback already performed, skipping."
+    fi
+    error "$msg"
+  }
+
+  # 1. Backup database production site
+  log "INFO" "deploy_db" "Backing up production database to $COMPRESSED_BACKUP"
+  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
+  if [ $? -ne 0 ]; then
+    fail_and_exit "Failed to backup production database."
+  fi
+
+  # 2. Drop views/tables (best effort)
+  log "INFO" "deploy_db" "Dropping existing views and tables in production (best-effort)"
   drop_views_and_tables "$PRODUCTION_DIR"
 
-  log "INFO" "deploy_db" "Command: wp db export $STAGING_DIR/.export-sql"
+  # 3. Export database staging
+  log "INFO" "deploy_db" "Exporting staging database"
   OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command performed: wp db export $STAGING_DIR/.export-sql"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to export database."
+    fail_and_exit "Unable to export database from staging. Output: $OUTPUT"
   fi
 
-  log "INFO" "deploy_db" "Execution: sed -i -E s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g $STAGING_DIR/.export-sql"
-  OUTPUT=$(sed -i -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" 2>&1)
+  # 4. Replace prefix in dump
+  log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
+  sed -i -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" 2>&1
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command executed: sed -i -e s/staging_$DB_PREFIX/$DB_PREFIX/g $STAGING_DIR/.export-sql"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to update prefix."
+    fail_and_exit "Unable to update prefix in staging SQL."
   fi
 
-  log "INFO" "deploy_db" "Commandd: wp db import $STAGING_DIR/.export-sql"
+  # 5. Import staging in production
+  log "INFO" "deploy_db" "Importing staging DB into production"
   OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - Command executed: wp db import $STAGING_DIR/.export-sql"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to import database."
+    fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
   fi
 
-  log "INFO" "deploy_db" "command: wp search-replace $STAGING_URL $PRODUCTION_URL"
+  # 6. Search-replace URL
+  log "INFO" "deploy_db" "Running search-replace $STAGING_URL -> $PRODUCTION_URL"
   OUTPUT=$(wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command executed: wp search-replace $STAGING_URL $PRODUCTION_URL"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to update URL on production."
+    fail_and_exit "Unable to update URLs on production. Output: $OUTPUT"
   fi
 
-  rm "$STAGING_DIR/.export-sql" --force
-
-  log "INFO" "deploy_db" "command: wp option update staging_environment production"
+  # 7. Update staging_environment
+  log "INFO" "deploy_db" "Updating staging_environment to production"
   OUTPUT=$(wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command executed: wp option update staging_environment production"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to set environment."
+    fail_and_exit "Unable to set staging_environment to production. Output: $OUTPUT"
   fi
 
-  log "INFO" "deploy_db" "command: wp option update staging_config"
-  OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command executed: wp option update staging_config ..."
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to import global config on production."
-  fi
+  # 8. Update staging_config findind errors
+    OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "staging_config update exit code: $RC; raw output length: ${#OUTPUT}"
 
-  log "INFO" "deploy_db" "command: wp option delete nfd_coming_soon"
+    # Fails
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to import global config on production. Exit code: $RC. Output: $OUTPUT"
+    fi
+
+    if [ -n "$OUTPUT" ]; then
+      log "WARNING" "deploy_db" "Non-empty output from staging_config update; inspecting but not failing. Output: $OUTPUT"
+      # opzionale: potresti decidere di trasformarlo in errore solo se supera certe soglie
+      # es. se contiene una riga che inizia con "Error:" in modo molto conservativo:
+      if echo "$OUTPUT" | grep -qE '^Error:'; then
+        fail_and_exit "Detected explicit error prefix in output when updating staging_config. Output: $OUTPUT"
+      fi
+    fi
+
+  # 9. Disable coming soon
+  log "INFO" "deploy_db" "Deleting nfd_coming_soon option"
   OUTPUT=$(wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ]; then
-    if [ -z "$OUTPUT" ]; then
-      log "ERROR" "deploy_db" "Error command: (no output) - command executed: wp option delete nfd_coming_soon"
-    else
-      log "ERROR" "deploy_db" "Error command: $OUTPUT"
-    fi
-    error "Unable to turn off Coming Soon page."
+    fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
   fi
 
+  # 10. Rewrite .htaccess
+  log "INFO" "deploy_db" "Rewriting .htaccess"
   rewrite_htaccess "$PRODUCTION_DIR"
+  if [ $? -ne 0 ]; then
+    fail_and_exit "Unable to rewrite .htaccess."
+  fi
+
+  # Success: disable automatic rollback
+  RESTORED=1
+  trap - EXIT
+
   log "SUCCESS" "deploy_db:end" "Database deployed successfully."
   echo '{"status":"success","message":"Database deployed successfully."}'
+
+  # Clear backup
+  rm -f "$COMPRESSED_BACKUP"
+  log "INFO" "deploy_db" "Cleaned up backup file."
+
+  # Restore normal behaviour
+  set -e
 }
 
 # --- Rewrite .htaccess ---
