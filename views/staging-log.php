@@ -39,65 +39,99 @@ $staging_config = $instance->getConfig();
 		<?php endforeach; ?>
 		</tbody></table>
 
-		<?php if ( $total_pages > 1 ) : ?>
-			<div class="tablenav"><div class="tablenav-pages" style="margin: 16px 0; font-size: 1.15em;">
-				<?php $base_url = remove_query_arg( array( 'paged' ) ); ?>
-				<?php // Prev button. ?>
-				<?php if ( $page > 1 ) : ?>
-					<?php
-					$prev_url = add_query_arg(
-						array(
-							'paged'    => $page - 1,
-							'per_page' => $per_page,
-							'log_date' => $filter_date,
-						),
-						$base_url
-					);
-					?>
-					<a href="<?php echo esc_url( $prev_url ); ?>" style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></a>
-				<?php else : ?>
-					<span style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></span>
-				<?php endif; ?>
+        <?php
+        if ( $total_pages > 1 ) : ?>
+            <div class="tablenav">
+                <div class="tablenav-pages" style="margin: 16px 0; font-size: 1.15em;">
+                    <?php
+                    $base_url = remove_query_arg( array( 'paged' ) );
 
-				<?php // Page links. ?>
-				<?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
-					<?php
-					$url = add_query_arg(
-						array(
-							'paged'    => $i,
-							'per_page' => $per_page,
-							'log_date' => $filter_date,
-						),
-						$base_url
-					);
-					?>
-					<span class="pagination-links">
-						<?php if ( $i == $page ) : ?>
-							<span style="font-weight:bold;margin:0 4px;padding:6px 14px;border-radius:4px;background:#2271b1;color:#fff;"><?php echo esc_html( $i ); ?></span>
-						<?php else : ?>
-							<a href="<?php echo esc_url( $url ); ?>" style="margin:0 4px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html( $i ); ?></a>
-						<?php endif; ?>
-					</span>
-				<?php endfor; ?>
+                    if ( $page > 1 ) :
+                        $prev_url = add_query_arg(
+                            array(
+                                'paged'    => $page - 1,
+                                'per_page' => $per_page,
+                                'log_date' => $filter_date,
+                            ),
+                            $base_url
+                        );
+                        ?>
+                        <a href="<?php echo esc_url( $prev_url ); ?>" style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></a>
+                    <?php else : ?>
+                        <span style="margin-right:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;">&laquo; <?php echo esc_html__( 'Prev', 'wp-module-staging' ); ?></span>
+                    <?php endif; ?>
 
-				<?php // Next button. ?>
-				<?php if ( $page < $total_pages ) : ?>
-					<?php
-					$next_url = add_query_arg(
-						array(
-							'paged'    => $page + 1,
-							'per_page' => $per_page,
-							'log_date' => $filter_date,
-						),
-						$base_url
-					);
-					?>
-					<a href="<?php echo esc_url( $next_url ); ?>" style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</a>
-				<?php else : ?>
-					<span style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</span>
-				<?php endif; ?>
-			</div></div>
-		<?php endif; ?>
+                    <?php
+                    $pages_to_show = array();
+
+                    if ( $total_pages <= 5 ) {
+                        $pages_to_show = range( 1, $total_pages );
+                    } else {
+                        $pages_to_show = array( 1, 2 );
+
+                        if ( $page > 3 ) {
+                            $pages_to_show[] = $page - 1;
+                        }
+                        if ( $page > 2 && $page < $total_pages - 1 ) {
+                            $pages_to_show[] = $page;
+                        }
+                        if ( $page < $total_pages - 2 ) {
+                            $pages_to_show[] = $page + 1;
+                        }
+
+                        $pages_to_show[] = $total_pages - 1;
+                        $pages_to_show[] = $total_pages;
+
+                        $pages_to_show = array_unique( $pages_to_show );
+                        sort( $pages_to_show );
+                    }
+
+                    $last_page = 0;
+                    foreach ( $pages_to_show as $p ) :
+                        if ( $p > $last_page + 1 ) {
+                            // Aggiungi puntini di sospensione
+                            echo '<span style="margin:0 4px;">...</span>';
+                        }
+
+                        $url = add_query_arg(
+                            array(
+                                'paged'    => $p,
+                                'per_page' => $per_page,
+                                'log_date' => $filter_date,
+                            ),
+                            $base_url
+                        );
+
+                        if ( $p == $page ) :
+                            ?>
+                            <span style="font-weight:bold;margin:0 4px;padding:6px 14px;border-radius:4px;background:#2271b1;color:#fff;"><?php echo esc_html( $p ); ?></span>
+                        <?php else : ?>
+                            <a href="<?php echo esc_url( $url ); ?>" style="margin:0 4px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html( $p ); ?></a>
+                        <?php
+                        endif;
+
+                        $last_page = $p;
+                    endforeach;
+                    ?>
+
+                    <?php
+                    if ( $page < $total_pages ) :
+                        $next_url = add_query_arg(
+                            array(
+                                'paged'    => $page + 1,
+                                'per_page' => $per_page,
+                                'log_date' => $filter_date,
+                            ),
+                            $base_url
+                        );
+                        ?>
+                        <a href="<?php echo esc_url( $next_url ); ?>" style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#f1f1f1;text-decoration:none;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</a>
+                    <?php else : ?>
+                        <span style="margin-left:8px;padding:6px 14px;border-radius:4px;background:#e2e2e2;color:#aaa;"><?php echo esc_html__( 'Next', 'wp-module-staging' ); ?> &raquo;</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 	<?php else : ?>
 		<p><?php echo esc_html__( 'No log found for selected date.', 'wp-module-staging' ); ?></p>
 	<?php endif; ?>
