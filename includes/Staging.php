@@ -550,13 +550,13 @@ class Staging {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( "Don't have capabilities to access this page", 'wp-module-staging' ) );
 		}
-        
+
 		$log_file = $this->getProductionDir() . 'nfd-staging.log';
 
 		$logs        = array();
-		$filter_date = isset( $_GET['log_date'] ) ? sanitize_text_field( $_GET['log_date'] ) : '';
-		$per_page    = isset( $_GET['per_page'] ) ? max( 1, intval( $_GET['per_page'] ) ) : 30;
-		$page        = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
+		$filter_date = isset( $_GET['log_date'] ) ? sanitize_text_field( $_GET['log_date'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$per_page    = isset( $_GET['per_page'] ) ? max( 1, intval( $_GET['per_page'] ) ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page        = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		if ( file_exists( $log_file ) ) {
 			$lines = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
@@ -576,7 +576,7 @@ class Staging {
 		$total_pages  = $per_page > 0 ? ceil( $total_logs / $per_page ) : 1;
 		$start        = ( $page - 1 ) * $per_page;
 		$logs_to_show = array_slice( $logs, $start, $per_page );
-        $instance = $this;
+		$instance     = $this;
 
 		include __DIR__ . '/../views/staging-log.php';
 	}
