@@ -873,73 +873,84 @@ deploy_db() {
   log "INFO" "deploy_db" "Dropping existing views and tables in production (best-effort)"
   drop_views_and_tables "$PRODUCTION_DIR"
 
-  # 3. Export database staging
-  log "INFO" "deploy_db" "Exporting staging database"
-  OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to export database from staging. Output: $OUTPUT"
-  fi
+    # 3. Export del database di staging
+    log "INFO" "deploy_db" "Exporting staging database"
+    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "staging export exit code: $RC; output: $OUTPUT"
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to export database from staging. Output: $OUTPUT"
+    fi
 
-  # 4. Replace prefix in dump
-  log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
-  sed -i -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" 2>&1
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to update prefix in staging SQL."
-  fi
+    # 4. Replace prefissi nel dump: usiamo temp file per essere portabili
+    log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
+    TMP_PREFIX_FILE=$(mktemp)
+    if ! sed -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
+      PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
+      fail_and_exit "Unable to update prefix in staging SQL. Output: $PREFIX_OUTPUT"
+    fi
+    mv "$TMP_PREFIX_FILE" "$STAGING_DIR/.export-sql"
+    if [ $? -ne 0 ]; then
+      fail_and_exit "Unable to replace staging SQL with updated prefix file."
+    fi
 
-  # 5. Import staging in production
-  log "INFO" "deploy_db" "Importing staging DB into production"
-  OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
-  fi
+    # 5. Import staging in produzione
+    log "INFO" "deploy_db" "Importing staging DB into production"
+    OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "import exit code: $RC; output: $OUTPUT"
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
+    fi
 
-  # 6. Search-replace URL
-  log "INFO" "deploy_db" "Running search-replace $STAGING_URL -> $PRODUCTION_URL"
-  OUTPUT=$(wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to update URLs on production. Output: $OUTPUT"
-  fi
+    # 6. Search-replace URL
+    log "INFO" "deploy_db" "Running search-replace $STAGING_URL -> $PRODUCTION_URL"
+    OUTPUT=$(wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "search-replace exit code: $RC; output: $OUTPUT"
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to update URLs on production. Output: $OUTPUT"
+    fi
 
-  # 7. Update staging_environment
-  log "INFO" "deploy_db" "Updating staging_environment to production"
-  OUTPUT=$(wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to set staging_environment to production. Output: $OUTPUT"
-  fi
+    # 7. Update staging_environment
+    log "INFO" "deploy_db" "Updating staging_environment to production"
+    OUTPUT=$(wp option update staging_environment production --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "staging_environment update exit code: $RC; output: $OUTPUT"
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to set staging_environment to production. Output: $OUTPUT"
+    fi
 
-  # 8. Update staging_config findind errors
+    # 8. Update staging_config con rilevamento esteso
+    log "INFO" "deploy_db" "Updating staging_config"
+    log "DEBUG" "deploy_db" "Command: wp option update staging_config '$STAGING_CONFIG_JSON' --format=json --path='$PRODUCTION_DIR'"
     OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
     RC=$?
-    log "DEBUG" "deploy_db" "staging_config update exit code: $RC; raw output length: ${#OUTPUT}"
-
-    # Fails
+    log "DEBUG" "deploy_db" "staging_config update exit code: $RC; raw output length: ${#OUTPUT}; output: $OUTPUT"
     if [ $RC -ne 0 ]; then
       fail_and_exit "Unable to import global config on production. Exit code: $RC. Output: $OUTPUT"
     fi
-
-    if [ -n "$OUTPUT" ]; then
-      log "WARNING" "deploy_db" "Non-empty output from staging_config update; inspecting but not failing. Output: $OUTPUT"
-      # opzionale: potresti decidere di trasformarlo in errore solo se supera certe soglie
-      # es. se contiene una riga che inizia con "Error:" in modo molto conservativo:
-      if echo "$OUTPUT" | grep -qE '^Error:'; then
-        fail_and_exit "Detected explicit error prefix in output when updating staging_config. Output: $OUTPUT"
-      fi
+    if echo "$OUTPUT" | grep -qE '^Error:'; then
+      fail_and_exit "Detected explicit error prefix in output when updating staging_config. Output: $OUTPUT"
     fi
 
-  # 9. Disable coming soon
-  log "INFO" "deploy_db" "Deleting nfd_coming_soon option"
-  OUTPUT=$(wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
-  fi
+    # 9. Disable coming soon
+    log "INFO" "deploy_db" "Deleting nfd_coming_soon option"
+    OUTPUT=$(wp option delete nfd_coming_soon --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
+    RC=$?
+    log "DEBUG" "deploy_db" "nfd_coming_soon delete exit code: $RC; output: $OUTPUT"
+    if [ $RC -ne 0 ]; then
+      fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
+    fi
 
-  # 10. Rewrite .htaccess
-  log "INFO" "deploy_db" "Rewriting .htaccess"
-  rewrite_htaccess "$PRODUCTION_DIR"
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Unable to rewrite .htaccess."
-  fi
+    # 10. Rewrite .htaccess (capturando output/errore)
+    log "INFO" "deploy_db" "Rewriting .htaccess"
+    HTA_OUTPUT=$(rewrite_htaccess "$PRODUCTION_DIR" 2>&1)
+    HTA_RC=$?
+    log "DEBUG" "deploy_db" "rewrite_htaccess exit code: $HTA_RC; output: $HTA_OUTPUT"
+    if [ $HTA_RC -ne 0 ]; then
+      fail_and_exit "Unable to rewrite .htaccess. Output: $HTA_OUTPUT"
+    fi
 
   # Success: disable automatic rollback
   RESTORED=1
