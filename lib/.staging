@@ -138,10 +138,24 @@ auth_action() {
 
 # --- Lock check ---
 lock_check() {
-  local LOCK=$(wp transient get nfd_staging_lock --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-  if [ -n "$LOCK" ]; then
-    error 'Staging action is locked by another command.'
+  local LOCK_DATA=$(wp transient get nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
+  local CURRENT_TIME=$(date +%s)
+
+  if [ -n "$LOCK_DATA" ]; then
+    local LOCK_TIMESTAMP=$(echo "$LOCK_DATA" | awk -F':' '{print $2}')
+    if [ -z "$LOCK_TIMESTAMP" ] || [ "$((CURRENT_TIME - LOCK_TIMESTAMP))" -gt 120 ]; then
+      # Lock scaduto, rimuovilo
+      wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+      log "INFO" "lock_check" "Expired lock removed."
+    else
+      # Lock still valid, block process
+      error 'Staging action is locked by another command.'
+    fi
   fi
+
+  # Imposta un nuovo lock con timestamp
+  wp transient set nfd_staging_lock "active:$CURRENT_TIME" 120 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  log "INFO" "lock_check" "Lock set successfully."
 }
 
 # --- Compatibility check ---
