@@ -48,6 +48,14 @@
       "@i18n-mo",
       "@i18n-php",
       "@i18n-json"
+    ],
+    "i18n-ci-pre": [
+      "@i18n-pot",
+      "@i18n-po"
+    ],
+    "i18n-ci-post": [
+      "@i18n-json",
+      "@i18n-php"
     ]
   },
   "scripts-descriptions": {
@@ -69,7 +77,7 @@
     }
   },
   "require": {
-    "newfold-labs/wp-module-context": "^1.0.1",
-    "newfold-labs/wp-module-features": "^1.5.0"
+    "newfold-labs/wp-module-context": "^1.0.2",
+    "newfold-labs/wp-module-features": "^1.5.1"
   }
 }
