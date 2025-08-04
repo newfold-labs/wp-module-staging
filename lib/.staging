@@ -144,7 +144,7 @@ lock_check() {
   if [ -n "$LOCK_DATA" ]; then
     local LOCK_TIMESTAMP=$(echo "$LOCK_DATA" | awk -F':' '{print $2}')
     if [ -z "$LOCK_TIMESTAMP" ] || [ "$((CURRENT_TIME - LOCK_TIMESTAMP))" -gt 120 ]; then
-      # Lock scaduto, rimuovilo
+
       wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
       log "INFO" "lock_check" "Expired lock removed."
     else
@@ -153,7 +153,6 @@ lock_check() {
     fi
   fi
 
-  # Imposta un nuovo lock con timestamp
   wp transient set nfd_staging_lock "active:$CURRENT_TIME" 120 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   log "INFO" "lock_check" "Lock set successfully."
 }
@@ -286,23 +285,23 @@ drop_views_and_tables() {
       fi
       if [ $DROP_TABLE_STATUS -ne 0 ]; then
         log "ERROR" "drop_views_and_tables" "Error dropping table $TABLE on attempt $attempt"
-        # Se è il primo tentativo, segnalo l'errore ma lascio in lista per retry
+        # If it's the first attempt, I'll report the error but leave it on the retry list.
         if [ "$attempt" -eq 1 ]; then
           first_attempt_errors["$TABLE"]=1
           new_remaining+=("$TABLE")
         else
-          # Secondo tentativo fallito: rimane nella lista definitiva
+          # Second failed attempt: remains on the final list
           new_remaining+=("$TABLE")
         fi
       else
         log "INFO" "drop_views_and_tables" "Dropped table $TABLE successfully on attempt $attempt"
-        # Se era presente un errore del primo tentativo, ora è risolto: non fare nulla, cioè lo rimuoviamo
+        # If there was an error from the first attempt, it is now solved: do nothing, i.e. we remove it
         unset first_attempt_errors["$TABLE"]
       fi
       rm -f "$TMP_DROP_TABLE_LOG"
     done
     remaining_tables=("${new_remaining[@]}")
-    # Se non ci sono più rimanenti, esco
+    # If there are no more remaining, I'm out
     if [ ${#remaining_tables[@]} -eq 0 ]; then
       break
     fi
@@ -311,7 +310,7 @@ drop_views_and_tables() {
   if [ ${#remaining_tables[@]} -ne 0 ]; then
     log "ERROR" "drop_views_and_tables" "Could not drop tables after retries: ${remaining_tables[*]}"
   else
-    log "INFO" "drop_views_and_tables" "All tables dropped successfully (eventuali errori del primo tentativo sono stati risolti)."
+    log "INFO" "drop_views_and_tables" "All tables dropped successfully (any errors from the first attempt have been resolved)."
   fi
 }
 
@@ -672,7 +671,7 @@ create() {
   if [ $CONFIG2_STATUS -ne 0 ]; then
     delete_temp_staging 4 "Unable to import global config on staging."
   fi
-  log "DEBUG" "create:after_import_config" "Completato import config"
+  log "DEBUG" "create:after_import_config" "Import config completed"
 
   log "DEBUG" "create:before_coming_soon" "Starting coming soon ON"
   # Coming soon ON
@@ -720,7 +719,7 @@ create() {
   if [ $HTA_STATUS -ne 0 ]; then
     delete_temp_staging 5 "Unable to rewrite .htaccess."
   fi
-  log "DEBUG" "create:after_rewrite_htaccess" "Completato rewrite htaccess"
+  log "DEBUG" "create:after_rewrite_htaccess" "Completed rewrite htaccess"
 
   log "SUCCESS" "create:end" "Staging website created successfully."
   log "DEBUG" "create:final_echo" "Starting print of final JSON"
@@ -791,8 +790,7 @@ clone() {
   log "DEBUG" "Performed by user : $(whoami)"
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   trap 'delete_temp_staging 5 "Clone failed unexpectedly."' ERR
-  # Drop views and tables
-  drop_views_and_tables "$STAGING_DIR"
+
   log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
   if [ "0" != "$USER_ID" ]; then
     log "INFO" "clone:get_sessions" "Fetching session tokens for user $USER_ID"
@@ -806,9 +804,12 @@ clone() {
       SESSIONS=""
     fi
   fi
+
+  # Drop views and tables
+  drop_views_and_tables "$STAGING_DIR"
   run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
 
-  # Aggiornamento del prefisso delle tabelle nel file SQL
+  # Updating table prefix in SQL file
   log "INFO" "clone:sed_prefix" "Updating table prefixes in .export-sql"
   tmpfile=$(mktemp)
   if [ $? -ne 0 ] || [ -z "$tmpfile" ]; then
@@ -831,18 +832,12 @@ clone() {
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
-  if [ "0" != "$USER_ID" ] && [ -n "$SESSIONS" ]; then
-    log "DEBUG" "clone:user_meta" "Updating user session tokens with value: $SESSIONS"
-    echo "$SESSIONS" | jq empty 2>/dev/null
-    if [ $? -eq 0 ]; then
-      run_or_fail "clone:user_meta" "Unable to update user session tokens." wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
-    else
-      log "ERROR" "clone:user_meta" "Invalid JSON in session_tokens, skipping update."
-    fi
-  else
-    log "INFO" "clone:user_meta" "No session tokens to update, skipping."
-  fi
+   if [ "0" != "$USER_ID" ]; then
+     wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
+   fi
+  log "DEBUG" "clone:set_env_staging" "Before set_env_staging"
   run_or_fail "clone:set_env_staging" "Unable to set environment." wp option update staging_environment staging --skip-themes --skip-plugins --quiet
+  log "DEBUG" "clone:set_env_staging" "After set_env_staging"
   move_content_dirs "$PRODUCTION_DIR" "$STAGING_DIR"
   if [ -L "$PRODUCTION_DIR/index.php" ]; then
     echo "path=$STAGING_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
@@ -955,7 +950,7 @@ deploy_db() {
       fail_and_exit "Unable to export database from staging. Output: $OUTPUT"
     fi
 
-    # 4. Replace prefissi nel dump: usiamo temp file per essere portabili
+    # 4. Replace prefix on dump: use temp file to be portable
     log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
     TMP_PREFIX_FILE=$(mktemp)
     if ! sed -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
@@ -967,21 +962,21 @@ deploy_db() {
       fail_and_exit "Unable to replace staging SQL with updated prefix file."
     fi
 
-    # 5. Import staging in produzione (con debug più ricco)
+    # 5. Import staging in production
     log "INFO" "deploy_db" "Importing staging DB into production"
-    # Usa --debug per avere più informazioni da WP-CLI e cattura output
+
     IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
     OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
     RC=${RC:-0}
     log "DEBUG" "deploy_db" "import exit code: $RC; raw output length: ${#OUTPUT}"
     if [ -n "$OUTPUT" ]; then
-      # spezzalo per loggare linee significative
+
       while IFS= read -r line; do
         log "DEBUG" "deploy_db:import_output" "$line"
       done <<< "$OUTPUT"
     fi
     if [ $RC -ne 0 ]; then
-      # Prova a pescare qualche indicazione aggiuntiva dal log MySQL se accessibile (opzionale)
+
       if [ -f /var/log/mysql/error.log ]; then
         log "DEBUG" "deploy_db" "Tail delle ultime 20 righe del log MySQL:"
         tail -n20 /var/log/mysql/error.log | while IFS= read -r l; do
@@ -1010,7 +1005,7 @@ deploy_db() {
       fail_and_exit "Unable to set staging_environment to production. Output: $OUTPUT"
     fi
 
-    # 8. Update staging_config con rilevamento esteso
+    # 8. Update staging_config
     log "INFO" "deploy_db" "Updating staging_config"
     log "DEBUG" "deploy_db" "Command: wp option update staging_config '$STAGING_CONFIG_JSON' --format=json --path='$PRODUCTION_DIR'"
     OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
