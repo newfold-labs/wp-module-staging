@@ -263,7 +263,7 @@ drop_views_and_tables() {
   # Convert CSV string to array
   IFS=',' read -r -a remaining_tables <<< "$raw_tables"
 
-  # Retry up to 2 volte per ciascuna tabella
+  # Retry up to 2 times for each folder
   local attempt
   declare -A first_attempt_errors=()
   for attempt in 1 2; do
