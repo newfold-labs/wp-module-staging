@@ -550,14 +550,15 @@ class Staging {
 	 * Add the log admin page to the Tools menu.
 	 */
 	public function add_log_admin_page() {
-		add_submenu_page(
-			'tools.php',
+		$hook = add_submenu_page(
+			'nfd-staging-log',
 			__( 'Log Staging', 'wp-module-staging' ),
-			__( 'Log Staging', 'wp-module-staging' ),
+			'',
 			'manage_options',
 			'nfd-staging-log',
 			array( $this, 'render_log_admin_page' )
 		);
+		remove_menu_page( $hook );
 	}
 
 	/**
