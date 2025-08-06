@@ -743,8 +743,12 @@ destroy() {
     run_or_fail "destroy:delete_config" "Unable to remove global staging config." wp option delete staging_config --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
     log "INFO" "destroy" "[STEP] Deleted staging_config option."
     log "INFO" "destroy" "[STEP] Remove staging directory $STAGING_DIR."
-    run_or_fail "destroy:rm_dir" "Unable to remove staging files." rm -rf "$STAGING_DIR" --force
+    run_or_fail "destroy:rm_dir" "Unable to remove staging files." rm -r "$STAGING_DIR" --force
     log "INFO" "destroy" "[STEP] Removed staging directory."
+    log "INFO" "destroy" "[STEP] Creating file index.php in the staging directory"
+       printf "%s" "<?php header('Location: $PRODUCTION_URL', true, 302); exit; ?>" > "$STAGING_DIR/index.php"
+        log "INFO" "destroy" "[STEP] File index.php has been created"
+    log "INFO" "destroy" "[STEP] Created file index.php on staging site directory"
     log "SUCCESS" "destroy:end" "Staging website destroyed."
     echo '{"status":"success","message":"Staging website destroyed.","reload":"true"}'
   else
@@ -762,8 +766,8 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Removing existing sso.php if present"
   run_or_fail "sso_staging:eval" "Unable to remove sso.php" \
-    wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
-    --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
+      --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
   LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2>&1) || {
