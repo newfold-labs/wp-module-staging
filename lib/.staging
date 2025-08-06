@@ -21,6 +21,7 @@ PRODUCTION_URL=$5
 STAGING_URL=$6
 USER_ID=$7
 PLUGIN_ID=$8
+PLUGIN_SLUG=$9
 DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -45,7 +46,7 @@ log() {
 
 # --- Error Handling ---
 error() {
-  echo {"status":"error","message":"$1"}
+  printf '{"status":"error","message":"%s"}\n' "$1"
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
   exit 1
 }
@@ -764,6 +765,11 @@ sso_staging() {
     error 'No user provided.'
   fi
 
+  if ! wp plugin is-active "$PLUGIN_SLUG" --path="$STAGING_DIR" --quiet; then
+      log "ERROR" "sso_staging" "Plugin $PLUGIN_SLUG is not installed or not active."
+      error 'Bluehost plugin is not installed or is disabled on your staging site.'
+  fi
+
   log "INFO" "sso_staging" "Removing existing sso.php if present"
   run_or_fail "sso_staging:eval" "Unable to remove sso.php" \
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
@@ -776,6 +782,7 @@ sso_staging() {
   }
 
   log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
+
   echo '{"status":"success","load_page":"'"$LINK"'&redirect=admin.php?page=nfd-staging"}'
 }
 

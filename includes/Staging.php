@@ -464,6 +464,10 @@ class Staging {
 		$token = wp_generate_password( 32, false );
 		set_transient( 'staging_auth_token', $token, 60 );
 
+		$plugin_basename = explode( '/', container()->plugin()->basename );
+
+		$plugin_slug = is_array( $plugin_basename ) && ! empty( $plugin_basename ) ? $plugin_basename[0] : null;
+
 		$command = array(
 			$command,
 			$token,
@@ -473,6 +477,7 @@ class Staging {
 			$config['staging_url'],
 			get_current_user_id(),
 			container()->plugin()->id,
+			$plugin_slug,
 		);
 
 		if ( $args && is_array( $args ) ) {
