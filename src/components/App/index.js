@@ -302,7 +302,7 @@ const App = () => {
 			// console.log('Switch Callback', response);
 			// validate response data
 			if ( response.hasOwnProperty( 'load_page' ) ) {
-				window.location.href = response.load_page;
+				window.location.href = window?.NewfoldRuntime?.linkTracker?.addUtmParams( response.load_page ) || response.load_page;
 				// navigate(response.load_page);
 				const notifyMessageText =
 					env === 'production'
