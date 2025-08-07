@@ -22,6 +22,7 @@ STAGING_URL=$6
 USER_ID=$7
 PLUGIN_ID=$8
 PLUGIN_SLUG=$9
+PLUGIN_NAME="${10}"
 DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -766,8 +767,8 @@ sso_staging() {
   fi
 
   if ! wp plugin is-active "$PLUGIN_SLUG" --path="$STAGING_DIR" --quiet; then
-      log "ERROR" "sso_staging" "Plugin $PLUGIN_SLUG is not installed or not active."
-      error 'Bluehost plugin is not installed or is disabled on your staging site.'
+      log "ERROR" "sso_staging" "$PLUGIN_NAME is not installed or not active."
+      error "$PLUGIN_NAME is missing from the staging site. Please install it to continue"
   fi
 
   log "INFO" "sso_staging" "Removing existing sso.php if present"

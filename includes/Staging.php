@@ -478,13 +478,14 @@ class Staging {
 			get_current_user_id(),
 			container()->plugin()->id,
 			$plugin_slug,
+			container()->plugin()->name,
 		);
 
 		if ( $args && is_array( $args ) ) {
 			$command = array_merge( $command, array_values( $args ) );
 		}
 
-		$command = implode( ' ', array_map( 'escapeshellcmd', $command ) );
+		$command = implode( ' ', array_map( 'escapeshellarg', $command ) );
 
 		// Check for invalid characters
 		$invalidChars = array( ';', '&', '|' );
