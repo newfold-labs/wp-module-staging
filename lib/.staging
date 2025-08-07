@@ -925,7 +925,7 @@ deploy_db() {
       _restore_db_from_backup "$COMPRESSED_BACKUP"
       RESTORED=1
     fi
-    exit $rc
+    error 'Unable to import database'
   }
   trap _on_exit EXIT
 
