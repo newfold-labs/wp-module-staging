@@ -21,6 +21,8 @@ PRODUCTION_URL=$5
 STAGING_URL=$6
 USER_ID=$7
 PLUGIN_ID=$8
+PLUGIN_SLUG=$9
+PLUGIN_NAME="${10}"
 DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -45,7 +47,7 @@ log() {
 
 # --- Error Handling ---
 error() {
-  echo {"status":"error","message":"$1"}
+  printf '{"status":"error","message":"%s"}\n' "$1"
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
   exit 1
 }
@@ -759,9 +761,26 @@ destroy() {
 }
 
 sso_staging() {
+
   log "DEBUG" "Performed by user : $(whoami)"
   if [ -z "$1" ]; then
     error 'No user provided.'
+  fi
+
+  WP_CONFIG="$STAGING_DIR/wp-config.php"
+
+  DB_NAME=$(grep DB_NAME "$WP_CONFIG" | cut -d \' -f 4)
+  DB_USER=$(grep DB_USER "$WP_CONFIG" | cut -d \' -f 4)
+  DB_PASS=$(grep DB_PASSWORD "$WP_CONFIG" | cut -d \' -f 4)
+  DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
+  TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
+
+   ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
+  "SELECT option_value FROM ${TABLE_PREFIX}options WHERE option_name = 'active_plugins';")
+
+  if ! echo "$ACTIVE_PLUGINS" | grep -q "$PLUGIN_SLUG"; then
+      log "ERROR" "sso_staging" "$PLUGIN_NAME is not installed or not active."
+      error "$PLUGIN_NAME is missing from the staging site. Please install it to continue"
   fi
 
   log "INFO" "sso_staging" "Removing existing sso.php if present"
@@ -776,6 +795,7 @@ sso_staging() {
   }
 
   log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
+
   echo '{"status":"success","load_page":"'"$LINK"'&redirect=admin.php?page=nfd-staging"}'
 }
 
@@ -917,7 +937,7 @@ deploy_db() {
       _restore_db_from_backup "$COMPRESSED_BACKUP"
       RESTORED=1
     fi
-    exit $rc
+    error 'Unable to import database'
   }
   trap _on_exit EXIT
 
