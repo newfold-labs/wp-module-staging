@@ -1168,6 +1168,8 @@
 }
 .nfd-root .nfd-autocomplete {
 		position: relative;
+		--tw-bg-opacity: 1;
+		background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 .nfd-root .nfd-autocomplete--error .nfd-autocomplete__button {
 		--tw-border-opacity: 1;
@@ -3072,7 +3074,7 @@
 .nfd-root .nfd-modal {
 		position: fixed;
 		inset: 0px;
-		z-index: 10;
+		z-index: 50;
 		padding: 1rem;
 }
 @media (min-width: 640px) {
@@ -3102,9 +3104,6 @@
 		inset: 0px;
 		background-color: rgb(100 116 139 / var(--tw-bg-opacity, 1));
 		--tw-bg-opacity: 0.75;
-		transition-property: opacity;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 150ms;
 }
 .nfd-root .nfd-modal__panel {
 		position: relative;
