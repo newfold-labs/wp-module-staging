@@ -965,6 +965,16 @@ deploy_db() {
   log "INFO" "deploy_db" "Dropping existing views and tables in production (best-effort)"
   drop_views_and_tables "$PRODUCTION_DIR"
 
+  # --- Custom cleanup for staging prefix ---
+  # Only if the effective staging prefix is 'staging_wp_'
+  if [[ "${DB_PREFIX}" == "wp_" ]]; then
+      if [[ "$STAGING_DIR" != "" ]]; then
+        log "INFO" "deploy_db:cleanup" "Cleaning specific options from staging_wp_options"
+        wp db query "DELETE FROM staging_wp_options WHERE option_name IN ('wp_page_for_privacy_policy','wp_attachment_pages_enabled','wp_force_deactivated_plugins');" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+      fi
+  fi
+
+
     # 3. Export del database di staging
     log "INFO" "deploy_db" "Exporting staging database"
     OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins 2>&1)
