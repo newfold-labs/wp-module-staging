@@ -748,6 +748,7 @@ destroy() {
     run_or_fail "destroy:rm_dir" "Unable to remove staging files." rm -r "$STAGING_DIR" --force
     log "INFO" "destroy" "[STEP] Removed staging directory."
     log "INFO" "destroy" "[STEP] Creating file index.php in the staging directory"
+       mkdir -p $STAGING_DIR
        printf "%s" "<?php header('Location: $PRODUCTION_URL', true, 302); exit; ?>" > "$STAGING_DIR/index.php"
         log "INFO" "destroy" "[STEP] File index.php has been created"
     log "INFO" "destroy" "[STEP] Created file index.php on staging site directory"
