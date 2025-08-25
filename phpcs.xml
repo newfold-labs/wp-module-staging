@@ -15,4 +15,6 @@
             <property name="text_domain" type="array" value="wp-module-staging" />
         </properties>
     </rule>
+
+    <exclude-pattern>build/staging/staging.min.asset.php</exclude-pattern>
 </ruleset>

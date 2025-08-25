@@ -37,6 +37,7 @@ const App = () => {
 		deleteNoticeStartText,
 		deployNoticeCompleteText,
 		deployNoticeStartText,
+		errorLabel,
 		pageDescription,
 		pageTitle,
 		proceed,
@@ -74,7 +75,7 @@ const App = () => {
 		title,
 		description,
 		variant = 'success',
-		duration = false
+		duration = 4000
 	) => {
 		pushNotification( id, {
 			title,
@@ -111,12 +112,12 @@ const App = () => {
 		}
 	};
 
-	const setError = ( error ) => {
+	const setError = ( msgError ) => {
 		// console.log('setError', error);
 		setIsLoading( false );
 		setIsThinking( false );
-		setIsError( true );
-		makeNotice( 'error', error, error, 'error' );
+		setIsError(true);
+		makeNotice( 'error', errorLabel, msgError, 'error' );
 	};
 
 	const catchError = ( error ) => {
