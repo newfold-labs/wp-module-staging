@@ -103,7 +103,7 @@ move_content_dirs() {
       set -e
       log "DEBUG" "move_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
       if [ -n "$RSYNC_OUTPUT" ]; then
-        log "ERROR" "move_content_dirs:$DIR" "Output rsync:" 
+        log "ERROR" "move_content_dirs:$DIR" "Output rsync:"
         while IFS= read -r line; do log "ERROR" "move_content_dirs:$DIR" "RSYNC: $line"; done <<< "$RSYNC_OUTPUT"
       fi
       if [ $RSYNC_EXIT -ne 0 ]; then
@@ -807,7 +807,7 @@ sso_production() {
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
   LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
-  log "SUCCESS" "sso_production" "SSO to production successful for user $1."
+  log "SUCCESS" "sso_production" "SSO to production successful for user $USER_ID."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
 
@@ -971,7 +971,7 @@ deploy_db() {
   if [[ "${DB_PREFIX}" == "wp_" ]]; then
       if [[ "$STAGING_DIR" != "" ]]; then
         log "INFO" "deploy_db:cleanup" "Cleaning specific options from staging_wp_options"
-        wp db query "DELETE FROM staging_wp_options WHERE option_name IN ('wp_page_for_privacy_policy','wp_attachment_pages_enabled','wp_force_deactivated_plugins');" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+        wp db query "DELETE FROM staging_wp_options WHERE option_name IN ('wp_page_for_privacy_policy','wp_attachment_pages_enabled','wp_force_deactivated_plugins', 'wp_smush_api_auth');" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
       fi
   fi
 
@@ -1062,7 +1062,7 @@ deploy_db() {
       fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
     fi
 
-    # 10. Rewrite .htaccess (capturando output/errore)
+    # 10. Rewrite .htaccess
     log "INFO" "deploy_db" "Rewriting .htaccess"
     HTA_OUTPUT=$(rewrite_htaccess "$PRODUCTION_DIR" 2>&1)
     HTA_RC=$?
