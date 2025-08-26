@@ -72,17 +72,6 @@ class Staging {
 			}
 		);
 
-		// Define WP_ENVIRONMENT_TYPE on staging sites
-		add_action(
-			'init',
-			function () {
-				if ( ! defined( 'WP_ENVIRONMENT_TYPE' ) && $this->isStaging() ) {
-					define( 'WP_ENVIRONMENT_TYPE', 'staging' );
-				}
-			},
-			1
-		);
-
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 
@@ -333,7 +322,14 @@ class Staging {
 			);
 		}
 
-		return $this->runCommand( 'clone' );
+		$response = $this->runCommand( 'clone' );
+
+		// If clone succeeded, ensure staging site's wp-config.php sets environment type.
+		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
+			$this->setWpEnvironmentTypeForStagingSite();
+		}
+
+		return $response;
 	}
 
 	/**
@@ -358,7 +354,39 @@ class Staging {
 			);
 		}
 
-		return $this->runCommand( 'create' );
+		$response = $this->runCommand( 'create' );
+
+		// If creation succeeded, set WP_ENVIRONMENT_TYPE in the staging site's wp-config.php via WP-CLI.
+		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
+			$this->setWpEnvironmentTypeForStagingSite();
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Ensure the staging site's wp-config.php defines WP_ENVIRONMENT_TYPE as 'staging'.
+	 *
+	 * This operates directly on the staging site's wp-config.php using WP_Filesystem
+	 * and adds a defensive define if one does not already exist.
+	 *
+	 * @return void
+	 */
+	protected function setWpEnvironmentTypeForStagingSite() {
+		$stagingDir = rtrim( $this->getStagingDir(), '/' );
+		if ( empty( $stagingDir ) ) {
+			return;
+		}
+
+		// Build and execute WP-CLI command to set the constant in wp-config.php of staging site.
+		$path_arg = escapeshellarg( $stagingDir );
+		$cmd      = 'wp config set WP_ENVIRONMENT_TYPE staging --type=constant --quiet --skip-themes --skip-plugins --path=' . $path_arg;
+
+		// Ensure common PATHs are available for wp binary
+		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' . PATH_SEPARATOR . '/usr/bin' ); // phpcs:ignore
+
+		// Execute the command; ignore output, we only care that it runs.
+		exec( $cmd ); // phpcs:ignore
 	}
 
 	/**
