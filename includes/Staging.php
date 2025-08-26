@@ -326,6 +326,8 @@ class Staging {
 
 		// If clone succeeded, ensure staging site's wp-config.php sets environment type.
 		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
+			$this->getConfig( false ); // Refresh cache
+			\sleep( 1 ); // Small delay to ensure option is written
 			$this->setWpEnvironmentTypeForStagingSite();
 		}
 
@@ -358,6 +360,8 @@ class Staging {
 
 		// If creation succeeded, set WP_ENVIRONMENT_TYPE in the staging site's wp-config.php via WP-CLI.
 		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
+			$this->getConfig( false ); // Refresh cache
+			\sleep( 1 ); // Small delay to ensure option is written
 			$this->setWpEnvironmentTypeForStagingSite();
 		}
 
@@ -373,20 +377,20 @@ class Staging {
 	 * @return void
 	 */
 	protected function setWpEnvironmentTypeForStagingSite() {
-		$stagingDir = rtrim( $this->getStagingDir(), '/' );
+		$stagingDir = \rtrim( $this->getStagingDir(), '/' );
 		if ( empty( $stagingDir ) ) {
 			return;
 		}
 
 		// Build and execute WP-CLI command to set the constant in wp-config.php of staging site.
-		$path_arg = escapeshellarg( $stagingDir );
+		$path_arg = \escapeshellarg( $stagingDir );
 		$cmd      = 'wp config set WP_ENVIRONMENT_TYPE staging --type=constant --quiet --skip-themes --skip-plugins --path=' . $path_arg;
 
 		// Ensure common PATHs are available for wp binary
-		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' . PATH_SEPARATOR . '/usr/bin' ); // phpcs:ignore
+		\putenv( 'PATH=' . \getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' . PATH_SEPARATOR . '/usr/bin' ); // phpcs:ignore
 
 		// Execute the command; ignore output, we only care that it runs.
-		exec( $cmd ); // phpcs:ignore
+		\exec( $cmd ); // phpcs:ignore
 	}
 
 	/**
