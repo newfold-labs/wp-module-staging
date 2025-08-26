@@ -72,6 +72,17 @@ class Staging {
 			}
 		);
 
+		// Define WP_ENVIRONMENT_TYPE on staging sites
+		add_action(
+			'init',
+			function () {
+				if ( ! defined( 'WP_ENVIRONMENT_TYPE' ) && $this->isStaging() ) {
+					define( 'WP_ENVIRONMENT_TYPE', 'staging' );
+				}
+			},
+			1
+		);
+
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 
