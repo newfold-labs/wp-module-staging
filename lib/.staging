@@ -100,9 +100,6 @@ function create {
   wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
     delete_temp_staging 3 "Unable to set environment."
   }
-  wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
-    delete_temp_staging 3 "Unable to set environment."
-  }
   wp search-replace $PRODUCTION_URL $STAGING_URL --skip-themes --skip-plugins --quiet || {
     delete_temp_staging 3 "Unable to update URLs on staging."
   }
