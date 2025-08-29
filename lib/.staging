@@ -34,6 +34,9 @@ PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$P
 LOG_FILE="$PRODUCTION_DIR/nfd-staging.log"  # Log file always in production uploads
 CONTENT_DIRS=(uploads themes plugins)
 
+# List of patterns to ignore, example ("htacces." "test "wpform")
+IGNORE_PATTERNS=("htaccess.")
+
 # --- Logging ---
 log() {
   # log LEVEL STEP MESSAGE
@@ -110,7 +113,19 @@ move_content_dirs() {
         PERM_DENIED_FILE=$(echo "$RSYNC_OUTPUT" | grep "Permission denied" | awk -F'open "' '{print $2}' | awk -F'"' '{print $1}' | head -n1)
         if [ -n "$PERM_DENIED_FILE" ]; then
           log "ERROR" "move_content_dirs:$DIR" "Permission denied on file: $PERM_DENIED_FILE"
-          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Permission denied on file: $PERM_DENIED_FILE"
+          SKIP_ERROR=0
+          for PATTERN in "${IGNORE_PATTERNS[@]}"; do
+            if [[ "$PERM_DENIED_FILE" == *"$PATTERN"* ]]; then
+              SKIP_ERROR=1
+              break
+            fi
+          done
+
+          if [ $SKIP_ERROR -eq 1 ]; then
+            log "INFO" "move_content_dirs:$DIR" "Ignored permission denied on $PERM_DENIED_FILE (matched ignore pattern)"
+          else
+            [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Permission denied on file: $PERM_DENIED_FILE"
+          fi
         else
           [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to move $DIR folder (rsync failed)."
         fi
@@ -396,17 +411,34 @@ prepare_new_content_dirs() {
         done <<< "$RSYNC_OUTPUT"
       fi
 
-      if [ $RSYNC_EXIT -ne 0 ]; then
+     if [ $RSYNC_EXIT -ne 0 ]; then
         PERM_DENIED_FILE=$(echo "$RSYNC_OUTPUT" | grep "Permission denied" | awk -F'open \"' '{print $2}' | awk -F'\"' '{print $1}' | head -n1)
         if [ -n "$PERM_DENIED_FILE" ]; then
           log "ERROR" "prepare_new_content_dirs:$DIR" "Permission denied on file: $PERM_DENIED_FILE"
+          # List of patterns to ignore
+          SKIP_ERROR=0
+          for PATTERN in "${IGNORE_PATTERNS[@]}"; do
+            if [[ "$PERM_DENIED_FILE" == *"$PATTERN"* ]]; then
+              SKIP_ERROR=1
+              break
+            fi
+          done
+
+          if [ $SKIP_ERROR -eq 1 ]; then
+            log "INFO" "prepare_new_content_dirs:$DIR" "Ignored permission denied on $PERM_DENIED_FILE (matched ignore pattern)"
+          else
+            log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
+            _do_cleanup
+            trap - EXIT
+            return 1
+          fi
         else
           log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to copy $DIR folder (rsync failed)."
+          log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
+          _do_cleanup
+          trap - EXIT
+          return 1
         fi
-        log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
-        _do_cleanup
-        trap - EXIT
-        return 1
       fi
 
       log "INFO" "prepare_new_content_dirs:$DIR" "Rsync completed with success."
