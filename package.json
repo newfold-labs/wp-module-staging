@@ -19,7 +19,7 @@
   "devDependencies": {
     "@testing-library/cypress": "^10.0.3",
     "cypress": "^15.0.0",
-    "cypress-axe": "^1.6.0",
+    "cypress-axe": "^1.7.0",
     "@wordpress/scripts": "^30.22.0",
     "css-minimizer-webpack-plugin": "^7.0.2",
     "@newfold/wp-module-runtime": "^1.1.3",
