@@ -78,16 +78,28 @@ function create {
 
   tmpfile=$(mktemp)
   while IFS= read -r line; do
-    echo "${line//${DB_PREFIX}/staging_${DB_PREFIX}}" >>"$tmpfile"
+    newline="${line//${DB_PREFIX}/staging_${DB_PREFIX}}"
+    newline="$(echo "$newline" | sed -E 's/CONSTRAINT `([^`]+)`/CONSTRAINT `staging_\1`/g')"
+    newline="$(echo "$newline" | sed -E 's/TRIGGER `([^`]+)`/TRIGGER `staging_\1`/g')"
+    echo "$newline" >>"$tmpfile"
   done <"$STAGING_DIR/.export-sql"
   mv "$tmpfile" "$STAGING_DIR/.export-sql" || {
-    delete_temp_staging 2 "Unable to update database prefix."
+    delete_temp_staging 2 "Unable to update database prefix, constraints and triggers."
+  }
+  wp db query "SET FOREIGN_KEY_CHECKS=0;" --skip-themes --skip-plugins --quiet || {
+    delete_temp_staging 2 "Unable to disable foreign key checks."
   }
 
   wp db import $STAGING_DIR/.export-sql --skip-themes --skip-plugins --quiet || {
     delete_temp_staging 2 "Unable to import database."
   }
+  wp db query "SET FOREIGN_KEY_CHECKS=1;" --skip-themes --skip-plugins --quiet || {
+    delete_temp_staging 2 "Unable to re-enable foreign key checks."
+  }
   rm $STAGING_DIR/.export-sql --force
+  wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
+    delete_temp_staging 3 "Unable to set environment."
+  }
   wp option update staging_environment staging --skip-themes --skip-plugins --quiet || {
     delete_temp_staging 3 "Unable to set environment."
   }
@@ -184,7 +196,11 @@ function deploy_db {
   cd $STAGING_DIR || error 'Unable to move staging directory.'
   wp db query "DROP TABLE $PRODUCTION_TABLES;" --path=$STAGING_DIR --skip-themes --skip-plugins --quiet || error 'Unable to drop staging tables.'
   wp db export $STAGING_DIR/.export-sql --add-drop-table --skip-themes --skip-plugins --quiet || error 'Unable to export database.'
-  sed -i -e "s/staging_$DB_PREFIX/$DB_PREFIX/g" $STAGING_DIR/.export-sql || error 'Unable to update prefix.'
+  sed -i -E \
+    -e "s/staging_${DB_PREFIX}/${DB_PREFIX}/g" \
+    -e "s/CONSTRAINT \`staging_([^`]+)\`/CONSTRAINT \`\1\`/g" \
+    -e "s/TRIGGER \`staging_([^`]+)\`/TRIGGER \`\1\`/g" \
+    $STAGING_DIR/.export-sql || error 'Unable to update prefix, constraints, and triggers.'
   wp db import $STAGING_DIR/.export-sql --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to import database.'
   wp search-replace "$STAGING_URL" "$PRODUCTION_URL" --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet || error 'Unable to update URL on production.'
   rm $STAGING_DIR/.export-sql --force
