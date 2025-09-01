@@ -656,9 +656,9 @@ create() {
     log "ERROR" "create:delete_sql_export" "Unable to delete SQL export file."
     delete_temp_staging 3 "Unable to delete SQL export file."
   fi
-  log "DEBUG" "create:after_delete_sql_export" "Sono dopo la cancellazione del file SQL"
+  log "DEBUG" "create:after_delete_sql_export" "After cancelling of SQL file"
 
-  log "DEBUG" "create:before_set_env_staging" "Sto per eseguire set env staging"
+  log "DEBUG" "create:before_set_env_staging" "Before set env staging"
   # Set env staging
   log "INFO" "create" "[STEP] Set env staging."
   set +e
