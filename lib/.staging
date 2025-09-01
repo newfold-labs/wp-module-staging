@@ -612,7 +612,11 @@ create() {
     delete_temp_staging 2 "SQL export file not found."
   fi
   set +e
-  sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$tmpfile"
+  sed -E \
+    -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
+    -e "s/CONSTRAINT \`([^`]+)\`/CONSTRAINT \`staging_\1\`/g" \
+    -e "s/TRIGGER \`([^`]+)\`/TRIGGER \`staging_\1\`/g" \
+    "$STAGING_DIR/.export-sql" > "$tmpfile"
   PREFIX_STATUS=$?
   set -e
   log "DEBUG" "create:update_prefix_sql" "Table prefix updated, exit code: $PREFIX_STATUS"
@@ -1020,7 +1024,11 @@ deploy_db() {
     # 4. Replace prefix on dump: use temp file to be portable
     log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
     TMP_PREFIX_FILE=$(mktemp)
-    if ! sed -E "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
+    if ! sed -E \
+      -e "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" \
+      -e "s/CONSTRAINT \`staging_([^`]+)\`/CONSTRAINT \`\1\`/g" \
+      -e "s/TRIGGER \`staging_([^`]+)\`/TRIGGER \`\1\`/g" \
+      "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
       PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
       fail_and_exit "Unable to update prefix in staging SQL. Output: $PREFIX_OUTPUT"
     fi
