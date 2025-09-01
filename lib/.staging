@@ -637,15 +637,37 @@ create() {
   # Import database
   log "INFO" "create" "[STEP] Import database."
   set +e
+  DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  DISABLE_FK_STATUS=$?
+
   IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet 2>&1)
   IMPORT_STATUS=$?
+
+  ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  ENABLE_FK_STATUS=$?
   set -e
+
+  log "DEBUG" "create:disable_fk" "Exit code: $DISABLE_FK_STATUS"
+  if [ $DISABLE_FK_STATUS -ne 0 ]; then
+    while IFS= read -r line; do
+      [ -n "$line" ] && log "ERROR" "create:disable_fk" "Output: $line"
+    done <<< "$DISABLE_FK_OUTPUT"
+  fi
+
   log "DEBUG" "create:db_import" "wp db import exit code: $IMPORT_STATUS"
   if [ $IMPORT_STATUS -ne 0 ] || echo "$IMPORT_OUTPUT" | grep -qE "ERROR [0-9]+ \(.*\)"; then
     while IFS= read -r line; do
       [ "$line" != "0" ] && [ -n "$line" ] && log "ERROR" "create:db_import" "Output: $line"
     done <<< "$IMPORT_OUTPUT"
     delete_temp_staging 3 "Unable to import database."
+  fi
+
+  log "DEBUG" "create:enable_fk" "Exit code: $ENABLE_FK_STATUS"
+  if [ $ENABLE_FK_STATUS -ne 0 ]; then
+    while IFS= read -r line; do
+      [ -n "$line" ] && log "ERROR" "create:enable_fk" "Output: $line"
+    done <<< "$ENABLE_FK_OUTPUT"
+    delete_temp_staging 3 "Unable to re-enable foreign key checks after import."
   fi
 
   # Delete SQL export
@@ -1040,6 +1062,15 @@ deploy_db() {
     # 5. Import staging in production
     log "INFO" "deploy_db" "Importing staging DB into production"
 
+    DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    DISABLE_FK_STATUS=$?
+    log "DEBUG" "deploy_db:disable_fk" "Exit code: $DISABLE_FK_STATUS"
+    if [ $DISABLE_FK_STATUS -ne 0 ]; then
+      while IFS= read -r line; do
+        [ -n "$line" ] && log "ERROR" "deploy_db:disable_fk" "Output: $line"
+      done <<< "$DISABLE_FK_OUTPUT"
+    fi
+
     IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
     OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
     RC=${RC:-0}
@@ -1059,6 +1090,16 @@ deploy_db() {
         done
       fi
       fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
+    fi
+
+    ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    ENABLE_FK_STATUS=$?
+    log "DEBUG" "deploy_db:enable_fk" "Exit code: $ENABLE_FK_STATUS"
+    if [ $ENABLE_FK_STATUS -ne 0 ]; then
+      while IFS= read -r line; do
+        [ -n "$line" ] && log "ERROR" "deploy_db:enable_fk" "Output: $line"
+      done <<< "$ENABLE_FK_OUTPUT"
+      fail_and_exit "Unable to re-enable foreign key checks after import."
     fi
 
 
