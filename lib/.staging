@@ -808,7 +808,7 @@ sso_staging() {
   DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
   TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
 
-   ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
+  ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
   "SELECT option_value FROM ${TABLE_PREFIX}options WHERE option_name = 'active_plugins';")
 
   if ! echo "$ACTIVE_PLUGINS" | grep -q "$PLUGIN_SLUG"; then
@@ -818,14 +818,21 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Removing existing sso.php if present"
   run_or_fail "sso_staging:eval" "Unable to remove sso.php" \
-  wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
-      --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+    wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
+    --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
-  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2>&1) || {
-    log "ERROR" "sso_staging" "Failed to generate SSO link: $LINK"
+
+  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" \
+    2> >(while read -r line; do
+          log "ERROR" "sso_staging" "$line"
+        done)
+  )
+
+  if [ -z "$LINK" ]; then
+    log "ERROR" "sso_staging" "Failed to generate SSO link (empty response)"
     error "Unable to create SSO link for staging."
-  }
+  fi
 
   log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
 
