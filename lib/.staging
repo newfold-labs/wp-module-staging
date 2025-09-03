@@ -614,8 +614,8 @@ create() {
   set +e
   sed -E \
     -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
-    -e "s/CONSTRAINT \`([^`]+)\`/CONSTRAINT \`staging_\1\`/g" \
-    -e "s/TRIGGER \`([^`]+)\`/TRIGGER \`staging_\1\`/g" \
+    -e "s/CONSTRAINT \`([^\`]+)\`/CONSTRAINT \`staging_\\1\`/g" \
+    -e "s/TRIGGER \`([^\`]+)\`/TRIGGER \`staging_\\1\`/g" \
     "$STAGING_DIR/.export-sql" > "$tmpfile"
   PREFIX_STATUS=$?
   set -e
@@ -682,9 +682,9 @@ create() {
     log "ERROR" "create:delete_sql_export" "Unable to delete SQL export file."
     delete_temp_staging 3 "Unable to delete SQL export file."
   fi
-  log "DEBUG" "create:after_delete_sql_export" "Sono dopo la cancellazione del file SQL"
+  log "DEBUG" "create:after_delete_sql_export" "After cancelling of SQL file"
 
-  log "DEBUG" "create:before_set_env_staging" "Sto per eseguire set env staging"
+  log "DEBUG" "create:before_set_env_staging" "Before set env staging"
   # Set env staging
   log "INFO" "create" "[STEP] Set env staging."
   set +e
@@ -834,7 +834,7 @@ sso_staging() {
   DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
   TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
 
-   ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
+  ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
   "SELECT option_value FROM ${TABLE_PREFIX}options WHERE option_name = 'active_plugins';")
 
   if ! echo "$ACTIVE_PLUGINS" | grep -q "$PLUGIN_SLUG"; then
@@ -844,14 +844,21 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Removing existing sso.php if present"
   run_or_fail "sso_staging:eval" "Unable to remove sso.php" \
-  wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
-      --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+    wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
+    --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
-  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2>&1) || {
-    log "ERROR" "sso_staging" "Failed to generate SSO link: $LINK"
+
+  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" \
+    2> >(while read -r line; do
+          log "ERROR" "sso_staging" "$line"
+        done)
+  )
+
+  if [ -z "$LINK" ]; then
+    log "ERROR" "sso_staging" "Failed to generate SSO link (empty response)"
     error "Unable to create SSO link for staging."
-  }
+  fi
 
   log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
 
@@ -1048,8 +1055,8 @@ deploy_db() {
     TMP_PREFIX_FILE=$(mktemp)
     if ! sed -E \
       -e "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" \
-      -e "s/CONSTRAINT \`staging_([^`]+)\`/CONSTRAINT \`\1\`/g" \
-      -e "s/TRIGGER \`staging_([^`]+)\`/TRIGGER \`\1\`/g" \
+      -e "s/CONSTRAINT \`staging_([^\`]+)\`/CONSTRAINT \`\\1\`/g" \
+      -e "s/TRIGGER \`staging_([^\`]+)\`/TRIGGER \`\\1\`/g" \
       "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
       PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
       fail_and_exit "Unable to update prefix in staging SQL. Output: $PREFIX_OUTPUT"
