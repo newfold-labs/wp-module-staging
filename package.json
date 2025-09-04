@@ -17,7 +17,7 @@
     "classnames": "^2.5.1"
   },
   "devDependencies": {
-    "@testing-library/cypress": "^10.0.3",
+    "@testing-library/cypress": "^10.1.0",
     "cypress": "^15.0.0",
     "cypress-axe": "^1.6.0",
     "@wordpress/scripts": "^30.22.0",
