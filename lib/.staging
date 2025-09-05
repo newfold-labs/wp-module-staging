@@ -1103,15 +1103,6 @@ deploy_db() {
       fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
     fi
 
-    # 10. Rewrite .htaccess
-    log "INFO" "deploy_db" "Rewriting .htaccess"
-    HTA_OUTPUT=$(rewrite_htaccess "$PRODUCTION_DIR" 2>&1)
-    HTA_RC=$?
-    log "DEBUG" "deploy_db" "rewrite_htaccess exit code: $HTA_RC; output: $HTA_OUTPUT"
-    if [ $HTA_RC -ne 0 ]; then
-      fail_and_exit "Unable to rewrite .htaccess. Output: $HTA_OUTPUT"
-    fi
-
   # Success: disable automatic rollback
   RESTORED=1
   trap - EXIT
