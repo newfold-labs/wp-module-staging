@@ -202,11 +202,13 @@ delete_temp_staging() {
     log "INFO" "delete_temp_staging:step4" "Removed option staging_config."
   fi
   if [ "$step" -ge 3 ]; then
-    TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path="$STAGING_DIR" | grep '^staging_')
-    for TABLE in $TABLES; do
-      log "INFO" "delete_temp_staging:step3" "Dropping table: $TABLE"
-      wp db query "DROP TABLE IF EXISTS $TABLE;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
-    done
+ 	WP_CONFIG="$PRODUCTION_DIR/wp-config.php"
+  	DB_NAME=$(grep DB_NAME "$WP_CONFIG" | cut -d \' -f 4)
+	DB_USER=$(grep DB_USER "$WP_CONFIG" | cut -d \' -f 4)
+	DB_PASS=$(grep DB_PASSWORD "$WP_CONFIG" | cut -d \' -f 4)
+	DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
+	TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
+	mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE 'staging\_%';" | tail -n +2 | xargs -I {} mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DROP TABLE {};"
     log "INFO" "delete_temp_staging:step3" "Removed all staging tables."
   fi
   if [ "$step" -ge 2 ]; then
@@ -1148,15 +1150,6 @@ deploy_db() {
     log "DEBUG" "deploy_db" "nfd_coming_soon delete exit code: $RC; output: $OUTPUT"
     if [ $RC -ne 0 ]; then
       fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
-    fi
-
-    # 10. Rewrite .htaccess
-    log "INFO" "deploy_db" "Rewriting .htaccess"
-    HTA_OUTPUT=$(rewrite_htaccess "$PRODUCTION_DIR" 2>&1)
-    HTA_RC=$?
-    log "DEBUG" "deploy_db" "rewrite_htaccess exit code: $HTA_RC; output: $HTA_OUTPUT"
-    if [ $HTA_RC -ne 0 ]; then
-      fail_and_exit "Unable to rewrite .htaccess. Output: $HTA_OUTPUT"
     fi
 
   # Success: disable automatic rollback
