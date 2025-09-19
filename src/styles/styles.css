@@ -255,6 +255,10 @@
         .nfd-notifications--bottom-left {
             @apply nfd-left-[12%];
         }
+
+        .nfd-notifications--bottom-right {
+            @apply nfd-right-[12%];
+        }
 	}
 }
 
