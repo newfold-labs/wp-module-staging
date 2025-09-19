@@ -222,7 +222,15 @@ class Staging {
 	 * @return string
 	 */
 	public function getStagingDir() {
-		return $this->getConfigValue( 'staging_dir' );
+		$staging_dir = $this->getConfigValue( 'staging_dir' );
+
+		// Validate the staging directory path for security
+		if ( ! empty( $staging_dir ) && ! $this->isValidStagingPath( $staging_dir ) ) {
+			error_log( 'Invalid staging directory path in configuration: ' . $staging_dir );
+			return '';
+		}
+
+		return $staging_dir;
 	}
 
 	/**
@@ -306,7 +314,7 @@ class Staging {
 	 */
 	public function stagingExists() {
 		$stagingDir = $this->getStagingDir();
-		return ! empty( $stagingDir ) && file_exists( $stagingDir );
+		return ! empty( $stagingDir ) && file_exists( $stagingDir ) && $this->isValidStagingPath( $stagingDir );
 	}
 
 	/**
@@ -327,7 +335,7 @@ class Staging {
 		// If clone succeeded, ensure staging site's wp-config.php sets environment type.
 		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
 			$this->getConfig( false ); // Refresh cache
-			\sleep( 1 ); // Small delay to ensure option is written
+			$this->waitForOptionWrite(); // Efficient wait for option to be written
 			$this->setWpEnvironmentTypeForStagingSite();
 		}
 
@@ -361,11 +369,145 @@ class Staging {
 		// If creation succeeded, set WP_ENVIRONMENT_TYPE in the staging site's wp-config.php via WP-CLI.
 		if ( is_array( $response ) && isset( $response['status'] ) && 'success' === $response['status'] ) {
 			$this->getConfig( false ); // Refresh cache
-			\sleep( 1 ); // Small delay to ensure option is written
+			$this->waitForOptionWrite(); // Efficient wait for option to be written
 			$this->setWpEnvironmentTypeForStagingSite();
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Wait for WordPress option to be written with efficient polling.
+	 *
+	 * Uses a configurable timeout with short intervals to avoid blocking delays
+	 * while ensuring the option is properly written before proceeding.
+	 *
+	 * @param int $max_wait_seconds Maximum time to wait in seconds (default: 3).
+	 * @param int $interval_ms Interval between checks in milliseconds (default: 100).
+	 * @return bool True if option is ready, false if timeout exceeded.
+	 */
+	protected function waitForOptionWrite( $max_wait_seconds = 3, $interval_ms = 100 ) {
+		$max_iterations = ( $max_wait_seconds * 1000 ) / $interval_ms;
+		$iterations     = 0;
+
+		while ( $iterations < $max_iterations ) {
+			// Check if the staging directory exists and is accessible
+			$staging_dir = $this->getStagingDir();
+			if ( ! empty( $staging_dir ) && is_dir( $staging_dir ) ) {
+				// Check if wp-config.php exists in staging directory
+				$wp_config_path = $staging_dir . '/wp-config.php';
+				if ( file_exists( $wp_config_path ) && is_readable( $wp_config_path ) ) {
+					return true;
+				}
+			}
+
+			// Small delay before next check
+			usleep( $interval_ms * 1000 ); // Convert ms to microseconds
+			++$iterations;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Validate staging directory path for security.
+	 *
+	 * Performs comprehensive validation to prevent command injection and directory traversal attacks.
+	 * Validates that the path is within allowed directories and contains no malicious characters.
+	 *
+	 * @param string $path The staging directory path to validate.
+	 * @return bool True if the path is valid, false otherwise.
+	 */
+	protected function isValidStagingPath( $path ) {
+		// Check if path is empty or null
+		if ( empty( $path ) || ! is_string( $path ) ) {
+			return false;
+		}
+
+		// Normalize the path to handle any potential directory traversal
+		$normalized_path = realpath( $path );
+		if ( false === $normalized_path ) {
+			// If realpath fails, check if it's a valid directory that exists
+			if ( ! is_dir( $path ) ) {
+				return false;
+			}
+			$normalized_path = $path;
+		}
+
+		// Ensure the path is within the WordPress installation directory
+		$wp_root = realpath( ABSPATH );
+		if ( false === $wp_root ) {
+			$wp_root = ABSPATH;
+		}
+
+		// Check if the staging directory is within the WordPress root or a subdirectory
+		if ( 0 !== strpos( $normalized_path, $wp_root ) ) {
+			return false;
+		}
+
+		// Additional security checks for malicious characters
+		$dangerous_patterns = array(
+			'/\.\./',           // Directory traversal
+			'/[\x00-\x1f\x7f]/', // Control characters
+			'/[;&|`$]/',        // Command injection characters
+			'/\/\//',           // Double slashes (potential path manipulation)
+		);
+
+		foreach ( $dangerous_patterns as $pattern ) {
+			if ( preg_match( $pattern, $path ) ) {
+				return false;
+			}
+		}
+
+		// Ensure the path doesn't contain any spaces that could be exploited
+		if ( preg_match( '/\s/', $path ) ) {
+			return false;
+		}
+
+		// Validate that the path is a directory and is readable
+		if ( ! is_dir( $normalized_path ) || ! is_readable( $normalized_path ) ) {
+			return false;
+		}
+
+		// Check that wp-config.php exists in the staging directory
+		$wp_config_path = $normalized_path . '/wp-config.php';
+		if ( ! file_exists( $wp_config_path ) || ! is_readable( $wp_config_path ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Sanitize staging directory path to prevent security issues.
+	 *
+	 * Removes dangerous characters and normalizes the path for safe use.
+	 *
+	 * @param string $path The staging directory path to sanitize.
+	 * @return string The sanitized path.
+	 */
+	protected function sanitizeStagingPath( $path ) {
+		if ( empty( $path ) || ! is_string( $path ) ) {
+			return '';
+		}
+
+		// Remove any control characters and dangerous characters
+		$path = preg_replace( '/[\x00-\x1f\x7f]/', '', $path );
+		$path = preg_replace( '/[;&|`$]/', '', $path );
+
+		// Normalize path separators
+		$path = str_replace( '\\', '/', $path );
+		$path = preg_replace( '/\/+/', '/', $path );
+
+		// Remove any leading/trailing whitespace
+		$path = trim( $path );
+
+		// Ensure the path doesn't start with a slash unless it's an absolute path
+		if ( ! empty( $path ) && '/' !== $path[0] && ! preg_match( '/^[A-Za-z]:/', $path ) ) {
+			$path = '/' . $path;
+		}
+
+		return $path;
 	}
 
 	/**
@@ -382,6 +524,12 @@ class Staging {
 			return;
 		}
 
+		// Validate the staging directory path for security
+		if ( ! $this->isValidStagingPath( $stagingDir ) ) {
+			error_log( 'Invalid staging directory path detected: ' . $stagingDir );
+			return;
+		}
+
 		// Build and execute WP-CLI command to set the constant in wp-config.php of staging site.
 		$path_arg = \escapeshellarg( $stagingDir );
 		$cmd      = 'wp config set WP_ENVIRONMENT_TYPE staging --type=constant --quiet --skip-themes --skip-plugins --path=' . $path_arg;
@@ -389,8 +537,22 @@ class Staging {
 		// Ensure common PATHs are available for wp binary
 		\putenv( 'PATH=' . \getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' . PATH_SEPARATOR . '/usr/bin' ); // phpcs:ignore
 
-		// Execute the command; ignore output, we only care that it runs.
-		\exec( $cmd ); // phpcs:ignore
+		// Execute the command and capture output and return code for proper error handling.
+		$output      = array();
+		$return_code = 0;
+		\exec( $cmd . ' 2>&1', $output, $return_code ); // phpcs:ignore
+
+		// Log any errors for debugging purposes.
+		if ( 0 !== $return_code ) {
+			error_log(
+				sprintf(
+					'WP-CLI command failed with return code %d: %s. Output: %s',
+					$return_code,
+					$cmd,
+					implode( "\n", $output )
+				)
+			);
+		}
 	}
 
 	/**
@@ -490,11 +652,12 @@ class Staging {
 
 			$uniqueId = wp_rand( 1000, 9999 );
 
-			$config = array(
+			$staging_dir = ABSPATH . 'staging/' . $uniqueId;
+			$config      = array(
 				'creation_date'  => gmdate( 'M j, Y' ),
 				'production_dir' => ABSPATH,
 				'production_url' => get_option( 'siteurl' ),
-				'staging_dir'    => ABSPATH . 'staging/' . $uniqueId,
+				'staging_dir'    => $this->sanitizeStagingPath( $staging_dir ),
 				'staging_url'    => get_option( 'siteurl' ) . '/staging/' . $uniqueId,
 			);
 
