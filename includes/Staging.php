@@ -135,7 +135,7 @@ class Staging {
 
 		$screen = \get_current_screen();
 		if (
-			isset( $screen->id ) && 
+			isset( $screen->id ) &&
 			(
 				false !== strpos( $screen->id, self::PAGE_SLUG ) ||
 				false !== strpos( $screen->id, 'bluehost' )
