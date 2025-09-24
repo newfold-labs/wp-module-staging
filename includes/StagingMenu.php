@@ -19,6 +19,8 @@ class StagingMenu {
 		add_action( 'admin_init', array( __CLASS__, 'handle_staging_redirect' ) );
 		// Register the old staging menu page and handle redirect
 		add_action( 'admin_menu', array( __CLASS__, 'add_dummy_staging_menu_link' ) );
+		// add tools page
+		add_action( 'admin_menu', array( __CLASS__, 'add_management_page' ) );
 	}
 
 	/**
@@ -31,7 +33,7 @@ class StagingMenu {
 		$staging = array(
 			'route'    => container()->plugin()->id . '#/settings/staging',
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
-			'priority' => 30,
+			'priority' => 62,
 			// 'callback' => array( __CLASS__, 'render_staging_app' ),
 		);
 		array_push( $subnav, $staging );
@@ -74,6 +76,22 @@ class StagingMenu {
 				$admin_bar->add_menu( $args );
 			}
 		}
+	}
+
+	/**
+	 * Adds the Page to the WordPress Tools menu.
+	 *
+	 * @return void
+	 */
+	public static function add_management_page() {
+
+		add_management_page(
+			__( 'Staging', 'wp-module-staging' ),
+			__( 'Staging', 'wp-module-staging' ),
+			'manage_options',
+			container()->plugin()->id . '#/settings/staging',
+			array( __CLASS__, 'render_staging_app' )
+		);
 	}
 
 	/**

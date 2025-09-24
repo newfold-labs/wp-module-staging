@@ -10,14 +10,17 @@ import App from './components/App';
 import './store';
 import { NFD_STAGING_ELEMENT_ID } from './data/constants';
 
+// mount the app on standalone page - legacy
 domReady( () => {
 	const mountNode = document.getElementById( NFD_STAGING_ELEMENT_ID );
 
+	// add brand class to body
 	const brand = NewfoldRuntime.sdk?.plugin?.brand;
 	if ( brand ) {
 		document.body.classList.add( `nfd-brand--${ brand }` );
 	}
 
+	// mount the app
 	if ( mountNode ) {
 		const root = createRoot( mountNode );
 		root.render( <App /> );
