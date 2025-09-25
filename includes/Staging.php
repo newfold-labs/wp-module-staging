@@ -138,7 +138,7 @@ class Staging {
 			isset( $screen->id ) &&
 			(
 				false !== strpos( $screen->id, self::PAGE_SLUG ) ||
-				false !== strpos( $screen->id, 'bluehost' )
+				false !== strpos( $screen->id, container()->plugin()->id )
 			)
 		) {
 			wp_enqueue_script( self::PAGE_SLUG );
