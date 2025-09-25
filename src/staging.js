@@ -74,7 +74,7 @@ export const StagingPortalApp = () => {
 		if ( current ) {
 			updateContainer( current );
 		}
-	}, [ container ] );
+	}, [] );
 
 	if ( ! container ) {
 		return null;
