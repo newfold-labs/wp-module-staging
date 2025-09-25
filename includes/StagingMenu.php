@@ -34,7 +34,6 @@ class StagingMenu {
 			'route'    => container()->plugin()->id . '#/settings/staging',
 			'title'    => _x( 'Staging', 'Menu item text', 'wp-module-staging' ),
 			'priority' => 62,
-			// 'callback' => array( __CLASS__, 'render_staging_app' ),
 		);
 		array_push( $subnav, $staging );
 		return $subnav;
