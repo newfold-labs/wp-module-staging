@@ -833,11 +833,28 @@ sso_staging() {
   DB_NAME=$(grep DB_NAME "$WP_CONFIG" | cut -d \' -f 4)
   DB_USER=$(grep DB_USER "$WP_CONFIG" | cut -d \' -f 4)
   DB_PASS=$(grep DB_PASSWORD "$WP_CONFIG" | cut -d \' -f 4)
-  DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
   TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
 
-  ACTIVE_PLUGINS=$(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST" -D "$DB_NAME" -N -s -e \
-  "SELECT option_value FROM ${TABLE_PREFIX}options WHERE option_name = 'active_plugins';")
+  DB_HOST_RAW=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
+
+  # split host and port if exists (eg. localhost:3306) It's needed because mysql cli needs -P parameter for port
+  if [[ "$DB_HOST_RAW" == *:* ]]; then
+    DB_HOST=$(echo "$DB_HOST_RAW" | cut -d: -f1)
+    DB_PORT=$(echo "$DB_HOST_RAW" | cut -d: -f2)
+  else
+    DB_HOST="$DB_HOST_RAW"
+    DB_PORT=""
+  fi
+
+  # build sql parameters
+  MYSQL_CMD=(mysql -u "$DB_USER" -p"$DB_PASS" -h "$DB_HOST")
+  if [ -n "$DB_PORT" ]; then
+    MYSQL_CMD+=(-P "$DB_PORT")
+  fi
+  MYSQL_CMD+=(-D "$DB_NAME" -N -s)
+
+  ACTIVE_PLUGINS=$("${MYSQL_CMD[@]}" -e \
+    "SELECT option_value FROM ${TABLE_PREFIX}options WHERE option_name = 'active_plugins';")
 
   if ! echo "$ACTIVE_PLUGINS" | grep -q "$PLUGIN_SLUG"; then
       log "ERROR" "sso_staging" "$PLUGIN_NAME is not installed or not active."
