@@ -1,0 +1,51 @@
+name: Auto Approve And Merge PRs
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Every Monday 9 AM UTC
+  workflow_dispatch:
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Approve Dependabot Minor/Patch PRs
+        run: |
+          prs=$(gh pr list --search "author:dependabot[bot] is:open" --json number,title)
+          echo "$prs" | jq -c '.[]' | while read pr; do
+            number=$(echo "$pr" | jq -r '.number')
+            title=$(echo "$pr" | jq -r '.title')
+
+            # Extract version numbers if present
+            if echo "$title" | grep -Eq 'to [0-9]+\.[0-9]+\.[0-9]+'; then
+              current=$(echo "$title" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$')
+              prev=$(echo "$title" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+              major_prev=$(echo $prev | cut -d. -f1)
+              major_curr=$(echo $current | cut -d. -f1)
+
+              if [ "$major_prev" = "$major_curr" ]; then
+                echo "Approving Dependabot minor/patch PR #$number"
+                gh pr review $number --approve || true
+              else
+                echo "Skipping major upgrade Dependabot PR #$number"
+              fi
+            fi
+          done
+
+      - name: Merge All Approved PRs
+        run: |
+          prs=$(gh pr list --search "review:approved is:open" --json number)
+          echo "$prs" | jq -r '.[].number' | while read number; do
+            echo "Merging approved PR #$number"
+            gh pr merge $number --auto --squash
+          done
