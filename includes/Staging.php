@@ -134,7 +134,13 @@ class Staging {
 		}
 
 		$screen = \get_current_screen();
-		if ( isset( $screen->id ) && false !== strpos( $screen->id, self::PAGE_SLUG ) ) {
+		if (
+			isset( $screen->id ) &&
+			(
+				false !== strpos( $screen->id, self::PAGE_SLUG ) ||
+				false !== strpos( $screen->id, container()->plugin()->id )
+			)
+		) {
 			wp_enqueue_script( self::PAGE_SLUG );
 			wp_enqueue_style( self::PAGE_SLUG );
 		}
