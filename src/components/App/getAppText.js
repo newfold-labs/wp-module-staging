@@ -45,7 +45,7 @@ const getAppText = () => ( {
 		'wp-module-staging'
 	),
 	deploySite: __( 'Deploy Site', 'wp-module-staging' ),
-	error: __( 'Error', 'wp-module-staging' ),
+	errorLabel: __( 'Error', 'wp-module-staging' ),
 	notCurrentlyEditing: __(
 		'Not currently editing',
 		'wp-module-staging'

@@ -75,6 +75,8 @@ class Staging {
 		add_action( 'init', array( __CLASS__, 'loadTextDomain' ), 100 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'initialize_staging_app' ) );
 
+		add_action( 'admin_menu', array( $this, 'add_log_admin_page' ) );
+
 		new Constants( $container );
 	}
 
@@ -132,7 +134,13 @@ class Staging {
 		}
 
 		$screen = \get_current_screen();
-		if ( isset( $screen->id ) && false !== strpos( $screen->id, self::PAGE_SLUG ) ) {
+		if (
+			isset( $screen->id ) &&
+			(
+				false !== strpos( $screen->id, self::PAGE_SLUG ) ||
+				false !== strpos( $screen->id, container()->plugin()->id )
+			)
+		) {
 			wp_enqueue_script( self::PAGE_SLUG );
 			wp_enqueue_style( self::PAGE_SLUG );
 		}
@@ -668,6 +676,10 @@ class Staging {
 		$token = wp_generate_password( 32, false );
 		set_transient( 'staging_auth_token', $token, 60 );
 
+		$plugin_basename = explode( '/', container()->plugin()->basename );
+
+		$plugin_slug = is_array( $plugin_basename ) && ! empty( $plugin_basename ) ? $plugin_basename[0] : null;
+
 		$command = array(
 			$command,
 			$token,
@@ -677,13 +689,15 @@ class Staging {
 			$config['staging_url'],
 			get_current_user_id(),
 			container()->plugin()->id,
+			$plugin_slug,
+			container()->plugin()->name,
 		);
 
 		if ( $args && is_array( $args ) ) {
 			$command = array_merge( $command, array_values( $args ) );
 		}
 
-		$command = implode( ' ', array_map( 'escapeshellcmd', $command ) );
+		$command = implode( ' ', array_map( 'escapeshellarg', $command ) );
 
 		// Check for invalid characters
 		$invalidChars = array( ';', '&', '|' );
@@ -739,7 +753,7 @@ class Staging {
 		$response = json_decode( $json, true );
 
 		if ( ! $response ) {
-			return new \WP_Error( 'json_decode', __( 'Unable to parse JSON', 'wp-module-staging' ) );
+			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
 		}
 
 		// Check if response is an error response.
@@ -748,5 +762,58 @@ class Staging {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Add the log admin page to the Tools menu.
+	 */
+	public function add_log_admin_page() {
+		$hook = add_submenu_page(
+			'nfd-staging-log',
+			__( 'Log Staging', 'wp-module-staging' ),
+			'',
+			'manage_options',
+			'nfd-staging-log',
+			array( $this, 'render_log_admin_page' )
+		);
+		remove_menu_page( $hook );
+	}
+
+	/**
+	 * Render the log admin page.
+	 */
+	public function render_log_admin_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( "Don't have capabilities to access this page", 'wp-module-staging' ) );
+		}
+
+		$log_file = $this->getProductionDir() . 'nfd-staging.log';
+
+		$logs        = array();
+		$filter_date = isset( $_GET['log_date'] ) ? sanitize_text_field( $_GET['log_date'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$per_page    = isset( $_GET['per_page'] ) ? max( 1, intval( $_GET['per_page'] ) ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page        = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( file_exists( $log_file ) ) {
+			$lines = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+			foreach ( $lines as $line ) {
+				$log_date = substr( $line, 0, 19 );
+				if ( $filter_date ) {
+					if ( strpos( $log_date, $filter_date ) === 0 ) {
+						$logs[] = $line;
+					}
+				} else {
+					$logs[] = $line;
+				}
+			}
+		}
+
+		$total_logs   = count( $logs );
+		$total_pages  = $per_page > 0 ? ceil( $total_logs / $per_page ) : 1;
+		$start        = ( $page - 1 ) * $per_page;
+		$logs_to_show = array_slice( $logs, $start, $per_page );
+		$instance     = $this;
+
+		include __DIR__ . '/../views/staging-log.php';
 	}
 }

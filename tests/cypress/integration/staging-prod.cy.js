@@ -23,7 +23,12 @@ describe(
 				Cypress.env( 'wpUsername' ),
 				Cypress.env( 'wpPassword' )
 			);
-			cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
+			// cy.visit( '/wp-admin/admin.php?page=nfd-staging' );
+			cy.visit(
+				'/wp-admin/admin.php?page=' +
+				Cypress.env( 'pluginId' ) +
+				'#/settings/staging'
+			);
 			cy.wait( '@mock-staging-data', {
 				timeout: customCommandTimeout,
 			} ).then( ( interception ) => {
