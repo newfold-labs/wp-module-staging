@@ -831,6 +831,10 @@ sso_staging() {
         done)
   )
 
+  # Remove newline (\n) e carriage return (\r) characters from the link
+  LINK="${LINK//$'\n'/}"
+  LINK="${LINK//$'\r'/}"
+
   if [ -z "$LINK" ]; then
     log "ERROR" "sso_staging" "Failed to generate SSO link (empty response)"
     error "Unable to create SSO link for staging."
@@ -848,6 +852,11 @@ sso_production() {
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
   LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+
+  # Remove newline (\n) e carriage return (\r) characters from the link
+  LINK="${LINK//$'\n'/}"
+  LINK="${LINK//$'\r'/}"
+
   log "SUCCESS" "sso_production" "SSO to production successful for user $USER_ID."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
