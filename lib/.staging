@@ -676,6 +676,18 @@ create() {
   fi
   log "DEBUG" "create:after_set_env_staging" "Completed set env staging"
 
+  # set WP_ENVIRONMENT_TYPE to staging in wp-config.php
+  log "DEBUG" "create:before_set_env_staging_wpconfig" "Before set WP_ENVIRONMENT_TYPE staging in wp-config.php"
+  set +e
+  ENV3_OUTPUT=$(wp config set WP_ENVIRONMENT_TYPE staging --type=constant --quiet --skip-themes --skip-plugins --path="$STAGING_DIR" 2>&1)
+  ENV3_STATUS=$?
+  set -e
+  log "DEBUG" "create:set_env_staging_wpconfig" "wp config set exit code: $ENV3_STATUS"
+  if [ -n "$ENV3_OUTPUT" ]; then
+    log "ERROR" "create:set_env_staging" "Output: $ENV3_OUTPUT"
+  fi
+  log "DEBUG" "create:set_env_staging_wpconfig" "Complete set WP_ENVIRONMENT_TYPE staging"
+
   log "DEBUG" "create:before_search_replace" "Starting search replace URLs"
   # Search replace URLs
   log "INFO" "create" "[STEP] Search replace URLs."
@@ -927,6 +939,17 @@ clone() {
   rm "$STAGING_DIR/.export-sql" --force
   trap - ERR
   rewrite_htaccess "$STAGING_DIR"
+  log "DEBUG" "create:before_set_env_staging_wpconfig" "Before set WP_ENVIRONMENT_TYPE staging in wp-config.php"
+  set +e
+  ENV3_OUTPUT=$(wp config set WP_ENVIRONMENT_TYPE staging --type=constant --quiet --skip-themes --skip-plugins --path="$STAGING_DIR" 2>&1)
+  ENV3_STATUS=$?
+  set -e
+  log "DEBUG" "create:set_env_staging_wpconfig" "wp config set exit code: $ENV3_STATUS"
+  if [ -n "$ENV3_OUTPUT" ]; then
+    log "ERROR" "create:set_env_staging" "Output: $ENV3_OUTPUT"
+  fi
+  log "DEBUG" "create:set_env_staging_wpconfig" "Complete set WP_ENVIRONMENT_TYPE staging"
+
   log "SUCCESS" "clone:end" "Website cloned successfully."
   echo '{"status":"success","message":"Website cloned successfully."}'
 }
