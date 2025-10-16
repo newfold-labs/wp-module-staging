@@ -453,6 +453,8 @@ class Staging {
 		// If config is empty, then we are creating a staging environment.
 		if ( empty( $config ) || 'create' === $command ) {
 
+            global $wpdb;
+
 			$uniqueId = wp_rand( 1000, 9999 );
 
 			$config = array(
@@ -464,6 +466,21 @@ class Staging {
 			);
 
 			update_option( 'staging_config', $config );
+
+            $current_time = current_time('mysql');
+            $current_time_gmt = current_time('mysql', 1);
+
+            // Update record con ID = 1 with current timestamp to trigger a change and prevent showing onboarding on staging site then
+            $wpdb->update(
+                $wpdb->posts,
+                array(
+                    'post_modified'     => $current_time,
+                    'post_modified_gmt' => $current_time_gmt,
+                ),
+                array('ID' => 1),
+                array('%s', '%s'),
+                array('%d')
+            );
 
 		}
 
