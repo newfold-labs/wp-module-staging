@@ -1216,6 +1216,14 @@ deploy_db() {
   set -e
 }
 
+deploy_files_db() {
+  deploy_files
+  log "INFO" "deploy_files_db" "Files deployed successfully! Now database deployment will initiate."
+  deploy_db
+  log "SUCCESS" "deploy_files_db:end" "Database deployed successfully."
+  echo '{"status":"success","message":"Files and Database deployed successfully."}'
+}
+
 # --- Rewrite .htaccess ---
 rewrite_htaccess() {
   log "DEBUG" "Performed by user : $(whoami)"
@@ -1244,6 +1252,7 @@ case "$1" in
   clone) clone "$@";;
   deploy_files) deploy_files "$@";;
   deploy_db) deploy_db "$@";;
+  deploy_files_db) deploy_files_db "$@";;
   sso_staging) sso_staging "$@";;
   sso_production) sso_production "$@";;
   *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
