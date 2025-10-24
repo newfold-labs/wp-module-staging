@@ -17,8 +17,6 @@ class StagingMenu {
 		add_filter( 'nfd_plugin_subnav', array( __CLASS__, 'add_nfd_subnav' ) );
 		// handle staging redirect from old url
 		add_action( 'admin_init', array( __CLASS__, 'handle_staging_redirect' ) );
-		// Register the old staging menu page and handle redirect
-		add_action( 'admin_menu', array( __CLASS__, 'add_dummy_staging_menu_link' ) );
 		// add tools page
 		add_action( 'admin_menu', array( __CLASS__, 'add_management_page' ) );
 	}
@@ -37,21 +35,6 @@ class StagingMenu {
 		);
 		array_push( $subnav, $staging );
 		return $subnav;
-	}
-
-	/**
-	 * Outputs the HTML container for the Staging module's React application.
-	 *
-	 * @return void
-	 */
-	public static function render_staging_app() {
-		echo PHP_EOL;
-		echo '<!-- NFD:STAGING -->';
-		echo PHP_EOL;
-		echo '<div id="' . esc_attr( Staging::PAGE_SLUG ) . '" class="' . esc_attr( Staging::PAGE_SLUG ) . '-container nfd-root"></div>';
-		echo PHP_EOL;
-		echo '<!-- /NFD:STAGING -->';
-		echo PHP_EOL;
 	}
 
 
@@ -88,23 +71,21 @@ class StagingMenu {
 			__( 'Staging', 'wp-module-staging' ),
 			__( 'Staging', 'wp-module-staging' ),
 			'manage_options',
-			container()->plugin()->id . '#/settings/staging',
-			array( __CLASS__, 'render_staging_app' )
+			Staging::PAGE_SLUG,
+			array( __CLASS__, 'tools_staging' )
 		);
 	}
 
 	/**
-	 * Register dummy staging menu page for redirect purposes
+	 * Redirects to the plugin staging page.
+	 * This is the callback for the tools staging page.
+	 *
+	 * @return void
 	 */
-	public static function add_dummy_staging_menu_link() {
-		add_submenu_page(
-			'', // Using empty string as parent, so it won't appear in any menu
-			'Old Staging',
-			'',
-			'manage_options',
-			Staging::PAGE_SLUG,
-			array( __CLASS__, 'old_staging_redirect' ),
-		);
+	public static function tools_staging() {
+		$new_url = admin_url( 'admin.php?page=' . container()->plugin()->id . '#/settings/staging' );
+		wp_safe_redirect( $new_url );
+		exit;
 	}
 
 	/**
@@ -123,22 +104,5 @@ class StagingMenu {
 			wp_safe_redirect( $new_url );
 			exit;
 		}
-	}
-
-	/**
-	 * Redirects the user to the new staging page.
-	 * This is the callback for the dummy menu page.
-	 *
-	 * @return void
-	 */
-	public static function old_staging_redirect() {
-		// Fallback: redirect using JavaScript if headers already sent
-		$new_url = admin_url( 'admin.php?page=' . container()->plugin()->id . '#/settings/staging' );
-		?>
-		<script>
-			window.location.href = '<?php echo esc_js( $new_url ); ?>';
-		</script>
-		<p>Redirecting to new staging page...</p>
-		<?php
 	}
 }
