@@ -1,71 +1,70 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-04-28 13:00+0100\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
+"Language: es_ES\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-04-28 13:00+0100\n"
-"Language: es_ES\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.6\n"
-"X-Domain: wp-module-staging\n"
-"X-Crowdin-Project: newfold-labswp-module-staging\n"
-"X-Crowdin-Project-ID: 764889\n"
-"X-Crowdin-Language: es-ES\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
+"X-Crowdin-Language: es-ES\n"
+"X-Crowdin-Project: newfold-labswp-module-staging\n"
+"X-Crowdin-Project-ID: 764889\n"
+"X-Domain: wp-module-staging\n"
+"X-Generator: Poedit 3.6\n"
 
-#: includes/Staging.php:304
+#: includes/Staging.php:329
 msgid "Cloning can only be done from the production environment."
 msgstr "La clonación sólo puede hacerse desde el entorno de producción."
 
-#: includes/Staging.php:329
+#: includes/Staging.php:354
 msgid "Staging environment already exists!"
 msgstr "¡El entorno de preproducción ya existe!"
 
-#: includes/Staging.php:363
-msgid "You must switch to the production environment before destroying staging."
-msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
+#: includes/Staging.php:388
+msgid ""
+"You must switch to the production environment before destroying staging."
+msgstr ""
+"Debes cambiar al entorno de producción antes de destruir la preproducción."
 
-#: includes/Staging.php:385
+#: includes/Staging.php:410
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Cambiar a un entorno en el que ya está, no puede."
 
-#: includes/Staging.php:422
+#: includes/Staging.php:447
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de preproducción inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:472
+#: includes/Staging.php:503
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Carácter inválido (%s) en el comando."
 
-#: includes/Staging.php:481
+#: includes/Staging.php:512
 msgid "Unable to execute script (disabled_function)."
 msgstr "No se puede ejecutar el script (disabled_function)."
 
-#: includes/Staging.php:505
+#: includes/Staging.php:536
 msgid "Unable to execute script (permission error)."
 msgstr "No se puede ejecutar el script (error de permisos)."
-
-#: includes/Staging.php:519
-msgid "Unable to parse JSON"
-msgstr "No se pudo procesar el JSON"
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
 msgstr "Respuesta JSON inválida"
 
-#: includes/StagingMenu.php:65
+#: includes/StagingMenu.php:53
 msgid "Staging Environment"
 msgstr "Entorno de preproducción"
 
-#: includes/StagingMenu.php:67
+#: includes/StagingMenu.php:55
 msgid "Staging Actions"
 msgstr "Acciones de preproducción"
 
@@ -82,8 +81,12 @@ msgid "Confirm Clone Action"
 msgstr "Confirmar acción de clonación"
 
 #: src/sections/ProductionSite/getProductionSiteText.js:9
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Esto sobrescribirá todo en preproducción y lo actualizará a un clon exacto del sitio de producción actual. ¿Está seguro que desea continuar?"
+msgid ""
+"This will overwrite anything in staging and update it to an exact clone of "
+"the current production site. Are you sure you want to proceed?"
+msgstr ""
+"Esto sobrescribirá todo en preproducción y lo actualizará a un clon exacto "
+"del sitio de producción actual. ¿Está seguro que desea continuar?"
 
 #: src/components/App/getAppText.js:5
 msgid "Cloned to Staging"
@@ -91,7 +94,9 @@ msgstr "Clonado a preproducción"
 
 #: src/components/App/getAppText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr "Clonando producción a preproducción, esto debería tomar aproximadamente un minuto."
+msgstr ""
+"Clonando producción a preproducción, esto debería tomar aproximadamente un "
+"minuto."
 
 #: src/sections/ProductionSite/getProductionSiteText.js:10
 msgid "Clone to staging"
@@ -107,7 +112,9 @@ msgstr "Preproducción creada"
 
 #: src/components/App/getAppText.js:17
 msgid "Creating a staging site, this should take about a minute."
-msgstr "Creando un sitio de preproducción, esto debería tomar aproximadamente un minuto."
+msgstr ""
+"Creando un sitio de preproducción, esto debería tomar aproximadamente un "
+"minuto."
 
 #: src/sections/StagingSite/getStagingSiteText.js:9
 msgid "Create staging site"
@@ -127,8 +134,15 @@ msgid "Confirm Delete"
 msgstr "Confirmar eliminación"
 
 #: src/sections/StagingSite/getStagingSiteText.js:14
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Esto eliminará permanentemente el sitio de preproducción. ¿Está seguro que desea continuar? Puede volver a crear otro sitio de preproducción en cualquier momento, pero cualquier cambio específico que haya realizado en este sitio se perderá."
+msgid ""
+"This will permanently delete staging site. Are you sure you want to proceed?"
+" You can recreate another staging site at any time, but any specific changes"
+" you've made to this staging site will be lost."
+msgstr ""
+"Esto eliminará permanentemente el sitio de preproducción. ¿Está seguro que "
+"desea continuar? Puede volver a crear otro sitio de preproducción en "
+"cualquier momento, pero cualquier cambio específico que haya realizado en "
+"este sitio se perderá."
 
 #: src/components/App/getAppText.js:25
 #: src/sections/StagingSite/getStagingSiteText.js:18
@@ -138,7 +152,8 @@ msgstr "Preproducción eliminada"
 #: src/components/App/getAppText.js:29
 #: src/sections/StagingSite/getStagingSiteText.js:22
 msgid "Deleting the staging site, this should take about a minute."
-msgstr "Eliminando el sitio de preproducción, esto tomará aproximadamente un minuto."
+msgstr ""
+"Eliminando el sitio de preproducción, esto tomará aproximadamente un minuto."
 
 #: src/sections/StagingSite/getStagingSiteText.js:13
 msgid "Delete Staging Site"
@@ -161,8 +176,12 @@ msgid "Deploy database only"
 msgstr "Desplegar sólo base de datos"
 
 #: src/components/App/getAppText.js:37
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Esto desplegará la preproducción a producción y sobrescribirá el sitio actual de producción. ¿Está seguro de que desea continuar?"
+msgid ""
+"This will deploy staging to production and overwrite current production "
+"site. Are you sure you want to proceed?"
+msgstr ""
+"Esto desplegará la preproducción a producción y sobrescribirá el sitio "
+"actual de producción. ¿Está seguro de que desea continuar?"
 
 #: src/components/App/getAppText.js:41
 msgid "Deploy files only"
@@ -174,7 +193,9 @@ msgstr "Desplegado"
 
 #: src/components/App/getAppText.js:43
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Desplegando de preproducción a producción, esto debería tomar aproximadamente un minuto."
+msgstr ""
+"Desplegando de preproducción a producción, esto debería tomar "
+"aproximadamente un minuto."
 
 #: src/components/App/getAppText.js:47
 msgid "Deploy Site"
@@ -206,8 +227,13 @@ msgid "Staging Site"
 msgstr "Sitio de preproducción"
 
 #: src/components/App/getAppText.js:53
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Un sitio de preproducción es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando esté listo."
+msgid ""
+"A staging site is a duplicate of your live site, offering a secure "
+"environment to experiment, test updates, and deploy when ready."
+msgstr ""
+"Un sitio de preproducción es un duplicado de su sitio en vivo, ofreciendo un"
+" entorno seguro para experimentar, probar actualizaciones y desplegar cuando"
+" esté listo."
 
 #: src/components/App/getAppText.js:59
 msgid "Switch"
@@ -230,8 +256,11 @@ msgid "Loading the production environment now."
 msgstr "Cargando el entorno de producción ahora."
 
 #: src/components/App/getAppText.js:72
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Cambiando al entorno de producción, esto debería tomar aproximadamente un minuto."
+msgid ""
+"Switching to the production environment, this should take about a minute."
+msgstr ""
+"Cambiando al entorno de producción, esto debería tomar aproximadamente un "
+"minuto."
 
 #: src/components/App/getAppText.js:76
 msgid "Switch to Staging"
@@ -247,13 +276,15 @@ msgstr "Cargando el entorno de preproducción ahora."
 
 #: src/components/App/getAppText.js:85
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Cambiando al entorno de preproducción, esto debería tomar aproximadamente un minuto."
+msgstr ""
+"Cambiando al entorno de preproducción, esto debería tomar aproximadamente un"
+" minuto."
 
 #: src/components/App/getAppText.js:90
 msgid "An unknown error has occurred."
 msgstr "Se ha producido un error desconocido."
 
-#: includes/StagingMenu.php:29
+#: includes/StagingMenu.php:33
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr "Preproducción"
@@ -280,16 +311,85 @@ msgstr "Error: "
 
 #: includes/StagingCLI.php:280
 msgid "Provided $data wasn't valid array or JSON string."
-msgstr "El $data proporcionado no era un array válido ni una cadena JSON válida."
+msgstr ""
+"El $data proporcionado no era un array válido ni una cadena JSON válida."
 
-#: includes/Staging.php:494
+#: includes/Staging.php:525
 msgid "Filesystem credentials required."
-msgstr ""
+msgstr "Se requieren credenciales del sistema de archivos."
 
-#: includes/Staging.php:498
+#: includes/Staging.php:529
 msgid "Unable to initialize WP Filesystem."
-msgstr ""
+msgstr "No se puede inicializar el sistema de archivos WP."
 
 #: src/components/App/getAppText.js:94
 msgid "Working…"
-msgstr ""
+msgstr "Laborable..."
+
+#: includes/Staging.php:550
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Algo salió mal, póngase en contacto con nuestro soporte."
+
+#: includes/Staging.php:567 views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Almacenamiento provisional de registros"
+
+#: includes/Staging.php:581
+msgid "Don't have capabilities to access this page"
+msgstr "No tengo capacidades para acceder a esta página"
+
+#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
+msgid "Staging"
+msgstr "Estadificación"
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr "Dirección de producción:"
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr "URL de producción:"
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr "DIR de ensayo:"
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr "URL de ensayo:"
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr "Entorno de ensayo:"
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr "Filtrar por fecha (AAAA-MM-DD):"
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr "Artículos por página:"
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr "Salvar"
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr "Restablecimiento"
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr "Registro"
+
+#: views/staging-log.php:63 views/staging-log.php:65
+msgid "Prev"
+msgstr "Prev"
+
+#: views/staging-log.php:132 views/staging-log.php:134
+msgid "Next"
+msgstr "Próximo"
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
+msgstr "No se encontró ningún registro para la fecha seleccionada."
