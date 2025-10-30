@@ -734,7 +734,7 @@ create() {
   # Import config
   log "INFO" "create" "[STEP] Import config."
   set +e
-  STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet 2>&1)
+  STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet 2>/dev/null)
   CONFIG2_OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   CONFIG2_STATUS=$?
   set -e
