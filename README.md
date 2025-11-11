@@ -3,7 +3,7 @@
 height="42" />
 </a>
 
-# WordPress staging Module
+# WordPress staging Module 
 
 [![Version Number](https://img.shields.io/github/v/release/newfold-labs/wp-module-staging?color=21a0ed&labelColor=333333)](https://github.com/newfold-labs/wp-module-staging/releases)
 [![Lint](https://github.com/newfold-labs/wp-module-staging/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/newfold-labs/wp-module-staging/actions/workflows/lint.yml)
