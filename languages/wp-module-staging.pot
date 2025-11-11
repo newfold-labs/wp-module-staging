@@ -12,50 +12,59 @@ msgstr ""
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wp-module-staging\n"
 
-#: includes/Staging.php:304
+#: includes/Staging.php:329
 msgid "Cloning can only be done from the production environment."
 msgstr ""
 
-#: includes/Staging.php:329
+#: includes/Staging.php:354
 msgid "Staging environment already exists!"
 msgstr ""
 
-#: includes/Staging.php:363
+#: includes/Staging.php:388
 msgid "You must switch to the production environment before destroying staging."
 msgstr ""
 
-#: includes/Staging.php:385
+#: includes/Staging.php:410
 msgid "Switch to an environment you are already in, you cannot."
 msgstr ""
 
-#: includes/Staging.php:422
+#: includes/Staging.php:447
 msgid "Invalid staging CLI command."
 msgstr ""
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:472
+#: includes/Staging.php:503
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr ""
 
-#: includes/Staging.php:481
+#: includes/Staging.php:512
 msgid "Unable to execute script (disabled_function)."
 msgstr ""
 
-#: includes/Staging.php:494
+#: includes/Staging.php:525
 msgid "Filesystem credentials required."
 msgstr ""
 
-#: includes/Staging.php:498
+#: includes/Staging.php:529
 msgid "Unable to initialize WP Filesystem."
 msgstr ""
 
-#: includes/Staging.php:505
+#: includes/Staging.php:536
 msgid "Unable to execute script (permission error)."
 msgstr ""
 
-#: includes/Staging.php:519
-msgid "Unable to parse JSON"
+#: includes/Staging.php:550
+msgid "Something gone wrong, please get in touch with our support."
+msgstr ""
+
+#: includes/Staging.php:567
+#: views/staging-log.php:11
+msgid "Log Staging"
+msgstr ""
+
+#: includes/Staging.php:581
+msgid "Don't have capabilities to access this page"
 msgstr ""
 
 #: includes/StagingCLI.php:19
@@ -86,17 +95,76 @@ msgstr ""
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr ""
 
-#: includes/StagingMenu.php:29
+#: includes/StagingMenu.php:33
 msgctxt "Menu item text"
 msgid "Staging"
 msgstr ""
 
-#: includes/StagingMenu.php:65
+#: includes/StagingMenu.php:53
 msgid "Staging Environment"
 msgstr ""
 
-#: includes/StagingMenu.php:67
+#: includes/StagingMenu.php:55
 msgid "Staging Actions"
+msgstr ""
+
+#: includes/StagingMenu.php:71
+#: includes/StagingMenu.php:72
+msgid "Staging"
+msgstr ""
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr ""
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr ""
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr ""
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr ""
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr ""
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr ""
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr ""
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr ""
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr ""
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr ""
+
+#: views/staging-log.php:63
+#: views/staging-log.php:65
+msgid "Prev"
+msgstr ""
+
+#: views/staging-log.php:132
+#: views/staging-log.php:134
+msgid "Next"
+msgstr ""
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
 msgstr ""
 
 #: src/components/App/getAppText.js:4
