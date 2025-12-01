@@ -77,6 +77,8 @@ class Staging {
 
 		add_action( 'admin_menu', array( $this, 'add_log_admin_page' ) );
 
+		add_action( 'init', array( $this, 'clean_log' ) );
+
 		new Constants( $container );
 	}
 
@@ -609,5 +611,18 @@ class Staging {
 		$instance     = $this;
 
 		include __DIR__ . '/../views/staging-log.php';
+	}
+
+	/**
+	 * Clean up old log file if the plugin has been upgraded from an older version
+	 */
+	public function clean_log() {
+		$cleaner_version = get_option( 'nfd_staging_log_cleaner_version' );
+		if ( version_compare( $cleaner_version, '4.8.0', '<' ) ) {
+			if ( file_exists( ABSPATH . '/nfd-staging.log' ) ) {
+				wp_delete_file( ABSPATH . '/nfd-staging.log' );
+			}
+			update_option( 'nfd_staging_log_cleaner_version', $this->container->plugin()->version );
+		}
 	}
 }
