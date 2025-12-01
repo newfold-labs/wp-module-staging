@@ -581,7 +581,7 @@ class Staging {
 			wp_die( esc_html__( "Don't have capabilities to access this page", 'wp-module-staging' ) );
 		}
 
-		$log_file = $this->getProductionDir() . 'nfd-staging.log';
+        $log_file = $this->getProductionDir() . '/nfd-private/nfd-staging.log';
 
 		$logs        = array();
 		$filter_date = isset( $_GET['log_date'] ) ? sanitize_text_field( $_GET['log_date'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended

@@ -31,7 +31,7 @@ DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR -
 STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
-LOG_FILE="$PRODUCTION_DIR/nfd-staging.log"  # Log file always in production uploads
+LOG_FILE="$PRODUCTION_DIR/nfd-private/nfd-staging.log"  # Log file always in production uploads
 CONTENT_DIRS=(uploads themes plugins)
 
 # List of patterns to ignore, example ("htacces." "test "wpform")
@@ -40,12 +40,31 @@ IGNORE_PATTERNS=("htaccess.")
 # --- Logging ---
 log() {
   # log LEVEL STEP MESSAGE
-  # Only write to log file (never stdout), to keep stdout clean for JSON parsing
   local level="$1"; local step="$2"; local msg="$3"
-  mkdir -p "$(dirname "$LOG_FILE")"
+
+  local log_dir
+  log_dir="$(dirname "$LOG_FILE")"
+
+  # 1. Create folder if not exists
+  if [ ! -d "$log_dir" ]; then
+    mkdir -p "$log_dir"
+  fi
+
+  # 2. Create .htaccess if not exists
+  local htaccess_file="$log_dir/.htaccess"
+
+  if [ ! -f "$htaccess_file" ]; then
+    echo "Order allow,deny"        > "$htaccess_file"
+    echo "Deny from all"          >> "$htaccess_file"
+  fi
+
+  # 3. Create file if log not exists
+  if [ ! -f "$LOG_FILE" ]; then
+    touch "$LOG_FILE"
+  fi
+
+  # 4. Write in log (never stdout)
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
-  # Optionally, also print to stderr for debugging (uncomment if needed):
-  # echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >&2
 }
 
 # --- Error Handling ---
