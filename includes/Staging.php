@@ -557,7 +557,7 @@ class Staging {
 			return new \WP_Error( 'error_response', $response->message );
 		}
 
-        wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
+		wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
 
 		return $response;
 	}
