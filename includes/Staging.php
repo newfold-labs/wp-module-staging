@@ -617,12 +617,8 @@ class Staging {
 	 * Clean up old log file if the plugin has been upgraded from an older version
 	 */
 	public function clean_log() {
-		$cleaner_version = get_option( 'nfd_staging_log_cleaner_version' );
-		if ( version_compare( $cleaner_version, '4.8.0', '<' ) ) {
-			if ( file_exists( ABSPATH . '/nfd-staging.log' ) ) {
-				wp_delete_file( ABSPATH . '/nfd-staging.log' );
-			}
-			update_option( 'nfd_staging_log_cleaner_version', $this->container->plugin()->version );
-		}
+        if ( file_exists( ABSPATH . '/nfd-staging.log' ) ) {
+            wp_delete_file( ABSPATH . '/nfd-staging.log' );
+        }
 	}
 }
