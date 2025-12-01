@@ -585,7 +585,7 @@ create() {
 
   # Set core config
   log "INFO" "create" "[STEP] Set core config."
-  log "DEBUG" "create:core_config" "Comando: wp core config --dbhost=$DB_HOST --dbname=$DB_NAME --dbuser=$DB_USER --dbpass=*** --dbprefix=staging_$DB_PREFIX --skip-themes --skip-plugins --quiet"
+  log "DEBUG" "create:core_config" "Comando: wp core config --dbhost=*** --dbname=*** --dbuser=*** --dbpass=*** --dbprefix=*** --skip-themes --skip-plugins --quiet"
   set +e
   CONFIG_OUTPUT=$(wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet 2>&1)
   CONFIG_STATUS=$?
