@@ -98,7 +98,6 @@ move_content_dirs() {
     mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create $DIR folder."; }
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
       log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
-      log "DEBUG" "move_content_dirs:$DIR" "Performed by user: $(whoami)"
       log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
       set +e
       RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
@@ -376,7 +375,6 @@ prepare_new_content_dirs() {
     local SRC="$FROM/wp-content/$DIR"
     local DEST="$TO/wp-content/$DIR-new"
     log "INFO" "prepare_new_content_dirs:$DIR" "Preparing to copy $SRC to $DEST"
-    log "DEBUG" "prepare_new_content_dirs:$DIR" "Performed by user: $(whoami)"
 
     # Clean destination
     log "INFO" "prepare_new_content_dirs:$DIR" "Cleaning destination dir: removing $DEST"
@@ -482,7 +480,6 @@ finalize_new_content_dirs() {
 
 # --- Main Functions ---
 create() {
-  log "DEBUG" "Performed by user : $(whoami)"
   log "INFO" "create" "[STEP] Start."
 
   # Move to production directory
@@ -802,7 +799,6 @@ create() {
 }
 
 destroy() {
-  log "DEBUG" "Performed by user : $(whoami)"
   log "INFO" "destroy" "[STEP] Start destroy."
   log "INFO" "destroy" "[STEP] Move to production directory."
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
@@ -835,7 +831,7 @@ destroy() {
 
 sso_staging() {
 
-  log "DEBUG" "Performed by user : $(whoami)"
+  log "DEBUG" "SSO staging"
   if [ -z "$1" ]; then
     error 'No user provided.'
   fi
@@ -901,7 +897,7 @@ sso_staging() {
 }
 
 sso_production() {
-  log "DEBUG" "Performed by user : $(whoami)"
+  log "DEBUG" "SSO Production"
   if [ -z "$1" ]; then
     error 'No user provided.'
   fi
@@ -917,7 +913,6 @@ sso_production() {
 }
 
 clone() {
-  log "DEBUG" "Performed by user : $(whoami)"
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
   trap 'delete_temp_staging 5 "Clone failed unexpectedly."' ERR
 
@@ -998,7 +993,6 @@ clone() {
 }
 
 deploy_files() {
-  log "DEBUG" "Performed by user : $(whoami)"
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
   if [ -L "$PRODUCTION_DIR/index.php" ]; then
     echo "path=$PRODUCTION_DIR" > /nfssys/etc/wp_symink_watch/$(whoami).notify
@@ -1035,7 +1029,6 @@ _restore_db_from_backup() {
 }
 
 deploy_db() {
-  log "DEBUG" "Performed by user : $(whoami)"
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
 
   # Disable global set -e and handle errors manually
@@ -1226,7 +1219,6 @@ deploy_files_db() {
 
 # --- Rewrite .htaccess ---
 rewrite_htaccess() {
-  log "DEBUG" "Performed by user : $(whoami)"
   log "INFO" "rewrite_htaccess" "Rewriting .htaccess"
   local LOCATION="$1"
   # Run in a subshell and redirect all output to /dev/null to avoid polluting stdout
