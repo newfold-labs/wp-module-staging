@@ -618,6 +618,7 @@ create() {
     -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
     -e "s/CONSTRAINT \`([^\`]+)\`/CONSTRAINT \`staging_\\1\`/g" \
     -e "s/TRIGGER \`([^\`]+)\`/TRIGGER \`staging_\\1\`/g" \
+    -e "s/\/\*\![0-9]+ DEFINER=[^*]*\*\///g" \
     "$STAGING_DIR/.export-sql" > "$tmpfile"
   PREFIX_STATUS=$?
   set -e
