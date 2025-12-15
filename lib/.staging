@@ -896,22 +896,18 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
 
-  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" \
-    2> >(while read -r line; do
-          log "ERROR" "sso_staging" "$line"
-        done)
-  )
+  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | head -n 1)
 
-   # Remove newline (\n), carriage return (\r)
-   LINK="${LINK//$'\n'/}"
-   LINK="${LINK//$'\r'/}"
+  # Remove newline (\n), carriage return (\r)
+  LINK="${LINK//$'\n'/}"
+  LINK="${LINK//$'\r'/}"
 
-   # Remove UTF-8 BOM via tr (fast)
-   LINK="$(printf '%s' "$LINK" | tr -d '\357\273\277')"
+  # Remove UTF-8 BOM via tr (fast)
+  LINK="$(printf '%s' "$LINK" | tr -d '\357\273\277')"
 
-   # If still contains BOM (or tr failed), fallback to perl
-   # (this removes the Unicode codepoint U+FEFF anywhere)
-   LINK="$(printf '%s' "$LINK" | perl -CS -pe 's/\x{FEFF}//g')"
+  # If still contains BOM (or tr failed), fallback to perl
+  # (this removes the Unicode codepoint U+FEFF anywhere)
+  LINK="$(printf '%s' "$LINK" | perl -CS -pe 's/\x{FEFF}//g')"
 
   if [ -z "$LINK" ]; then
     log "ERROR" "sso_staging" "Failed to generate SSO link (empty response)"
