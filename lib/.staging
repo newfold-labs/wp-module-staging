@@ -905,6 +905,8 @@ sso_staging() {
    # Remove newline (\n), carriage return (\r)
    LINK="${LINK//$'\n'/}"
    LINK="${LINK//$'\r'/}"
+   LINK="${LINK#*http}"
+   LINK="http${LINK}"
 
    # Remove UTF-8 BOM via tr (fast)
    LINK="$(printf '%s' "$LINK" | tr -d '\357\273\277')"
@@ -934,6 +936,8 @@ sso_production() {
   # Remove newline (\n) e carriage return (\r) characters from the link
   LINK="${LINK//$'\n'/}"
   LINK="${LINK//$'\r'/}"
+  LINK="${LINK#*http}"
+  LINK="http${LINK}"
 
   # Remove UTF-8 BOM via tr (fast)
   LINK="$(printf '%s' "$LINK" | tr -d '\357\273\277')"
