@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@newfold/wp-module-runtime": "^1.1.3",
-    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/forms": "^0.5.11",
     "@testing-library/cypress": "^10.1.0",
     "@wordpress/scripts": "^31.1.0",
     "css-minimizer-webpack-plugin": "^7.0.4",
