@@ -54,6 +54,8 @@ export const SELECTORS = {
   // Toggle switches
   productionToggle: '#newfold-production-toggle',
   stagingToggle: '#newfold-staging-toggle',
+  productionToggleLabel: 'label[for="newfold-production-toggle"]',
+  stagingToggleLabel: 'label[for="newfold-staging-toggle"]',
   
   // Buttons
   cloneButton: '#staging-clone-button',
@@ -95,8 +97,8 @@ export async function navigateToStagingPage(page) {
  * @param {Object} fixture - The fixture data to return
  */
 export async function mockStagingApi(page, fixture) {
-  // Use broad pattern to match both /wp-json/ and index.php?rest_route= URLs
-  await page.route(/newfold-staging.*v1.*staging/, async (route) => {
+  // Use API_PATTERNS.staging to match both /wp-json/ and index.php?rest_route= URLs
+  await page.route(API_PATTERNS.staging, async (route) => {
     const method = route.request().method();
     const url = route.request().url();
     
@@ -171,8 +173,8 @@ export async function mockStagingApi(page, fixture) {
 export async function setupProductionEnvironmentMocks(page) {
   let currentFixture = FIXTURES.stagingInit;
   
-  // Use broad pattern to match both /wp-json/ and index.php?rest_route= URLs
-  await page.route(/newfold-staging.*v1.*staging/, async (route) => {
+  // Use API_PATTERNS.staging to match both /wp-json/ and index.php?rest_route= URLs
+  await page.route(API_PATTERNS.staging, async (route) => {
     const method = route.request().method();
     const url = route.request().url();
     
@@ -198,7 +200,7 @@ export async function setupProductionEnvironmentMocks(page) {
     
     // Handle switch-to endpoint - add delay to allow Working state to be visible
     if (url.includes('switch-to')) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 250));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -222,8 +224,8 @@ export async function setupProductionEnvironmentMocks(page) {
     // Handle POST (create staging) - add delay to allow is-thinking state to be visible
     if (method === 'POST' && !url.includes('clone') && !url.includes('deploy')) {
       currentFixture = FIXTURES.stagingCreate;
-      // Add delay like Cypress test to allow is-thinking class to be observed
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Add delay to allow is-thinking class to be observed (250ms is sufficient)
+      await new Promise(resolve => setTimeout(resolve, 250));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -265,7 +267,7 @@ export async function closeAllNotifications(page) {
     const button = notificationButtons.nth(0); // Always get first as others shift
     if (await button.isVisible()) {
       await button.click();
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(50); // Reduced from 100ms - just enough for UI to settle
     }
   }
 }
@@ -281,4 +283,39 @@ export async function clickModalButton(page, buttonText, isPrimary = true) {
   const button = page.locator(selector).filter({ hasText: buttonText });
   await expect(button).toBeVisible();
   await button.click();
+}
+
+/**
+ * Combined setup: login, navigate to staging page, and wait for it to load
+ * @param {import('@playwright/test').Page} page
+ */
+export async function setupAndNavigate(page) {
+  await auth.loginToWordPress(page);
+  await navigateToStagingPage(page);
+  await waitForStagingPage(page);
+}
+
+/**
+ * Assert that a notification with specific text is visible
+ * Uses filter to handle multiple notification containers on the page
+ * @param {import('@playwright/test').Page} page
+ * @param {string} text - The text to expect in the notification
+ */
+export async function expectNotification(page, text) {
+  await expect(
+    page.locator(SELECTORS.notifications).filter({ hasText: text })
+  ).toContainText(text);
+}
+
+/**
+ * Verify modal title and click action button
+ * @param {import('@playwright/test').Page} page
+ * @param {string} expectedTitle - Expected modal title text
+ * @param {string} buttonText - Button text to click
+ * @param {boolean} isPrimary - Whether it's the primary (true) or cancel/error (false) button
+ */
+export async function confirmModalAction(page, expectedTitle, buttonText, isPrimary = true) {
+  const modal = page.locator(SELECTORS.modal);
+  await expect(modal.locator('h1')).toContainText(expectedTitle);
+  await clickModalButton(page, buttonText, isPrimary);
 }
