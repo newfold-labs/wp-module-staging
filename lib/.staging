@@ -643,6 +643,18 @@ create() {
     log "ERROR" "create:update_prefix_sql" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
+  
+  # Truncate constraint names that exceed MySQL's 64-character limit
+  log "INFO" "create:update_prefix_sql" "Truncating constraint names that exceed 64 characters"
+  set +e
+  perl -i -pe 's/CONSTRAINT `([^`]+)`/do { my $name = $1; length($name) > 64 ? "CONSTRAINT `" . substr($name, 0, 64) . "`" : "CONSTRAINT `$name`" }/ge' "$tmpfile"
+  TRUNCATE_STATUS=$?
+  set -e
+  if [ $TRUNCATE_STATUS -ne 0 ]; then
+    log "ERROR" "create:update_prefix_sql" "Unable to truncate constraint names."
+    delete_temp_staging 2 "Unable to truncate constraint names."
+  fi
+  
   set +e
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
   MV_STATUS=$?
@@ -1135,6 +1147,14 @@ deploy_db() {
       PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
       fail_and_exit "Unable to update prefix in staging SQL. Output: $PREFIX_OUTPUT"
     fi
+    
+    # Truncate constraint names that exceed MySQL's 64-character limit
+    log "INFO" "deploy_db" "Truncating constraint names that exceed 64 characters"
+    if ! perl -i -pe 's/CONSTRAINT `([^`]+)`/do { my $name = $1; length($name) > 64 ? "CONSTRAINT `" . substr($name, 0, 64) . "`" : "CONSTRAINT `$name`" }/ge' "$TMP_PREFIX_FILE" 2>&1; then
+      PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
+      fail_and_exit "Unable to truncate constraint names. Output: $PREFIX_OUTPUT"
+    fi
+    
     mv "$TMP_PREFIX_FILE" "$STAGING_DIR/.export-sql"
     if [ $? -ne 0 ]; then
       fail_and_exit "Unable to replace staging SQL with updated prefix file."
