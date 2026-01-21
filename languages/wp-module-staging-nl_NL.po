@@ -1,16 +1,15 @@
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 13:44\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
-"Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-02-19 13:44\n"
+"Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
@@ -29,11 +28,8 @@ msgid "Staging environment already exists!"
 msgstr "Testomgeving bestaat al!"
 
 #: includes/Staging.php:390
-msgid ""
-"You must switch to the production environment before destroying staging."
-msgstr ""
-"U moet naar de productieomgeving overschakelen voordat u de testomgeving "
-"verwijdert."
+msgid "You must switch to the production environment before destroying staging."
+msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
 
 #: includes/Staging.php:412
 msgid "Switch to an environment you are already in, you cannot."
@@ -82,12 +78,8 @@ msgid "Confirm Clone Action"
 msgstr "Bevestig kloonactie"
 
 #: src/sections/ProductionSite/getProductionSiteText.js:9
-msgid ""
-"This will overwrite anything in staging and update it to an exact clone of "
-"the current production site. Are you sure you want to proceed?"
-msgstr ""
-"Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte "
-"kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
 
 #: src/components/App/getAppText.js:5
 msgid "Cloned to Staging"
@@ -95,9 +87,7 @@ msgstr "Gekopieerd naar testomgeving"
 
 #: src/components/App/getAppText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr ""
-"Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een"
-" minuut."
+msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
 
 #: src/sections/ProductionSite/getProductionSiteText.js:10
 msgid "Clone to staging"
@@ -133,14 +123,8 @@ msgid "Confirm Delete"
 msgstr "Verwijderen bevestigen"
 
 #: src/sections/StagingSite/getStagingSiteText.js:14
-msgid ""
-"This will permanently delete staging site. Are you sure you want to proceed?"
-" You can recreate another staging site at any time, but any specific changes"
-" you've made to this staging site will be lost."
-msgstr ""
-"Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt "
-"doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle "
-"wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
 
 #: src/components/App/getAppText.js:25
 #: src/sections/StagingSite/getStagingSiteText.js:18
@@ -173,12 +157,8 @@ msgid "Deploy database only"
 msgstr "Alleen database implementeren"
 
 #: src/components/App/getAppText.js:37
-msgid ""
-"This will deploy staging to production and overwrite current production "
-"site. Are you sure you want to proceed?"
-msgstr ""
-"Dit zal de testomgeving naar productie overzetten en de huidige "
-"productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
 
 #: src/components/App/getAppText.js:41
 msgid "Deploy files only"
@@ -190,8 +170,7 @@ msgstr "Geïmplementeerd"
 
 #: src/components/App/getAppText.js:43
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr ""
-"Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
+msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
 
 #: src/components/App/getAppText.js:47
 msgid "Deploy Site"
@@ -223,13 +202,8 @@ msgid "Staging Site"
 msgstr "Testomgeving"
 
 #: src/components/App/getAppText.js:53
-msgid ""
-"A staging site is a duplicate of your live site, offering a secure "
-"environment to experiment, test updates, and deploy when ready."
-msgstr ""
-"Een testomgeving is een kopie van uw live website die een veilige omgeving "
-"biedt om te experimenteren, updates te testen en door te voeren wanneer u "
-"klaar bent."
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
 
 #: src/components/App/getAppText.js:59
 msgid "Switch"
@@ -252,11 +226,8 @@ msgid "Loading the production environment now."
 msgstr "De productieomgeving nu laden."
 
 #: src/components/App/getAppText.js:72
-msgid ""
-"Switching to the production environment, this should take about a minute."
-msgstr ""
-"De omschakeling naar de productieomgeving zou ongeveer een minuut moeten "
-"duren."
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
 
 #: src/components/App/getAppText.js:76
 msgid "Switch to Staging"
@@ -272,8 +243,7 @@ msgstr "De testomgeving wordt nu geladen."
 
 #: src/components/App/getAppText.js:85
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr ""
-"Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
+msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
 
 #: src/components/App/getAppText.js:90
 msgid "An unknown error has occurred."
@@ -324,7 +294,8 @@ msgstr "Werkend..."
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
 
-#: includes/Staging.php:571 views/staging-log.php:11
+#: includes/Staging.php:571
+#: views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Logstamopstelling"
 
@@ -332,7 +303,8 @@ msgstr "Logstamopstelling"
 msgid "Don't have capabilities to access this page"
 msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
 
-#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
+#: includes/StagingMenu.php:71
+#: includes/StagingMenu.php:72
 msgid "Staging"
 msgstr "Enscenering"
 
@@ -376,11 +348,13 @@ msgstr "Terugstellen"
 msgid "Log"
 msgstr "Log"
 
-#: views/staging-log.php:63 views/staging-log.php:65
+#: views/staging-log.php:63
+#: views/staging-log.php:65
 msgid "Prev"
 msgstr "Vorige"
 
-#: views/staging-log.php:132 views/staging-log.php:134
+#: views/staging-log.php:132
+#: views/staging-log.php:134
 msgid "Next"
 msgstr "Volgend"
 
