@@ -50,9 +50,11 @@ class StagingApiWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 			->getMock();
 
 		$container->method( 'set' )->willReturn( null );
-		$container->method( 'computed' )->willReturnCallback( function ( $fn ) {
-			return $fn;
-		} );
+		$container->method( 'computed' )->willReturnCallback(
+			function ( $callable ) {
+				return $callable;
+			}
+		);
 
 		$plugin = (object) array(
 			'url'      => 'https://test.local/',
@@ -114,10 +116,10 @@ class StagingApiWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 	public function test_get_staging_details_returns_expected_structure() {
 		$user_id = $this->factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
-		$api       = new StagingApi( $this->container );
-		$response  = $api->getStagingDetails();
-		$data      = $response->get_data();
-		$expected  = array(
+		$api      = new StagingApi( $this->container );
+		$response = $api->getStagingDetails();
+		$data     = $response->get_data();
+		$expected = array(
 			'creationDate',
 			'currentEnvironment',
 			'productionDir',
