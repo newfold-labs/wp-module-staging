@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "961cb0438cd27a342397dbedb36b0db5",
+    "content-hash": "0ab563e4e5862dd78bc849261f1ea546",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -104,16 +104,16 @@
         },
         {
             "name": "newfold-labs/wp-module-context",
-            "version": "1.0.2",
+            "version": "1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/newfold-labs/wp-module-context.git",
-                "reference": "46c3fb5f0df3eb1e016b04310a1edb274e00fde9"
+                "reference": "1c6782114a57fbe6aadc3fe42b585e5f5a48a443"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/newfold-labs/wp-module-context/zipball/46c3fb5f0df3eb1e016b04310a1edb274e00fde9",
-                "reference": "46c3fb5f0df3eb1e016b04310a1edb274e00fde9",
+                "url": "https://api.github.com/repos/newfold-labs/wp-module-context/zipball/1c6782114a57fbe6aadc3fe42b585e5f5a48a443",
+                "reference": "1c6782114a57fbe6aadc3fe42b585e5f5a48a443",
                 "shasum": ""
             },
             "require": {
@@ -162,10 +162,10 @@
             ],
             "description": "Newfold module to determine context for various brands and platforms.",
             "support": {
-                "source": "https://github.com/newfold-labs/wp-module-context/tree/1.0.2",
+                "source": "https://github.com/newfold-labs/wp-module-context/tree/1.0.3",
                 "issues": "https://github.com/newfold-labs/wp-module-context/issues"
             },
-            "time": "2025-06-06T22:13:44+00:00"
+            "time": "2026-02-06T13:36:08+00:00"
         },
         {
             "name": "newfold-labs/wp-module-features",

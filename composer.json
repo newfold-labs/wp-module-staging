@@ -95,7 +95,7 @@
     }
   },
   "require": {
-    "newfold-labs/wp-module-context": "^1.0.2",
+    "newfold-labs/wp-module-context": "^1.0.3",
     "newfold-labs/wp-module-features": "^1.5.2"
   }
 }
