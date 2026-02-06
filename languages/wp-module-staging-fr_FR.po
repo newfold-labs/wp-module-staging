@@ -1,15 +1,16 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-02-19 13:44\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
+"Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 13:44\n"
-"Language: fr_FR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
@@ -21,19 +22,24 @@ msgstr ""
 
 #: includes/Staging.php:331
 msgid "Cloning can only be done from the production environment."
-msgstr "Le clonage ne peut se faire qu'à partir de l'environnement de production."
+msgstr ""
+"Le clonage ne peut se faire qu'à partir de l'environnement de production."
 
 #: includes/Staging.php:356
 msgid "Staging environment already exists!"
 msgstr "L'environnement de pré-production existe déjà !"
 
 #: includes/Staging.php:390
-msgid "You must switch to the production environment before destroying staging."
-msgstr "Vous devez passer à l'environnement de production avant de supprimer l'environnement de pré-production."
+msgid ""
+"You must switch to the production environment before destroying staging."
+msgstr ""
+"Vous devez passer à l'environnement de production avant de supprimer "
+"l'environnement de pré-production."
 
 #: includes/Staging.php:412
 msgid "Switch to an environment you are already in, you cannot."
-msgstr "Passez à un environnement dans lequel vous êtes déjà, vous ne pouvez pas."
+msgstr ""
+"Passez à un environnement dans lequel vous êtes déjà, vous ne pouvez pas."
 
 #: includes/Staging.php:449
 msgid "Invalid staging CLI command."
@@ -78,8 +84,13 @@ msgid "Confirm Clone Action"
 msgstr "Confirmer l'action de clonage"
 
 #: src/sections/ProductionSite/getProductionSiteText.js:9
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Ceci va écraser tout ce qui est en cours de pré-production et le mettre à jour vers un clone exact du site de production actuel. Êtes-vous sûr de vouloir continuer ?"
+msgid ""
+"This will overwrite anything in staging and update it to an exact clone of "
+"the current production site. Are you sure you want to proceed?"
+msgstr ""
+"Ceci va écraser tout ce qui est en cours de pré-production et le mettre à "
+"jour vers un clone exact du site de production actuel. Êtes-vous sûr de "
+"vouloir continuer ?"
 
 #: src/components/App/getAppText.js:5
 msgid "Cloned to Staging"
@@ -87,7 +98,9 @@ msgstr "Cloné en pré-production"
 
 #: src/components/App/getAppText.js:9
 msgid "Cloning production to staging, this should take about a minute."
-msgstr "Clonage de la production vers la pré-production, cela devrait prendre environ une minute."
+msgstr ""
+"Clonage de la production vers la pré-production, cela devrait prendre "
+"environ une minute."
 
 #: src/sections/ProductionSite/getProductionSiteText.js:10
 msgid "Clone to staging"
@@ -103,7 +116,8 @@ msgstr "Pré-production créée"
 
 #: src/components/App/getAppText.js:17
 msgid "Creating a staging site, this should take about a minute."
-msgstr "Créer un site de pré-production, cela devrait prendre environ une minute."
+msgstr ""
+"Créer un site de pré-production, cela devrait prendre environ une minute."
 
 #: src/sections/StagingSite/getStagingSiteText.js:9
 msgid "Create staging site"
@@ -123,8 +137,15 @@ msgid "Confirm Delete"
 msgstr "Confirmer la suppression"
 
 #: src/sections/StagingSite/getStagingSiteText.js:14
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Ceci supprimera définitivement le site de pré-production. Êtes-vous sûr de vouloir continuer ? Vous pouvez recréer un autre site de pré-production à tout moment, mais toutes les modifications spécifiques que vous avez apportées à ce site de pré-production seront perdues."
+msgid ""
+"This will permanently delete staging site. Are you sure you want to proceed?"
+" You can recreate another staging site at any time, but any specific changes"
+" you've made to this staging site will be lost."
+msgstr ""
+"Ceci supprimera définitivement le site de pré-production. Êtes-vous sûr de "
+"vouloir continuer ? Vous pouvez recréer un autre site de pré-production à "
+"tout moment, mais toutes les modifications spécifiques que vous avez "
+"apportées à ce site de pré-production seront perdues."
 
 #: src/components/App/getAppText.js:25
 #: src/sections/StagingSite/getStagingSiteText.js:18
@@ -134,7 +155,9 @@ msgstr "Environnement de pré-production supprimé"
 #: src/components/App/getAppText.js:29
 #: src/sections/StagingSite/getStagingSiteText.js:22
 msgid "Deleting the staging site, this should take about a minute."
-msgstr "Suppression du site de pré-production, cela devrait prendre environ une minute."
+msgstr ""
+"Suppression du site de pré-production, cela devrait prendre environ une "
+"minute."
 
 #: src/sections/StagingSite/getStagingSiteText.js:13
 msgid "Delete Staging Site"
@@ -157,8 +180,12 @@ msgid "Deploy database only"
 msgstr "Déployer la base de données uniquement"
 
 #: src/components/App/getAppText.js:37
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Ceci va déployer la pré-production vers la production et écraser le site de production actuel. Êtes-vous sûr de vouloir continuer ?"
+msgid ""
+"This will deploy staging to production and overwrite current production "
+"site. Are you sure you want to proceed?"
+msgstr ""
+"Ceci va déployer la pré-production vers la production et écraser le site de "
+"production actuel. Êtes-vous sûr de vouloir continuer ?"
 
 #: src/components/App/getAppText.js:41
 msgid "Deploy files only"
@@ -170,7 +197,9 @@ msgstr "Déployé"
 
 #: src/components/App/getAppText.js:43
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Déploiement de la pré-production vers la production, cela devrait prendre environ une minute."
+msgstr ""
+"Déploiement de la pré-production vers la production, cela devrait prendre "
+"environ une minute."
 
 #: src/components/App/getAppText.js:47
 msgid "Deploy Site"
@@ -202,8 +231,13 @@ msgid "Staging Site"
 msgstr "Site de pré-production"
 
 #: src/components/App/getAppText.js:53
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Un site de pré-production est un duplicata de votre site en direct, offrant un environnement sécurisé pour expérimenter, tester les mises à jour et déployer quand il est prêt."
+msgid ""
+"A staging site is a duplicate of your live site, offering a secure "
+"environment to experiment, test updates, and deploy when ready."
+msgstr ""
+"Un site de pré-production est un duplicata de votre site en direct, offrant "
+"un environnement sécurisé pour expérimenter, tester les mises à jour et "
+"déployer quand il est prêt."
 
 #: src/components/App/getAppText.js:59
 msgid "Switch"
@@ -226,8 +260,11 @@ msgid "Loading the production environment now."
 msgstr "Chargement de l'environnement de production maintenant."
 
 #: src/components/App/getAppText.js:72
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Passage à l'environnement de production, cela devrait prendre environ une minute."
+msgid ""
+"Switching to the production environment, this should take about a minute."
+msgstr ""
+"Passage à l'environnement de production, cela devrait prendre environ une "
+"minute."
 
 #: src/components/App/getAppText.js:76
 msgid "Switch to Staging"
@@ -243,7 +280,9 @@ msgstr "Chargement de l'environnement de pré-production maintenant."
 
 #: src/components/App/getAppText.js:85
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Passage à l'environnement de pré-production, cela devrait prendre environ une minute."
+msgstr ""
+"Passage à l'environnement de pré-production, cela devrait prendre environ "
+"une minute."
 
 #: src/components/App/getAppText.js:90
 msgid "An unknown error has occurred."
@@ -276,7 +315,9 @@ msgstr "Erreur : "
 
 #: includes/StagingCLI.php:280
 msgid "Provided $data wasn't valid array or JSON string."
-msgstr "Les données fournies ($data) ne sont pas un tableau ou une chaîne JSON valides."
+msgstr ""
+"Les données fournies ($data) ne sont pas un tableau ou une chaîne JSON "
+"valides."
 
 #: includes/Staging.php:527
 msgid "Filesystem credentials required."
@@ -294,8 +335,7 @@ msgstr "Travaillant..."
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Quelque chose a mal tourné, n’hésitez pas à contacter notre support."
 
-#: includes/Staging.php:571
-#: views/staging-log.php:11
+#: includes/Staging.php:571 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Phase de journal"
 
@@ -303,8 +343,7 @@ msgstr "Phase de journal"
 msgid "Don't have capabilities to access this page"
 msgstr "Je n’ai pas la possibilité d’accéder à cette page"
 
-#: includes/StagingMenu.php:71
-#: includes/StagingMenu.php:72
+#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
 msgid "Staging"
 msgstr "Mise en scène"
 
@@ -348,16 +387,666 @@ msgstr "Réinitialisation"
 msgid "Log"
 msgstr "Rapport"
 
-#: views/staging-log.php:63
-#: views/staging-log.php:65
+#: views/staging-log.php:63 views/staging-log.php:65
 msgid "Prev"
 msgstr "Prev"
 
-#: views/staging-log.php:132
-#: views/staging-log.php:134
+#: views/staging-log.php:132 views/staging-log.php:134
 msgid "Next"
 msgstr "Prochain"
 
 #: views/staging-log.php:140
 msgid "No log found for selected date."
 msgstr "Aucun journal trouvé pour la date sélectionnée."
+
+#: wordpress/wp-includes/blocks/widget-group/block.json
+msgctxt "block title"
+msgid "Widget Group"
+msgstr "Groupe de widgets"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Color name"
+msgid "Base"
+msgstr "Base"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Color name"
+msgid "Contrast"
+msgstr "Contrast"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 1"
+msgstr "Accent 1"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 2"
+msgstr "Accent 2"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 3"
+msgstr "Accent 3"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 4"
+msgstr "Accent 4"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 5"
+msgstr "Accent 5"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Color name"
+msgid "Accent 6"
+msgstr "Accent 6"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "Tiny"
+msgstr "Tiny"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "X-Small"
+msgstr "X-Small"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "Small"
+msgstr "Petit"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "Regular"
+msgstr "Régulier"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "Large"
+msgstr "Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "X-Large"
+msgstr "X-Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Space size name"
+msgid "XX-Large"
+msgstr "XX-Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-includes/theme.json
+msgctxt "Font size name"
+msgid "Small"
+msgstr "Petit"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-includes/theme.json
+msgctxt "Font size name"
+msgid "Medium"
+msgstr "Medium"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-includes/theme.json
+msgctxt "Font size name"
+msgid "Large"
+msgstr "Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-includes/theme.json
+msgctxt "Font size name"
+msgid "Extra Large"
+msgstr "Extra Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Font size name"
+msgid "Extra Extra Large"
+msgstr "Extra Extra Large"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Font family name"
+msgid "Manrope"
+msgstr "Manrope"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Font family name"
+msgid "Fira Code"
+msgstr "Code Fira"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Template part name"
+msgid "Header"
+msgstr "En-tête"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Template part name"
+msgid "Vertical site header"
+msgstr "En-tête vertical du site"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Template part name"
+msgid "Header with large title"
+msgstr "En-tête avec un titre grand"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Template part name"
+msgid "Footer"
+msgstr "Pied de page"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Template part name"
+msgid "Footer Columns"
+msgstr "Colonnes de pied de page"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+msgctxt "Template part name"
+msgid "Footer Newsletter"
+msgstr "Newsletter en bas de page"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Template part name"
+msgid "Sidebar"
+msgstr "Encadré"
+
+#: wordpress/wp-content/themes/twentytwentyfive/theme.json
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Custom template name"
+msgid "Page No Title"
+msgstr "Page sans titre"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Duotone name"
+msgid "Black and white"
+msgstr "Noir et blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Duotone name"
+msgid "Black and sandstone"
+msgstr "Noir et grès"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Duotone name"
+msgid "Black and rust"
+msgstr "Noir et rouille"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Duotone name"
+msgid "Black and sage"
+msgstr "Noir et sauge"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Duotone name"
+msgid "Black and pastel blue"
+msgstr "Noir et bleu pastel"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft beige to white"
+msgstr "Beige doux vertical à blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft sandstone to white"
+msgstr "Grès tendre vertical vers blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft rust to white"
+msgstr "De la rouille douce verticale au blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft sage to white"
+msgstr "De la sauge douce verticale au blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft mint to white"
+msgstr "De la menthe douce verticale au blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical soft pewter to white"
+msgstr "Étain doux vertical à blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard beige to white"
+msgstr "Vertical dur beige à blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard sandstone to white"
+msgstr "Grès dur vertical vers blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard rust to white"
+msgstr "De la rouille verticale dure au blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard sage to white"
+msgstr "De la sauge dure verticale au blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard mint to white"
+msgstr "Vertical hard mint vers blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Gradient name"
+msgid "Vertical hard pewter to white"
+msgstr "Étain dur vertical vers blanc"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Base / Two"
+msgstr "Base / Deux"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Contrast / Two"
+msgstr "Contrast / Deux"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Contrast / Three"
+msgstr "Contrast / Three"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Accent"
+msgstr "Accent"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Accent / Two"
+msgstr "Accent / Deux"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Accent / Three"
+msgstr "Accent / Three"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Accent / Four"
+msgstr "Accent / Quatre"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Color name"
+msgid "Accent / Five"
+msgstr "Accent / Cinq"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "1"
+msgstr "1"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "2"
+msgstr "2"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "3"
+msgstr "3"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "4"
+msgstr "4"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "5"
+msgstr "5"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Space size name"
+msgid "6"
+msgstr "6"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Font family name"
+msgid "Inter"
+msgstr "Inter"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Font family name"
+msgid "Cardo"
+msgstr "Cardo"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Font family name"
+msgid "System Sans-serif"
+msgstr "System Sans-serif"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Font family name"
+msgid "System Serif"
+msgstr "Système à empattement"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Template part name"
+msgid "Post Meta"
+msgstr "Post Meta"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Custom template name"
+msgid "Page with Sidebar"
+msgstr "Page avec barre latérale"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Custom template name"
+msgid "Page with Wide Image"
+msgstr "Page avec image large"
+
+#: wordpress/wp-content/themes/twentytwentyfour/theme.json
+msgctxt "Custom template name"
+msgid "Single with Sidebar"
+msgstr "Single avec barre latérale"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Custom template name"
+msgid "Blank"
+msgstr "Blank"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Custom template name"
+msgid "Blog (Alternative)"
+msgstr "Blog (Alternative)"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Custom template name"
+msgid "404"
+msgstr "404"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Color name"
+msgid "Primary"
+msgstr "Primaire"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Color name"
+msgid "Secondary"
+msgstr "Secondaire"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Color name"
+msgid "Tertiary"
+msgstr "Tertiaire"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Font family name"
+msgid "DM Sans"
+msgstr "DM Sans"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Font family name"
+msgid "IBM Plex Mono"
+msgstr "IBM Plex Mono"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Font family name"
+msgid "System Font"
+msgstr "Police système"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Font family name"
+msgid "Source Serif Pro"
+msgstr "Source Serif Pro"
+
+#: wordpress/wp-content/themes/twentytwentythree/theme.json
+msgctxt "Template part name"
+msgid "Comments Template Part"
+msgstr "Partie modèle de commentaires"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Dark grayscale"
+msgstr "Niveaux de gris foncé"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Grayscale"
+msgstr "Niveaux de gris"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Purple and yellow"
+msgstr "Violet et jaune"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Blue and red"
+msgstr "Bleu et rouge"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Midnight"
+msgstr "Minuit"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Magenta and yellow"
+msgstr "Magenta et jaune"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Purple and green"
+msgstr "Violet et vert"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Duotone name"
+msgid "Blue and orange"
+msgstr "Bleu et orange"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Vivid cyan blue to vivid purple"
+msgstr "Bleu cyan vif à violet vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Light green cyan to vivid green cyan"
+msgstr "Du cyan vert clair au cyan vert vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Luminous vivid amber to luminous vivid orange"
+msgstr "De l’ambre vif lumineux à l’orange vif lumineux"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Luminous vivid orange to vivid red"
+msgstr "Orange vif lumineux à rouge vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Very light gray to cyan bluish gray"
+msgstr "Gris très clair à gris cyan bleuâtre"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Cool to warm spectrum"
+msgstr "Spectre froid à chaud"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Blush light purple"
+msgstr "Blush violet clair"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Blush bordeaux"
+msgstr "Blush bordeaux"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Luminous dusk"
+msgstr "Crépuscule lumineux"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Pale ocean"
+msgstr "Océan pâle"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Electric grass"
+msgstr "Gazon électrique"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Gradient name"
+msgid "Midnight"
+msgstr "Minuit"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Black"
+msgstr "Noir"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Cyan bluish gray"
+msgstr "Gris bleuâtre cyan"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "White"
+msgstr "Blanc"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Pale pink"
+msgstr "Rose pâle"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Vivid red"
+msgstr "Rouge vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Luminous vivid orange"
+msgstr "Orange vif lumineux"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Luminous vivid amber"
+msgstr "Ambre lumineux et vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Light green cyan"
+msgstr "Cyan vert clair"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Vivid green cyan"
+msgstr "Cyan vert vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Pale cyan blue"
+msgstr "Bleu cyan pâle"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Vivid cyan blue"
+msgstr "Bleu cyan vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Color name"
+msgid "Vivid purple"
+msgstr "Violet vif"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Square - 1:1"
+msgstr "Carré - 1:1"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Standard - 4:3"
+msgstr "Standard - 4:3"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Portrait - 3:4"
+msgstr "Portrait - 3:4"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Classic - 3:2"
+msgstr "Classic - 3:2"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Classic Portrait - 2:3"
+msgstr "Classic Portrait - 2:3"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Wide - 16:9"
+msgstr "Largeur - 16:9"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Aspect ratio name"
+msgid "Tall - 9:16"
+msgstr "Hauteur - 9:16"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Shadow name"
+msgid "Natural"
+msgstr "Natural"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Shadow name"
+msgid "Deep"
+msgstr "Deep"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Shadow name"
+msgid "Sharp"
+msgstr "Sharp"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Shadow name"
+msgid "Outlined"
+msgstr "Contourné"
+
+#: wordpress/wp-includes/theme.json
+msgctxt "Shadow name"
+msgid "Crisp"
+msgstr "Crisp"
