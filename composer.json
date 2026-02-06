@@ -35,7 +35,7 @@
     "wp-cli/i18n-command": "^2.6.6",
     "johnpbloch/wordpress": "@stable",
     "lucatume/wp-browser": "*",
-    "newfold-labs/wp-module-loader": "^1.0",
+    "newfold-labs/wp-module-loader": "^1.1",
     "phpunit/phpcov": "*"
   },
   "scripts": {
