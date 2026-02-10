@@ -516,7 +516,7 @@ create() {
   # Get WP Version
   log "INFO" "create" "[STEP] Get WP Version."
   set +e
-  WP_VER=$(wp core version 2>&1)
+  WP_VER=$(wp core version 2>/dev/null | tr -d '\n')
   WP_VER_STATUS=$?
   set -e
   log "DEBUG" "create:wp_version" "wp core version exit code: $WP_VER_STATUS"
