@@ -11,7 +11,7 @@ const customConfig = {
 	},
 	output: {
 		path: path.resolve(process.cwd(), 'build/staging'),
-		filename: 'staging.min.js', // Output JS
+		filename: 'bundle.js', // Output JS
 	},
 	plugins: [
 		new MiniCssExtractPlugin({
