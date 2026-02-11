@@ -167,842 +167,186 @@ msgstr ""
 msgid "No log found for selected date."
 msgstr ""
 
-#: src/components/App/getAppText.js:4
-msgid "Cancel"
-msgstr ""
-
-#: src/components/App/getAppText.js:5
-msgid "Cloned to Staging"
-msgstr ""
-
-#: src/components/App/getAppText.js:9
-msgid "Cloning production to staging, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:13
-msgid "Staging Created"
-msgstr ""
-
-#: src/components/App/getAppText.js:17
-msgid "Creating a staging site, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:21
-msgid "Created"
-msgstr ""
-
-#: src/components/App/getAppText.js:22
-#: src/sections/ProductionSite/getProductionSiteText.js:5
-msgid "Currently editing"
-msgstr ""
-
-#: src/components/App/getAppText.js:23
-msgid "Delete"
-msgstr ""
-
-#: src/components/App/getAppText.js:24
-msgid "Confirm Delete"
-msgstr ""
-
-#: src/components/App/getAppText.js:25
-#: src/sections/StagingSite/getStagingSiteText.js:18
-msgid "Deleted Staging"
-msgstr ""
-
-#: src/components/App/getAppText.js:29
-#: src/sections/StagingSite/getStagingSiteText.js:22
-msgid "Deleting the staging site, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:33
-msgid "Deploy"
-msgstr ""
-
-#: src/components/App/getAppText.js:34
-msgid "Deploy all changes"
-msgstr ""
-
-#: src/components/App/getAppText.js:35
-msgid "Confirm Deployment"
-msgstr ""
-
-#: src/components/App/getAppText.js:36
-msgid "Deploy database only"
-msgstr ""
-
-#: src/components/App/getAppText.js:37
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr ""
-
-#: src/components/App/getAppText.js:41
-msgid "Deploy files only"
-msgstr ""
-
-#: src/components/App/getAppText.js:42
-msgid "Deployed"
-msgstr ""
-
-#: src/components/App/getAppText.js:43
-msgid "Deploying from staging to production, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:47
-msgid "Deploy Site"
-msgstr ""
-
-#: src/components/App/getAppText.js:48
-msgid "Error"
-msgstr ""
-
-#: src/components/App/getAppText.js:49
-#: src/sections/ProductionSite/getProductionSiteText.js:6
-msgid "Not currently editing"
-msgstr ""
-
-#: src/components/App/getAppText.js:53
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr ""
-
-#: src/components/App/getAppText.js:58
-msgid "Proceed"
-msgstr ""
-
-#: src/components/App/getAppText.js:59
-msgid "Switch"
-msgstr ""
-
-#: src/components/App/getAppText.js:60
-msgid "Switch to Production"
-msgstr ""
-
-#: src/components/App/getAppText.js:64
-msgid "This will navigate you to the production environment"
-msgstr ""
-
-#: src/components/App/getAppText.js:68
-msgid "Loading the production environment now."
-msgstr ""
-
-#: src/components/App/getAppText.js:72
-msgid "Switching to the production environment, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:76
-msgid "Switch to Staging"
-msgstr ""
-
-#: src/components/App/getAppText.js:77
-msgid "This will navigate you to the staging environment"
-msgstr ""
-
-#: src/components/App/getAppText.js:81
-msgid "Loading the staging environment now."
-msgstr ""
-
-#: src/components/App/getAppText.js:85
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr ""
-
-#: src/components/App/getAppText.js:89
-msgid "Switching"
-msgstr ""
-
-#: src/components/App/getAppText.js:90
-msgid "An unknown error has occurred."
-msgstr ""
-
-#: src/components/App/getAppText.js:94
-msgid "Working…"
-msgstr ""
-
-#: src/sections/ProductionSite/getProductionSiteText.js:4
+#: build/staging/bundle.js:1
 msgid "Production Site"
 msgstr ""
 
-#: src/sections/ProductionSite/getProductionSiteText.js:7
+#: build/staging/bundle.js:1
+msgid "Currently editing"
+msgstr ""
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr ""
+
+#: build/staging/bundle.js:1
 msgid "Clone"
 msgstr ""
 
-#: src/sections/ProductionSite/getProductionSiteText.js:8
+#: build/staging/bundle.js:1
 msgid "Confirm Clone Action"
 msgstr ""
 
-#: src/sections/ProductionSite/getProductionSiteText.js:9
+#: build/staging/bundle.js:1
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 msgstr ""
 
-#: src/sections/ProductionSite/getProductionSiteText.js:10
+#: build/staging/bundle.js:1
 msgid "Clone to staging"
 msgstr ""
 
-#: src/sections/StagingSite/getStagingSiteText.js:4
+#: build/staging/bundle.js:1
 msgid "Staging Site"
 msgstr ""
 
-#: src/sections/StagingSite/getStagingSiteText.js:5
+#: build/staging/bundle.js:1
 msgid "You don't have a staging site yet."
 msgstr ""
 
-#: src/sections/StagingSite/getStagingSiteText.js:9
+#: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr ""
 
-#: src/sections/StagingSite/getStagingSiteText.js:13
+#: build/staging/bundle.js:1
 msgid "Delete Staging Site"
 msgstr ""
 
-#: src/sections/StagingSite/getStagingSiteText.js:14
+#: build/staging/bundle.js:1
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr ""
 
-#: wordpress/wp-includes/blocks/widget-group/block.json
-msgctxt "block title"
-msgid "Widget Group"
+#: build/staging/bundle.js:1
+msgid "Deleted Staging"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Color name"
-msgid "Base"
+#: build/staging/bundle.js:1
+msgid "Deleting the staging site, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Color name"
-msgid "Contrast"
+#: build/staging/bundle.js:1
+msgid "Cancel"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 1"
+#: build/staging/bundle.js:1
+msgid "Cloned to Staging"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 2"
+#: build/staging/bundle.js:1
+msgid "Cloning production to staging, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 3"
+#: build/staging/bundle.js:1
+msgid "Staging Created"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 4"
+#: build/staging/bundle.js:1
+msgid "Creating a staging site, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 5"
+#: build/staging/bundle.js:1
+msgid "Created"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Color name"
-msgid "Accent 6"
+#: build/staging/bundle.js:1
+msgid "Delete"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "Tiny"
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "X-Small"
+#: build/staging/bundle.js:1
+msgid "Deploy"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "Small"
+#: build/staging/bundle.js:1
+msgid "Deploy all changes"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "Regular"
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "Large"
+#: build/staging/bundle.js:1
+msgid "Deploy database only"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "X-Large"
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Space size name"
-msgid "XX-Large"
+#: build/staging/bundle.js:1
+msgid "Deploy files only"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-includes/theme.json
-msgctxt "Font size name"
-msgid "Small"
+#: build/staging/bundle.js:1
+msgid "Deployed"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-includes/theme.json
-msgctxt "Font size name"
-msgid "Medium"
+#: build/staging/bundle.js:1
+msgid "Deploying from staging to production, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-includes/theme.json
-msgctxt "Font size name"
-msgid "Large"
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-includes/theme.json
-msgctxt "Font size name"
-msgid "Extra Large"
+#: build/staging/bundle.js:1
+msgid "Error"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Font size name"
-msgid "Extra Extra Large"
+#: build/staging/bundle.js:1
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Font family name"
-msgid "Manrope"
+#: build/staging/bundle.js:1
+msgid "Proceed"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Font family name"
-msgid "Fira Code"
+#: build/staging/bundle.js:1
+msgid "Switch"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Template part name"
-msgid "Header"
+#: build/staging/bundle.js:1
+msgid "Switch to Production"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Template part name"
-msgid "Vertical site header"
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Template part name"
-msgid "Header with large title"
+#: build/staging/bundle.js:1
+msgid "Loading the production environment now."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Template part name"
-msgid "Footer"
+#: build/staging/bundle.js:1
+msgid "Switching to the production environment, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Template part name"
-msgid "Footer Columns"
+#: build/staging/bundle.js:1
+msgid "Switch to Staging"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-msgctxt "Template part name"
-msgid "Footer Newsletter"
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Template part name"
-msgid "Sidebar"
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfive/theme.json
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Custom template name"
-msgid "Page No Title"
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Duotone name"
-msgid "Black and white"
+#: build/staging/bundle.js:1
+msgid "Switching"
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Duotone name"
-msgid "Black and sandstone"
+#: build/staging/bundle.js:1
+msgid "An unknown error has occurred."
 msgstr ""
 
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Duotone name"
-msgid "Black and rust"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Duotone name"
-msgid "Black and sage"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Duotone name"
-msgid "Black and pastel blue"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft beige to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft sandstone to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft rust to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft sage to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft mint to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical soft pewter to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard beige to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard sandstone to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard rust to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard sage to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard mint to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Gradient name"
-msgid "Vertical hard pewter to white"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Base / Two"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Contrast / Two"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Contrast / Three"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Accent"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Accent / Two"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Accent / Three"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Accent / Four"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Color name"
-msgid "Accent / Five"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "1"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "2"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "3"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "4"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "5"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Space size name"
-msgid "6"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Font family name"
-msgid "Inter"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Font family name"
-msgid "Cardo"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Font family name"
-msgid "System Sans-serif"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Font family name"
-msgid "System Serif"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Template part name"
-msgid "Post Meta"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Custom template name"
-msgid "Page with Sidebar"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Custom template name"
-msgid "Page with Wide Image"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentyfour/theme.json
-msgctxt "Custom template name"
-msgid "Single with Sidebar"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Custom template name"
-msgid "Blank"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Custom template name"
-msgid "Blog (Alternative)"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Custom template name"
-msgid "404"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Color name"
-msgid "Primary"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Color name"
-msgid "Secondary"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Color name"
-msgid "Tertiary"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Font family name"
-msgid "DM Sans"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Font family name"
-msgid "IBM Plex Mono"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Font family name"
-msgid "System Font"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Font family name"
-msgid "Source Serif Pro"
-msgstr ""
-
-#: wordpress/wp-content/themes/twentytwentythree/theme.json
-msgctxt "Template part name"
-msgid "Comments Template Part"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Dark grayscale"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Grayscale"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Purple and yellow"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Blue and red"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Midnight"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Magenta and yellow"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Purple and green"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Duotone name"
-msgid "Blue and orange"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Vivid cyan blue to vivid purple"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Light green cyan to vivid green cyan"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Luminous vivid amber to luminous vivid orange"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Luminous vivid orange to vivid red"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Very light gray to cyan bluish gray"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Cool to warm spectrum"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Blush light purple"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Blush bordeaux"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Luminous dusk"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Pale ocean"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Electric grass"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Gradient name"
-msgid "Midnight"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Black"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Cyan bluish gray"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "White"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Pale pink"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Vivid red"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Luminous vivid orange"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Luminous vivid amber"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Light green cyan"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Vivid green cyan"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Pale cyan blue"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Vivid cyan blue"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Color name"
-msgid "Vivid purple"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Square - 1:1"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Standard - 4:3"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Portrait - 3:4"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Classic - 3:2"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Classic Portrait - 2:3"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Wide - 16:9"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Aspect ratio name"
-msgid "Tall - 9:16"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Shadow name"
-msgid "Natural"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Shadow name"
-msgid "Deep"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Shadow name"
-msgid "Sharp"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Shadow name"
-msgid "Outlined"
-msgstr ""
-
-#: wordpress/wp-includes/theme.json
-msgctxt "Shadow name"
-msgid "Crisp"
+#: build/staging/bundle.js:1
+msgid "Working…"
 msgstr ""
