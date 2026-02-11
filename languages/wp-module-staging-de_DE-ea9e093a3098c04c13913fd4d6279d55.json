@@ -1,7 +1,7 @@
 {
     "translation-revision-date": "2025-02-19 13:44",
     "generator": "WP-CLI\/2.12.0",
-    "source": "src\/components\/App\/getAppText.js",
+    "source": "build\/staging\/bundle.js",
     "domain": "messages",
     "locale_data": {
         "messages": {
@@ -13,11 +13,23 @@
             "Cancel": [
                 "Abbrechen"
             ],
+            "Clone": [
+                "Klonen"
+            ],
+            "Confirm Clone Action": [
+                "Klon-Aktion best\u00e4tigen"
+            ],
+            "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
+                "Dies wird alle Inhalte in der Staging-Umgebung \u00fcberschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
+            ],
             "Cloned to Staging": [
                 "In Staging-Umgebung geklont"
             ],
             "Cloning production to staging, this should take about a minute.": [
                 "Klonen der Produktionsumgebung in die Staging-Umgebung, dies sollte ungef\u00e4hr eine Minute dauern."
+            ],
+            "Clone to staging": [
+                "In Staging-Umgebung klonen"
             ],
             "Created": [
                 "Erstellt"
@@ -28,6 +40,9 @@
             "Creating a staging site, this should take about a minute.": [
                 "Erstellen einer Staging-Site sollte eine Minute dauern."
             ],
+            "Create staging site": [
+                "Staging-Site erstellen"
+            ],
             "Currently editing": [
                 "Aktuell bearbeiten"
             ],
@@ -37,11 +52,17 @@
             "Confirm Delete": [
                 "L\u00f6schen best\u00e4tigen"
             ],
+            "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
+                "Staging-Site wird dauerhaft gel\u00f6scht. Sind Sie sicher, dass Sie fortfahren m\u00f6chten? Sie k\u00f6nnen jederzeit eine andere Staging-Site neu erstellen, aber alle spezifischen \u00c4nderungen, die Sie an dieser Staging-Site vorgenommen haben, gehen verloren."
+            ],
             "Deleted Staging": [
                 "Staging-Umgebung gel\u00f6scht"
             ],
             "Deleting the staging site, this should take about a minute.": [
                 "Die Staging-Seite wird gel\u00f6scht, dies sollte ungef\u00e4hr eine Minute dauern."
+            ],
+            "Delete Staging Site": [
+                "Staging-Site l\u00f6schen"
             ],
             "Deploy": [
                 "Deploy"
@@ -73,11 +94,20 @@
             "Error": [
                 "Fehler"
             ],
+            "You don't have a staging site yet.": [
+                "Sie haben noch keine Staging-Site."
+            ],
             "Not currently editing": [
                 "Derzeit nicht bearbeiten"
             ],
             "Proceed": [
                 "Fortfahren"
+            ],
+            "Production Site": [
+                "Produktionsstandort"
+            ],
+            "Staging Site": [
+                "Staging-Seite"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
                 "Eine Staging-Site ist eine Kopie Ihrer Live-Site, die eine sichere Umgebung zum Experimentieren, Testen von Aktualisierungen und Verteilen bietet, wenn sie bereit sind."

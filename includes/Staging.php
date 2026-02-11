@@ -114,14 +114,14 @@ class Staging {
 	public static function register_staging_assets() {
 		$build_dir  = NFD_STAGING_BUILD_DIR;
 		$build_url  = NFD_STAGING_BUILD_URL;
-		$asset_file = $build_dir . '/staging/staging.min.asset.php';
+		$asset_file = $build_dir . '/staging/bundle.asset.php';
 
 		if ( is_readable( $asset_file ) ) {
 			$asset = include_once $asset_file;
 
 			wp_register_script(
 				self::PAGE_SLUG,
-				$build_url . '/staging/staging.min.js',
+				$build_url . '/staging/bundle.js',
 				$asset['dependencies'],
 				$asset['version'],
 				true

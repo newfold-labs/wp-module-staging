@@ -1,7 +1,7 @@
 {
     "translation-revision-date": "2025-02-19 13:44",
     "generator": "WP-CLI\/2.12.0",
-    "source": "src\/components\/App\/getAppText.js",
+    "source": "build\/staging\/bundle.js",
     "domain": "messages",
     "locale_data": {
         "messages": {
@@ -13,11 +13,23 @@
             "Cancel": [
                 "annuleren"
             ],
+            "Clone": [
+                "Dupliceren"
+            ],
+            "Confirm Clone Action": [
+                "Bevestig kloonactie"
+            ],
+            "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
+                "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
+            ],
             "Cloned to Staging": [
                 "Gekopieerd naar testomgeving"
             ],
             "Cloning production to staging, this should take about a minute.": [
                 "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
+            ],
+            "Clone to staging": [
+                "Kopieer naar testomgeving"
             ],
             "Created": [
                 "Aangemaakt"
@@ -28,6 +40,9 @@
             "Creating a staging site, this should take about a minute.": [
                 "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
             ],
+            "Create staging site": [
+                "Testomgeving aanmaken"
+            ],
             "Currently editing": [
                 "Momenteel bewerken"
             ],
@@ -37,11 +52,17 @@
             "Confirm Delete": [
                 "Verwijderen bevestigen"
             ],
+            "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
+                "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+            ],
             "Deleted Staging": [
                 "Testomgeving verwijderd"
             ],
             "Deleting the staging site, this should take about a minute.": [
                 "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
+            ],
+            "Delete Staging Site": [
+                "Testomgeving verwijderen"
             ],
             "Deploy": [
                 "Implementeren"
@@ -73,11 +94,20 @@
             "Error": [
                 "Foutmelding"
             ],
+            "You don't have a staging site yet.": [
+                "U heeft nog geen testomgeving."
+            ],
             "Not currently editing": [
                 "Momenteel niet bewerkt"
             ],
             "Proceed": [
                 "Doorgaan"
+            ],
+            "Production Site": [
+                "Productie site"
+            ],
+            "Staging Site": [
+                "Testomgeving"
             ],
             "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
                 "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
