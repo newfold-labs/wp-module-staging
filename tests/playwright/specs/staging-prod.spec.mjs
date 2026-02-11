@@ -126,11 +126,10 @@ test.describe('Staging Page - Production Environment', () => {
       // Wait for thinking state
       await expect(page.locator(SELECTORS.stagingPage)).toHaveClass(/is-thinking/);
       
-      // Wait for response
-      await page.waitForLoadState('networkidle');
+      // Wait for create to complete
+      await expect(page.locator(SELECTORS.stagingPage)).not.toHaveClass(/is-thinking/, { timeout: 30000 });
       
       // Verify staging is created
-      await expect(page.locator(SELECTORS.stagingPage)).not.toHaveClass(/is-thinking/);
       await expect(stagingSection.locator('h3')).toContainText('Staging Site');
       await expect(stagingSection.locator(SELECTORS.stagingToggleLabel)).toContainText('Not currently editing');
       await expect(stagingSection).toContainText('https://localhost:8882/staging/1234');
@@ -161,10 +160,7 @@ test.describe('Staging Page - Production Environment', () => {
       // Verify working notification appears
       await expectNotification(page, 'Working');
       
-      // Wait for switch response
-      await page.waitForLoadState('networkidle');
-      
-      // Verify switching notification
+      // Wait for switch to complete
       await expectNotification(page, 'Switching');
     });
   });

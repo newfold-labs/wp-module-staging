@@ -48,10 +48,7 @@ test.describe('Staging Page - Staging Environment', () => {
     await confirmModalAction(page, 'Confirm Deployment', 'Deploy');
     await expectNotification(page, 'Working');
     
-    // Wait for response
-    await page.waitForLoadState('networkidle');
-    
-    // Verify deployed success notification
+    // Wait for deploy to complete
     await expectNotification(page, 'Deployed');
   });
 });
