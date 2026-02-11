@@ -1,0 +1,153 @@
+{
+    "translation-revision-date": "2025-02-19 13:44",
+    "generator": "WP-CLI\/2.12.0",
+    "source": "build\/staging\/bundle.js",
+    "domain": "messages",
+    "locale_data": {
+        "messages": {
+            "": {
+                "domain": "messages",
+                "lang": "fr_FR",
+                "plural-forms": "nplurals=2; plural=(n > 1);"
+            },
+            "Production Site": [
+                ""
+            ],
+            "Currently editing": [
+                ""
+            ],
+            "Not currently editing": [
+                ""
+            ],
+            "Clone": [
+                ""
+            ],
+            "Confirm Clone Action": [
+                ""
+            ],
+            "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
+                ""
+            ],
+            "Clone to staging": [
+                ""
+            ],
+            "Staging Site": [
+                ""
+            ],
+            "You don't have a staging site yet.": [
+                ""
+            ],
+            "Create staging site": [
+                ""
+            ],
+            "Delete Staging Site": [
+                ""
+            ],
+            "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
+                ""
+            ],
+            "Deleted Staging": [
+                ""
+            ],
+            "Deleting the staging site, this should take about a minute.": [
+                ""
+            ],
+            "Cancel": [
+                ""
+            ],
+            "Cloned to Staging": [
+                ""
+            ],
+            "Cloning production to staging, this should take about a minute.": [
+                ""
+            ],
+            "Staging Created": [
+                ""
+            ],
+            "Creating a staging site, this should take about a minute.": [
+                ""
+            ],
+            "Created": [
+                ""
+            ],
+            "Delete": [
+                ""
+            ],
+            "Confirm Delete": [
+                ""
+            ],
+            "Deploy": [
+                ""
+            ],
+            "Deploy all changes": [
+                ""
+            ],
+            "Confirm Deployment": [
+                ""
+            ],
+            "Deploy database only": [
+                ""
+            ],
+            "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?": [
+                ""
+            ],
+            "Deploy files only": [
+                ""
+            ],
+            "Deployed": [
+                ""
+            ],
+            "Deploying from staging to production, this should take about a minute.": [
+                ""
+            ],
+            "Deploy Site": [
+                ""
+            ],
+            "Error": [
+                ""
+            ],
+            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
+                ""
+            ],
+            "Proceed": [
+                ""
+            ],
+            "Switch": [
+                ""
+            ],
+            "Switch to Production": [
+                ""
+            ],
+            "This will navigate you to the production environment": [
+                ""
+            ],
+            "Loading the production environment now.": [
+                ""
+            ],
+            "Switching to the production environment, this should take about a minute.": [
+                ""
+            ],
+            "Switch to Staging": [
+                ""
+            ],
+            "This will navigate you to the staging environment": [
+                ""
+            ],
+            "Loading the staging environment now.": [
+                ""
+            ],
+            "Switching to the staging environment, this should take about a minute.": [
+                ""
+            ],
+            "Switching": [
+                ""
+            ],
+            "An unknown error has occurred.": [
+                ""
+            ],
+            "Working\u2026": [
+                ""
+            ]
+        }
+    }
+}
