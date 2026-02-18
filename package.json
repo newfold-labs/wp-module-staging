@@ -24,7 +24,7 @@
     "@wordpress/scripts": "^31.4.0",
     "css-minimizer-webpack-plugin": "^7.0.4",
     "postcss": "^8.5.6",
-    "postcss-loader": "^8.2.0",
+    "postcss-loader": "^8.2.1",
     "tailwindcss": "^3.4.17"
   },
   "scripts": {
