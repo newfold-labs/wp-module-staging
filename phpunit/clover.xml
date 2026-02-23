@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1771428142">
-  <project timestamp="1771428142">
+<coverage generated="1771860148">
+  <project timestamp="1771860148">
     <file name="/home/runner/work/wp-module-staging/wp-module-staging/bootstrap.php">
       <line num="13" type="stmt" count="0"/>
       <metrics loc="17" ncloc="17" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="1" coveredstatements="0" elements="1" coveredelements="0"/>
