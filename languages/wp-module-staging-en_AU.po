@@ -1,15 +1,16 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-02-19 19:17+0530\n"
 "Last-Translator: Vara Prasad Maruboina <varaprasad.maruboina@newfold.com>\n"
 "Language-Team: English\n"
+"Language: en_AU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 19:17+0530\n"
-"Language: en_AU\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
@@ -23,8 +24,10 @@ msgid "Staging environment already exists!"
 msgstr "Staging environment already exists!"
 
 #: includes/Staging.php:390
-msgid "You must switch to the production environment before destroying staging."
-msgstr "You must switch to the production environment before destroying staging."
+msgid ""
+"You must switch to the production environment before destroying staging."
+msgstr ""
+"You must switch to the production environment before destroying staging."
 
 #: includes/Staging.php:412
 msgid "Switch to an environment you are already in, you cannot."
@@ -73,8 +76,12 @@ msgid "Confirm Clone Action"
 msgstr "Confirm Clone Action"
 
 #: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgid ""
+"This will overwrite anything in staging and update it to an exact clone of "
+"the current production site. Are you sure you want to proceed?"
+msgstr ""
+"This will overwrite anything in staging and update it to an exact clone of "
+"the current production site. Are you sure you want to proceed?"
 
 #: build/staging/bundle.js:1
 msgid "Cloned to Staging"
@@ -117,8 +124,14 @@ msgid "Confirm Delete"
 msgstr "Confirm Delete"
 
 #: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgid ""
+"This will permanently delete staging site. Are you sure you want to proceed?"
+" You can recreate another staging site at any time, but any specific changes"
+" you've made to this staging site will be lost."
+msgstr ""
+"This will permanently delete staging site. Are you sure you want to proceed?"
+" You can recreate another staging site at any time, but any specific changes"
+" you've made to this staging site will be lost."
 
 #: build/staging/bundle.js:1
 msgid "Deleted Staging"
@@ -149,8 +162,12 @@ msgid "Deploy database only"
 msgstr "Deploy database only"
 
 #: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgid ""
+"This will deploy staging to production and overwrite current production "
+"site. Are you sure you want to proceed?"
+msgstr ""
+"This will deploy staging to production and overwrite current production "
+"site. Are you sure you want to proceed?"
 
 #: build/staging/bundle.js:1
 msgid "Deploy files only"
@@ -162,7 +179,8 @@ msgstr "Deployed"
 
 #: build/staging/bundle.js:1
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Deploying from staging to production, this should take about a minute."
+msgstr ""
+"Deploying from staging to production, this should take about a minute."
 
 #: build/staging/bundle.js:1
 msgid "Deploy Site"
@@ -193,8 +211,12 @@ msgid "Staging Site"
 msgstr "Staging Site"
 
 #: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgid ""
+"A staging site is a duplicate of your live site, offering a secure "
+"environment to experiment, test updates, and deploy when ready."
+msgstr ""
+"A staging site is a duplicate of your live site, offering a secure "
+"environment to experiment, test updates, and deploy when ready."
 
 #: build/staging/bundle.js:1
 msgid "Switch"
@@ -217,8 +239,10 @@ msgid "Loading the production environment now."
 msgstr "Loading the production environment now."
 
 #: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Switching to the production environment, this should take about a minute."
+msgid ""
+"Switching to the production environment, this should take about a minute."
+msgstr ""
+"Switching to the production environment, this should take about a minute."
 
 #: build/staging/bundle.js:1
 msgid "Switch to Staging"
@@ -234,7 +258,8 @@ msgstr "Loading the staging environment now."
 
 #: build/staging/bundle.js:1
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Switching to the staging environment, this should take about a minute."
+msgstr ""
+"Switching to the staging environment, this should take about a minute."
 
 #: build/staging/bundle.js:1
 msgid "An unknown error has occurred."
@@ -285,8 +310,7 @@ msgstr "Working…"
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Something gone wrong, please get in touch with our support."
 
-#: includes/Staging.php:571
-#: views/staging-log.php:11
+#: includes/Staging.php:571 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Log Staging"
 
@@ -294,8 +318,7 @@ msgstr "Log Staging"
 msgid "Don't have capabilities to access this page"
 msgstr "Don't have capabilities to access this page"
 
-#: includes/StagingMenu.php:71
-#: includes/StagingMenu.php:72
+#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
 msgid "Staging"
 msgstr "Staging"
 
@@ -339,13 +362,11 @@ msgstr "Reset"
 msgid "Log"
 msgstr "Log"
 
-#: views/staging-log.php:63
-#: views/staging-log.php:65
+#: views/staging-log.php:63 views/staging-log.php:65
 msgid "Prev"
 msgstr "Prev"
 
-#: views/staging-log.php:132
-#: views/staging-log.php:134
+#: views/staging-log.php:132 views/staging-log.php:134
 msgid "Next"
 msgstr "Next"
 
