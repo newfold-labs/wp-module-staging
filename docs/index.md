@@ -10,6 +10,7 @@ Documentation for wp-module-staging, for **humans** and **AI agents**. Start her
 | [getting-started.md](getting-started.md) | Prerequisites, install, and tests. |
 | [integration.md](integration.md) | How the module registers and how hosts use it. |
 | [development.md](development.md) | Lint, test, and workflow. |
+| [release.md](release.md) | Release process: use the Newfold Prepare Release workflow. |
 
 ## Quick links
 
