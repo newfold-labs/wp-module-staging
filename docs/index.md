@@ -1,3 +1,10 @@
+---
+name: wp-module-staging
+title: Documentation index
+description: Table of contents and quick links.
+updated: 2025-03-18
+---
+
 # wp-module-staging – Documentation index
 
 Documentation for wp-module-staging, for **humans** and **AI agents**. Start here.
