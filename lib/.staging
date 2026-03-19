@@ -990,11 +990,20 @@ clone() {
     delete_temp_staging 2 "Unable to update database prefix."
   fi
 
+  # Truncate constraint names that exceed MySQL's 64-character limit
+  log "INFO" "clone:truncate_constraint" "Truncating constraint names that exceed 64 characters"
+  perl -i -pe 's/CONSTRAINT `([^`]+)`/do { my $name = $1; length($name) > 64 ? "CONSTRAINT `" . substr($name, 0, 64) . "`" : "CONSTRAINT `$name`" }/ge' "$tmpfile"
+  if [ $? -ne 0 ]; then
+    log "ERROR" "clone:truncate_constraint" "Unable to truncate constraint names."
+    delete_temp_staging 2 "Unable to truncate constraint names."
+  fi
+
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
   if [ $? -ne 0 ]; then
     log "ERROR" "clone:sed_prefix" "Unable to overwrite SQL file with temp file."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
+
 
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
