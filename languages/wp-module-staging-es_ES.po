@@ -1,16 +1,15 @@
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-04-28 13:00+0100\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
-"Language: es_ES\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2025-04-28 13:00+0100\n"
+"Language: es_ES\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
@@ -29,10 +28,8 @@ msgid "Staging environment already exists!"
 msgstr "¡El entorno de preproducción ya existe!"
 
 #: includes/Staging.php:390
-msgid ""
-"You must switch to the production environment before destroying staging."
-msgstr ""
-"Debes cambiar al entorno de producción antes de destruir la preproducción."
+msgid "You must switch to the production environment before destroying staging."
+msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
 
 #: includes/Staging.php:412
 msgid "Switch to an environment you are already in, you cannot."
@@ -81,12 +78,8 @@ msgid "Confirm Clone Action"
 msgstr "Confirmar acción de clonación"
 
 #: build/staging/bundle.js:1
-msgid ""
-"This will overwrite anything in staging and update it to an exact clone of "
-"the current production site. Are you sure you want to proceed?"
-msgstr ""
-"Esto sobrescribirá todo en preproducción y lo actualizará a un clon exacto "
-"del sitio de producción actual. ¿Está seguro que desea continuar?"
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Esto sobrescribirá todo en preproducción y lo actualizará a un clon exacto del sitio de producción actual. ¿Está seguro que desea continuar?"
 
 #: build/staging/bundle.js:1
 msgid "Cloned to Staging"
@@ -94,9 +87,7 @@ msgstr "Clonado a preproducción"
 
 #: build/staging/bundle.js:1
 msgid "Cloning production to staging, this should take about a minute."
-msgstr ""
-"Clonando producción a preproducción, esto debería tomar aproximadamente un "
-"minuto."
+msgstr "Clonando producción a preproducción, esto debería tomar aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "Clone to staging"
@@ -112,9 +103,7 @@ msgstr "Preproducción creada"
 
 #: build/staging/bundle.js:1
 msgid "Creating a staging site, this should take about a minute."
-msgstr ""
-"Creando un sitio de preproducción, esto debería tomar aproximadamente un "
-"minuto."
+msgstr "Creando un sitio de preproducción, esto debería tomar aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "Create staging site"
@@ -133,15 +122,8 @@ msgid "Confirm Delete"
 msgstr "Confirmar eliminación"
 
 #: build/staging/bundle.js:1
-msgid ""
-"This will permanently delete staging site. Are you sure you want to proceed?"
-" You can recreate another staging site at any time, but any specific changes"
-" you've made to this staging site will be lost."
-msgstr ""
-"Esto eliminará permanentemente el sitio de preproducción. ¿Está seguro que "
-"desea continuar? Puede volver a crear otro sitio de preproducción en "
-"cualquier momento, pero cualquier cambio específico que haya realizado en "
-"este sitio se perderá."
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Esto eliminará permanentemente el sitio de preproducción. ¿Está seguro que desea continuar? Puede volver a crear otro sitio de preproducción en cualquier momento, pero cualquier cambio específico que haya realizado en este sitio se perderá."
 
 #: build/staging/bundle.js:1
 msgid "Deleted Staging"
@@ -149,8 +131,7 @@ msgstr "Preproducción eliminada"
 
 #: build/staging/bundle.js:1
 msgid "Deleting the staging site, this should take about a minute."
-msgstr ""
-"Eliminando el sitio de preproducción, esto tomará aproximadamente un minuto."
+msgstr "Eliminando el sitio de preproducción, esto tomará aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "Delete Staging Site"
@@ -173,12 +154,8 @@ msgid "Deploy database only"
 msgstr "Desplegar sólo base de datos"
 
 #: build/staging/bundle.js:1
-msgid ""
-"This will deploy staging to production and overwrite current production "
-"site. Are you sure you want to proceed?"
-msgstr ""
-"Esto desplegará la preproducción a producción y sobrescribirá el sitio "
-"actual de producción. ¿Está seguro de que desea continuar?"
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Esto desplegará la preproducción a producción y sobrescribirá el sitio actual de producción. ¿Está seguro de que desea continuar?"
 
 #: build/staging/bundle.js:1
 msgid "Deploy files only"
@@ -190,9 +167,7 @@ msgstr "Desplegado"
 
 #: build/staging/bundle.js:1
 msgid "Deploying from staging to production, this should take about a minute."
-msgstr ""
-"Desplegando de preproducción a producción, esto debería tomar "
-"aproximadamente un minuto."
+msgstr "Desplegando de preproducción a producción, esto debería tomar aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "Deploy Site"
@@ -223,13 +198,8 @@ msgid "Staging Site"
 msgstr "Sitio de preproducción"
 
 #: build/staging/bundle.js:1
-msgid ""
-"A staging site is a duplicate of your live site, offering a secure "
-"environment to experiment, test updates, and deploy when ready."
-msgstr ""
-"Un sitio de preproducción es un duplicado de su sitio en vivo, ofreciendo un"
-" entorno seguro para experimentar, probar actualizaciones y desplegar cuando"
-" esté listo."
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Un sitio de preproducción es un duplicado de su sitio en vivo, ofreciendo un entorno seguro para experimentar, probar actualizaciones y desplegar cuando esté listo."
 
 #: build/staging/bundle.js:1
 msgid "Switch"
@@ -252,11 +222,8 @@ msgid "Loading the production environment now."
 msgstr "Cargando el entorno de producción ahora."
 
 #: build/staging/bundle.js:1
-msgid ""
-"Switching to the production environment, this should take about a minute."
-msgstr ""
-"Cambiando al entorno de producción, esto debería tomar aproximadamente un "
-"minuto."
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "Cambiando al entorno de producción, esto debería tomar aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "Switch to Staging"
@@ -272,9 +239,7 @@ msgstr "Cargando el entorno de preproducción ahora."
 
 #: build/staging/bundle.js:1
 msgid "Switching to the staging environment, this should take about a minute."
-msgstr ""
-"Cambiando al entorno de preproducción, esto debería tomar aproximadamente un"
-" minuto."
+msgstr "Cambiando al entorno de preproducción, esto debería tomar aproximadamente un minuto."
 
 #: build/staging/bundle.js:1
 msgid "An unknown error has occurred."
@@ -307,8 +272,7 @@ msgstr "Error: "
 
 #: includes/StagingCLI.php:280
 msgid "Provided $data wasn't valid array or JSON string."
-msgstr ""
-"El $data proporcionado no era un array válido ni una cadena JSON válida."
+msgstr "El $data proporcionado no era un array válido ni una cadena JSON válida."
 
 #: includes/Staging.php:527
 msgid "Filesystem credentials required."
@@ -324,10 +288,10 @@ msgstr "Laborable..."
 
 #: includes/Staging.php:552
 msgid "Something gone wrong, please get in touch with our support."
-msgstr ""
-"Si algo ha salido mal, por favor ponte en contacto con nuestro soporte."
+msgstr "Si algo ha salido mal, por favor ponte en contacto con nuestro soporte."
 
-#: includes/Staging.php:571 views/staging-log.php:11
+#: includes/Staging.php:571
+#: views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Escenificación de troncos"
 
@@ -335,7 +299,8 @@ msgstr "Escenificación de troncos"
 msgid "Don't have capabilities to access this page"
 msgstr "No tengo capacidad para acceder a esta página"
 
-#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
+#: includes/StagingMenu.php:71
+#: includes/StagingMenu.php:72
 msgid "Staging"
 msgstr "Estadificación"
 
@@ -379,11 +344,13 @@ msgstr "Restablecimiento"
 msgid "Log"
 msgstr "Registro"
 
-#: views/staging-log.php:63 views/staging-log.php:65
+#: views/staging-log.php:63
+#: views/staging-log.php:65
 msgid "Prev"
 msgstr "Prev"
 
-#: views/staging-log.php:132 views/staging-log.php:134
+#: views/staging-log.php:132
+#: views/staging-log.php:134
 msgid "Next"
 msgstr "Próximo"
 
