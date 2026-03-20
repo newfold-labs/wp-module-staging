@@ -67,10 +67,15 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
 }
 
+# --- Staging lock (WordPress transient) ---
+release_staging_lock() {
+  wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
+}
+
 # --- Error Handling ---
 error() {
   printf '{"status":"error","message":"%s"}\n' "$1"
-  wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
+  release_staging_lock
   exit 1
 }
 
@@ -100,7 +105,7 @@ run_or_fail() {
 
 # --- Cleanup on exit ---
 cleanup() {
-  wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
+  release_staging_lock
 }
 trap cleanup EXIT
 
@@ -401,7 +406,7 @@ prepare_new_content_dirs() {
     if [ $? -ne 0 ]; then
       log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to remove $DEST"
       _do_cleanup
-      trap - EXIT
+      trap cleanup EXIT
       return 1
     fi
 
@@ -411,7 +416,7 @@ prepare_new_content_dirs() {
     if [ $? -ne 0 ]; then
       log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to create $DEST"
       _do_cleanup
-      trap - EXIT
+      trap cleanup EXIT
       return 1
     fi
 
@@ -448,14 +453,14 @@ prepare_new_content_dirs() {
           else
             log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
             _do_cleanup
-            trap - EXIT
+            trap cleanup EXIT
             return 1
           fi
         else
           log "ERROR" "prepare_new_content_dirs:$DIR" "Unable to copy $DIR folder (rsync failed)."
           log "DEBUG" "prepare_new_content_dirs:$DIR" "Invoking cleanup_failed_new_content_dirs with TO=$TO due to rsync failure"
           _do_cleanup
-          trap - EXIT
+          trap cleanup EXIT
           return 1
         fi
       fi
@@ -468,9 +473,9 @@ prepare_new_content_dirs() {
     log "DEBUG" "prepare_new_content_dirs:$DIR" "Post-copy permissions: $(ls -ld "$DEST")"
   done
 
-  # Success: stop trap and exit
+  # Success: restore global cleanup (releases staging lock on script exit)
   CLEANED=1
-  trap - EXIT
+  trap cleanup EXIT
   log "INFO" "prepare_new_content_dirs" "END: Finished preparing new content dirs from $FROM to $TO"
   return 0
 }
@@ -1244,9 +1249,9 @@ deploy_db() {
       fail_and_exit "Unable to turn off Coming Soon page. Output: $OUTPUT"
     fi
 
-  # Success: disable automatic rollback
+  # Success: disable automatic rollback; restore global cleanup (releases staging lock on exit)
   RESTORED=1
-  trap - EXIT
+  trap cleanup EXIT
 
   log "SUCCESS" "deploy_db:end" "Database deployed successfully."
   echo '{"status":"success","message":"Database deployed successfully."}'
@@ -1286,7 +1291,7 @@ compatibility_check "$1"
 auth_action $2
 lock_check
 
-wp transient set nfd_staging_lock "true" 120 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
+wp transient set nfd_staging_lock "true" 1800 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 case "$1" in
   create) create "$@";;
@@ -1300,4 +1305,4 @@ case "$1" in
   *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
 esac
 
-# The lock will be cleaned up by the trap on exit
+# Lock is released by cleanup EXIT trap, or by error()/release_staging_lock on failure paths
