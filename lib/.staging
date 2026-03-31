@@ -984,7 +984,12 @@ clone() {
     delete_temp_staging 2 "Unable to create temp file for prefix update."
   fi
 
-  sed -E "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" "$STAGING_DIR/.export-sql" > "$tmpfile"
+  sed -E \
+    -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
+    -e "s/CONSTRAINT \`(prod_)?([^\`]+)\`/CONSTRAINT \`staging_\\2\`/g" \
+    -e "s/TRIGGER \`(prod_)?([^\`]+)\`/TRIGGER \`staging_\\2\`/g" \
+    "$STAGING_DIR/.export-sql" > "$tmpfile"
+
   if [ $? -ne 0 ]; then
     log "ERROR" "clone:sed_prefix" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
