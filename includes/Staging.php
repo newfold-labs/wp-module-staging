@@ -470,7 +470,7 @@ class Staging {
 		}
 
 		$token = wp_generate_password( 32, false );
-		set_transient( 'staging_auth_token', $token, 60 );
+		set_transient( 'staging_auth_token', $token, 300 );
 
 		$plugin_basename = explode( '/', container()->plugin()->basename );
 
