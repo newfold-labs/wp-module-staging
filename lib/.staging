@@ -995,11 +995,40 @@ clone() {
     delete_temp_staging 2 "Unable to update database prefix."
   fi
 
+  # Normalize FK constraint names for staging, keep max 64 chars and force uniqueness
+  # to avoid import failures like "Duplicate foreign key constraint name".
+  log "INFO" "clone:normalize_constraint" "Normalizing/uniquifying constraint names for staging"
+  perl -i -pe '
+    BEGIN { our %seen = (); }
+    s/CONSTRAINT `([^`]+)`/do {
+      my $raw = $1;
+      my $base = "staging_$raw";
+      $base = substr($base, 0, 64) if length($base) > 64;
+
+      my $name = $base;
+      my $i = 1;
+      while (exists $seen{lc $name}) {
+        my $suffix = "_" . $i;
+        my $max = 64 - length($suffix);
+        my $stem = $max > 0 ? substr($base, 0, $max) : "";
+        $name = $stem . $suffix;
+        $i++;
+      }
+      $seen{lc $name} = 1;
+      "CONSTRAINT `$name`";
+    }/ge
+  ' "$tmpfile"
+  if [ $? -ne 0 ]; then
+    log "ERROR" "clone:normalize_constraint" "Unable to normalize constraint names."
+    delete_temp_staging 2 "Unable to normalize constraint names."
+  fi
+
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
   if [ $? -ne 0 ]; then
     log "ERROR" "clone:sed_prefix" "Unable to overwrite SQL file with temp file."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
+
 
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
