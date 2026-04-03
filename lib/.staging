@@ -103,6 +103,26 @@ run_or_fail() {
   fi
 }
 
+# Table-prefix sed replaces wp_* everywhere, including inside serialized option values
+# (e.g. wp_mail_smtp.php -> staging_wp_mail_smtp.php). Re-copy active_plugins from production.
+restore_staging_active_plugins_from_production() {
+  local prod_path="$1"
+  local staging_path="$2"
+  local log_step="$3"
+  log "INFO" "$log_step" "Restoring active_plugins from production (SQL prefix step must not alter plugin paths)"
+  local ap_json
+  set +e
+  ap_json=$(wp option get active_plugins --format=json --path="$prod_path" --skip-themes --skip-plugins --quiet 2>/dev/null)
+  local ap_get_status=$?
+  set -e
+  if [ $ap_get_status -ne 0 ] || [ -z "$ap_json" ]; then
+    log "ERROR" "$log_step:get" "Unable to read active_plugins from production (exit=$ap_get_status)"
+    error "Unable to read active_plugins from production."
+  fi
+  run_or_fail "$log_step:update" "Unable to restore active_plugins on staging." \
+    wp option update active_plugins "$ap_json" --format=json --path="$staging_path" --skip-themes --skip-plugins --quiet
+}
+
 # --- Cleanup on exit ---
 cleanup() {
   release_staging_lock
@@ -764,6 +784,9 @@ create() {
   fi
   log "DEBUG" "create:after_search_replace" "Completed search replace URLs"
 
+  log "INFO" "create" "[STEP] Restore active_plugins from production"
+  restore_staging_active_plugins_from_production "$PRODUCTION_DIR" "$STAGING_DIR" "create:restore_active_plugins"
+
   log "DEBUG" "create:before_import_config" "Starting import config"
   # Import config
   log "INFO" "create" "[STEP] Import config."
@@ -1052,6 +1075,8 @@ clone() {
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
+  log "INFO" "clone" "[STEP] Restore active_plugins from production"
+  restore_staging_active_plugins_from_production "$PRODUCTION_DIR" "$STAGING_DIR" "clone:restore_active_plugins"
   run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
