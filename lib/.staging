@@ -103,24 +103,45 @@ run_or_fail() {
   fi
 }
 
-# Table-prefix sed replaces wp_* everywhere, including inside serialized option values
-# (e.g. wp_mail_smtp.php -> staging_wp_mail_smtp.php). Re-copy active_plugins from production.
-restore_staging_active_plugins_from_production() {
-  local prod_path="$1"
-  local staging_path="$2"
-  local log_step="$3"
-  log "INFO" "$log_step" "Restoring active_plugins from production (SQL prefix step must not alter plugin paths)"
-  local ap_json
+
+rename_prefixed_keys_to_staging() {
+  local wp_path="$1"
+  local log_step="$2"
+  log "INFO" "$log_step" "Renaming prefix-dependent option names and meta keys to staging prefix"
   set +e
-  ap_json=$(wp option get active_plugins --format=json --path="$prod_path" --skip-themes --skip-plugins --quiet 2>/dev/null)
-  local ap_get_status=$?
+  wp db query "UPDATE \`staging_${DB_PREFIX}options\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${DB_PREFIX}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local opt_status=$?
+  wp db query "UPDATE \`staging_${DB_PREFIX}usermeta\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${DB_PREFIX}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local meta_status=$?
   set -e
-  if [ $ap_get_status -ne 0 ] || [ -z "$ap_json" ]; then
-    log "ERROR" "$log_step:get" "Unable to read active_plugins from production (exit=$ap_get_status)"
-    error "Unable to read active_plugins from production."
+  if [ $opt_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed option names (exit=$opt_status)"
   fi
-  run_or_fail "$log_step:update" "Unable to restore active_plugins on staging." \
-    wp option update active_plugins "$ap_json" --format=json --path="$staging_path" --skip-themes --skip-plugins --quiet
+  if [ $meta_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (exit=$meta_status)"
+  fi
+}
+
+rename_prefixed_keys_to_production() {
+  local wp_path="$1"
+  local log_step="$2"
+  log "INFO" "$log_step" "Renaming staging-prefixed option names and meta keys back to production prefix"
+  set +e
+  wp db query "UPDATE \`${DB_PREFIX}options\` SET option_name = REPLACE(option_name, 'staging_${DB_PREFIX}', '${DB_PREFIX}') WHERE option_name LIKE 'staging\_${DB_PREFIX}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local opt_status=$?
+  wp db query "UPDATE \`${DB_PREFIX}usermeta\` SET meta_key = REPLACE(meta_key, 'staging_${DB_PREFIX}', '${DB_PREFIX}') WHERE meta_key LIKE 'staging\_${DB_PREFIX}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local meta_status=$?
+  set -e
+  if [ $opt_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed option names (exit=$opt_status)"
+  fi
+  if [ $meta_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (exit=$meta_status)"
+  fi
 }
 
 # --- Cleanup on exit ---
@@ -656,7 +677,7 @@ create() {
   fi
   set +e
   sed -E \
-    -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
+    -e "s/\`${DB_PREFIX}([a-zA-Z0-9_]+)\`/\`staging_${DB_PREFIX}\\1\`/g" \
     -e "s/CONSTRAINT \`(prod_)?([^\`]+)\`/CONSTRAINT \`staging_\\2\`/g" \
     -e "s/TRIGGER \`(prod_)?([^\`]+)\`/TRIGGER \`staging_\\2\`/g" \
     -e "s/\/\*\![0-9]+ DEFINER=[^*]*\*\///g" \
@@ -784,8 +805,8 @@ create() {
   fi
   log "DEBUG" "create:after_search_replace" "Completed search replace URLs"
 
-  log "INFO" "create" "[STEP] Restore active_plugins from production"
-  restore_staging_active_plugins_from_production "$PRODUCTION_DIR" "$STAGING_DIR" "create:restore_active_plugins"
+  log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
+  rename_prefixed_keys_to_staging "$STAGING_DIR" "create:rename_prefixed_keys"
 
   log "DEBUG" "create:before_import_config" "Starting import config"
   # Import config
@@ -1013,7 +1034,7 @@ clone() {
   fi
 
   sed -E \
-    -e "s/(\b|[\`])${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1staging_${DB_PREFIX}\\2\\3/g" \
+    -e "s/\`${DB_PREFIX}([a-zA-Z0-9_]+)\`/\`staging_${DB_PREFIX}\\1\`/g" \
     -e "s/CONSTRAINT \`(prod_)?([^\`]+)\`/CONSTRAINT \`staging_\\2\`/g" \
     -e "s/TRIGGER \`(prod_)?([^\`]+)\`/TRIGGER \`staging_\\2\`/g" \
     "$STAGING_DIR/.export-sql" > "$tmpfile"
@@ -1075,8 +1096,8 @@ clone() {
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
-  log "INFO" "clone" "[STEP] Restore active_plugins from production"
-  restore_staging_active_plugins_from_production "$PRODUCTION_DIR" "$STAGING_DIR" "clone:restore_active_plugins"
+  log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
+  rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"
   run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
@@ -1204,7 +1225,7 @@ deploy_db() {
     log "INFO" "deploy_db" "Replacing staging prefixes in SQL"
     TMP_PREFIX_FILE=$(mktemp)
     if ! sed -E \
-      -e "s/(\b|[\`])staging_${DB_PREFIX}([a-zA-Z0-9_]+)(\b|[\`])/\\1${DB_PREFIX}\\2\\3/g" \
+      -e "s/\`staging_${DB_PREFIX}([a-zA-Z0-9_]+)\`/\`${DB_PREFIX}\\1\`/g" \
       -e "s/CONSTRAINT \`(staging_)?([^\`]+)\`/CONSTRAINT \`prod_\\2\`/g" \
       -e "s/TRIGGER \`(staging_)?([^\`]+)\`/TRIGGER \`prod_\\2\`/g" \
       "$STAGING_DIR/.export-sql" > "$TMP_PREFIX_FILE" 2>&1; then
@@ -1276,6 +1297,9 @@ deploy_db() {
     if [ $RC -ne 0 ]; then
       fail_and_exit "Unable to update URLs on production. Output: $OUTPUT"
     fi
+
+    # 6b. Rename staging-prefixed option names and meta keys back to production prefix
+    rename_prefixed_keys_to_production "$PRODUCTION_DIR" "deploy_db:rename_prefixed_keys"
 
     # 7. Update staging_environment
     log "INFO" "deploy_db" "Updating staging_environment to production"
