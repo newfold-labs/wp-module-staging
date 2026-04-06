@@ -127,20 +127,35 @@ rename_prefixed_keys_to_staging() {
 rename_prefixed_keys_to_production() {
   local wp_path="$1"
   local log_step="$2"
-  log "INFO" "$log_step" "Renaming staging-prefixed option names and meta keys back to production prefix"
+  log "INFO" "$log_step" "Cleaning staging-prefixed option names and meta keys for production"
   set +e
-  wp db query "UPDATE \`${DB_PREFIX}options\` SET option_name = REPLACE(option_name, 'staging_${DB_PREFIX}', '${DB_PREFIX}') WHERE option_name LIKE 'staging\_${DB_PREFIX}%';" \
+
+  # Options: drop staging-prefixed rows where the un-prefixed version already exists
+  wp db query "DELETE o1 FROM \`${DB_PREFIX}options\` o1 INNER JOIN \`${DB_PREFIX}options\` o2 ON o2.option_name = REPLACE(o1.option_name, 'staging_', '') WHERE o1.option_name LIKE 'staging\_${DB_PREFIX}%' AND o1.option_name != o2.option_name;" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local opt_del_status=$?
+
+  # Options: rename remaining staging-prefixed rows (no conflict)
+  wp db query "UPDATE \`${DB_PREFIX}options\` SET option_name = REPLACE(option_name, 'staging_', '') WHERE option_name LIKE 'staging\_${DB_PREFIX}%';" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local opt_status=$?
-  wp db query "UPDATE \`${DB_PREFIX}usermeta\` SET meta_key = REPLACE(meta_key, 'staging_${DB_PREFIX}', '${DB_PREFIX}') WHERE meta_key LIKE 'staging\_${DB_PREFIX}%';" \
+
+  # Usermeta: drop staging-prefixed rows where the un-prefixed version exists for the same user
+  wp db query "DELETE m1 FROM \`${DB_PREFIX}usermeta\` m1 INNER JOIN \`${DB_PREFIX}usermeta\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = REPLACE(m1.meta_key, 'staging_', '') WHERE m1.meta_key LIKE 'staging\_${DB_PREFIX}%' AND m1.meta_key != m2.meta_key;" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  local meta_del_status=$?
+
+  # Usermeta: rename remaining staging-prefixed rows (no conflict)
+  wp db query "UPDATE \`${DB_PREFIX}usermeta\` SET meta_key = REPLACE(meta_key, 'staging_', '') WHERE meta_key LIKE 'staging\_${DB_PREFIX}%';" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local meta_status=$?
+
   set -e
-  if [ $opt_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed option names (exit=$opt_status)"
+  if [ $opt_del_status -ne 0 ] || [ $opt_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to clean prefixed option names (del=$opt_del_status, rename=$opt_status)"
   fi
-  if [ $meta_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (exit=$meta_status)"
+  if [ $meta_del_status -ne 0 ] || [ $meta_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to clean prefixed meta keys (del=$meta_del_status, rename=$meta_status)"
   fi
 }
 
