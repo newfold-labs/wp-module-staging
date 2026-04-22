@@ -157,7 +157,7 @@ body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-containe
 	background-position: center center;
 	background-size: 200px auto;
 	background-repeat: no-repeat;
-	opacity: 0.75;
+	opacity: 1;
 }
 /* Tailwind base styles, layers must come *after* the import */
 *, ::before, ::after {
