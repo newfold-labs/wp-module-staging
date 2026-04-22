@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-13T09:55:55+00:00\n"
-"PO-Revision-Date: 2025-05-07 14:42+0100\n"
+"PO-Revision-Date: 2026-04-22T20:40:22+00:00\n"
 "Language: es_MX\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: wp-module-staging\n"
@@ -44,9 +44,30 @@ msgstr "Carácter no válido (%s) en el comando."
 msgid "Unable to execute script (disabled_function)."
 msgstr "No se puede ejecutar el script (función deshabilitada)."
 
+#: includes/Staging.php:527
+msgid "Filesystem credentials required."
+msgstr "Se requieren credenciales del sistema de archivos."
+
+#: includes/Staging.php:531
+msgid "Unable to initialize WP Filesystem."
+msgstr "No se puede inicializar el sistema de archivos WP."
+
 #: includes/Staging.php:538
 msgid "Unable to execute script (permission error)."
 msgstr "No se puede ejecutar el script (error de permisos)."
+
+#: includes/Staging.php:552
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Si algo ha salido mal, por favor ponte en contacto con nuestro soporte."
+
+#: includes/Staging.php:571
+#: views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Escenificación de troncos"
+
+#: includes/Staging.php:585
+msgid "Don't have capabilities to access this page"
+msgstr "No tengo capacidad para acceder a esta página"
 
 #: includes/StagingCLI.php:19
 msgid "No sub-command provided"
@@ -88,211 +109,6 @@ msgstr "Entorno de Staging"
 #: includes/StagingMenu.php:55
 msgid "Staging Actions"
 msgstr "Acciones de Staging"
-
-#: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "Cancelar"
-
-#: build/staging/bundle.js:1
-msgid "Clone"
-msgstr "Clonar"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Clone Action"
-msgstr "Confirmar acción de clonación"
-
-#: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Esto sobrescribirá todo en el entorno de staging y lo actualizará con una copia exacta del sitio actual en producción. ¿Seguro que deseas continuar?"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Clonado en Staging"
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Clonando el entorno de producción a staging, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "Clone to staging"
-msgstr "Clonar a staging"
-
-#: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Creado"
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Staging creado"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Creando un sitio de staging, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "Create staging site"
-msgstr "Crear sitio de staging"
-
-#: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Editando actualmente"
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Eliminar"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Confirmar eliminación"
-
-#: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Esto eliminará permanentemente el sitio de staging. ¿Seguro que deseas continuar? Puedes crear otro sitio de staging en cualquier momento, pero los cambios realizados en este sitio se perderán."
-
-#: build/staging/bundle.js:1
-msgid "Deleted Staging"
-msgstr "Staging eliminado"
-
-#: build/staging/bundle.js:1
-msgid "Deleting the staging site, this should take about a minute."
-msgstr "Eliminando el sitio de staging, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "Delete Staging Site"
-msgstr "Eliminar sitio de Staging"
-
-#: build/staging/bundle.js:1
-msgid "Deploy"
-msgstr "Implementar"
-
-#: build/staging/bundle.js:1
-msgid "Deploy all changes"
-msgstr "Implementar todos los cambios"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Confirmar implementación"
-
-#: build/staging/bundle.js:1
-msgid "Deploy database only"
-msgstr "Implementar solo la base de datos"
-
-#: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Esto implementará el entorno de staging en producción y sobrescribirá el sitio actual. ¿Seguro que deseas continuar?"
-
-#: build/staging/bundle.js:1
-msgid "Deploy files only"
-msgstr "Implementar solo archivos"
-
-#: build/staging/bundle.js:1
-msgid "Deployed"
-msgstr "Implementado"
-
-#: build/staging/bundle.js:1
-msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Implementando de staging a producción, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Implementar sitio"
-
-#: build/staging/bundle.js:1
-msgid "Error"
-msgstr "Error"
-
-#: build/staging/bundle.js:1
-msgid "You don't have a staging site yet."
-msgstr "Aún no tienes un sitio de staging."
-
-#: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "No se está editando actualmente"
-
-#: build/staging/bundle.js:1
-msgid "Proceed"
-msgstr "Continuar"
-
-#: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Sitio de Producción"
-
-#: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Sitio de Staging"
-
-#: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Un sitio de staging es una copia de tu sitio en producción que te permite probar cambios, experimentar y realizar implementaciones de forma segura."
-
-#: build/staging/bundle.js:1
-msgid "Switch"
-msgstr "Cambiar"
-
-#: build/staging/bundle.js:1
-msgid "Switching"
-msgstr "Cambiando"
-
-#: build/staging/bundle.js:1
-msgid "Switch to Production"
-msgstr "Cambiar a Producción"
-
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "Esto te llevará al entorno de producción"
-
-#: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "Cargando el entorno de producción."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Cambiando al entorno de producción, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "Switch to Staging"
-msgstr "Cambiar a Staging"
-
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the staging environment"
-msgstr "Esto te llevará al entorno de staging"
-
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "Cargando el entorno de staging."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Cambiando al entorno de staging, esto tomará aproximadamente un minuto."
-
-#: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "Ha ocurrido un error desconocido."
-
-#: includes/Staging.php:527
-msgid "Filesystem credentials required."
-msgstr "Se requieren credenciales del sistema de archivos."
-
-#: includes/Staging.php:531
-msgid "Unable to initialize WP Filesystem."
-msgstr "No se puede inicializar el sistema de archivos WP."
-
-#: build/staging/bundle.js:1
-msgid "Working…"
-msgstr "Laborable..."
-
-#: includes/Staging.php:552
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Si algo ha salido mal, por favor ponte en contacto con nuestro soporte."
-
-#: includes/Staging.php:571
-#: views/staging-log.php:11
-msgid "Log Staging"
-msgstr "Escenificación de troncos"
-
-#: includes/Staging.php:585
-msgid "Don't have capabilities to access this page"
-msgstr "No tengo capacidad para acceder a esta página"
 
 #: includes/StagingMenu.php:71
 #: includes/StagingMenu.php:72
@@ -352,3 +168,187 @@ msgstr "Próximo"
 #: views/staging-log.php:140
 msgid "No log found for selected date."
 msgstr "No se encontró registro para la fecha seleccionada."
+
+#: build/staging/bundle.js:1
+msgid "Production Site"
+msgstr "Sitio de Producción"
+
+#: build/staging/bundle.js:1
+msgid "Currently editing"
+msgstr "Editando actualmente"
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr "No se está editando actualmente"
+
+#: build/staging/bundle.js:1
+msgid "Clone"
+msgstr "Clonar"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Clone Action"
+msgstr "Confirmar acción de clonación"
+
+#: build/staging/bundle.js:1
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Esto sobrescribirá todo en el entorno de staging y lo actualizará con una copia exacta del sitio actual en producción. ¿Seguro que deseas continuar?"
+
+#: build/staging/bundle.js:1
+msgid "Clone to staging"
+msgstr "Clonar a staging"
+
+#: build/staging/bundle.js:1
+msgid "Staging Site"
+msgstr "Sitio de Staging"
+
+#: build/staging/bundle.js:1
+msgid "You don't have a staging site yet."
+msgstr "Aún no tienes un sitio de staging."
+
+#: build/staging/bundle.js:1
+msgid "Create staging site"
+msgstr "Crear sitio de staging"
+
+#: build/staging/bundle.js:1
+msgid "Delete Staging Site"
+msgstr "Eliminar sitio de Staging"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Esto eliminará permanentemente el sitio de staging. ¿Seguro que deseas continuar? Puedes crear otro sitio de staging en cualquier momento, pero los cambios realizados en este sitio se perderán."
+
+#: build/staging/bundle.js:1
+msgid "Deleted Staging"
+msgstr "Staging eliminado"
+
+#: build/staging/bundle.js:1
+msgid "Deleting the staging site, this should take about a minute."
+msgstr "Eliminando el sitio de staging, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: build/staging/bundle.js:1
+msgid "Cloned to Staging"
+msgstr "Clonado en Staging"
+
+#: build/staging/bundle.js:1
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Clonando el entorno de producción a staging, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Staging creado"
+
+#: build/staging/bundle.js:1
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Creando un sitio de staging, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Created"
+msgstr "Creado"
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Eliminar"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Confirmar eliminación"
+
+#: build/staging/bundle.js:1
+msgid "Deploy"
+msgstr "Implementar"
+
+#: build/staging/bundle.js:1
+msgid "Deploy all changes"
+msgstr "Implementar todos los cambios"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Confirmar implementación"
+
+#: build/staging/bundle.js:1
+msgid "Deploy database only"
+msgstr "Implementar solo la base de datos"
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Esto implementará el entorno de staging en producción y sobrescribirá el sitio actual. ¿Seguro que deseas continuar?"
+
+#: build/staging/bundle.js:1
+msgid "Deploy files only"
+msgstr "Implementar solo archivos"
+
+#: build/staging/bundle.js:1
+msgid "Deployed"
+msgstr "Implementado"
+
+#: build/staging/bundle.js:1
+msgid "Deploying from staging to production, this should take about a minute."
+msgstr "Implementando de staging a producción, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Implementar sitio"
+
+#: build/staging/bundle.js:1
+msgid "Error"
+msgstr "Error"
+
+#: build/staging/bundle.js:1
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Un sitio de staging es una copia de tu sitio en producción que te permite probar cambios, experimentar y realizar implementaciones de forma segura."
+
+#: build/staging/bundle.js:1
+msgid "Proceed"
+msgstr "Continuar"
+
+#: build/staging/bundle.js:1
+msgid "Switch"
+msgstr "Cambiar"
+
+#: build/staging/bundle.js:1
+msgid "Switch to Production"
+msgstr "Cambiar a Producción"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
+msgstr "Esto te llevará al entorno de producción"
+
+#: build/staging/bundle.js:1
+msgid "Loading the production environment now."
+msgstr "Cargando el entorno de producción."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "Cambiando al entorno de producción, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Switch to Staging"
+msgstr "Cambiar a Staging"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
+msgstr "Esto te llevará al entorno de staging"
+
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
+msgstr "Cargando el entorno de staging."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Cambiando al entorno de staging, esto tomará aproximadamente un minuto."
+
+#: build/staging/bundle.js:1
+msgid "Switching"
+msgstr "Cambiando"
+
+#: build/staging/bundle.js:1
+msgid "An unknown error has occurred."
+msgstr "Ha ocurrido un error desconocido."
+
+#: build/staging/bundle.js:1
+msgid "Working…"
+msgstr "Laborable..."

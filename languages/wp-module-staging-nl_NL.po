@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2025-02-19 13:44\n"
+"PO-Revision-Date: 2026-04-22T20:40:22+00:00\n"
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
@@ -49,206 +49,30 @@ msgstr "Ongeldig teken (%s) in command."
 msgid "Unable to execute script (disabled_function)."
 msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
 
+#: includes/Staging.php:527
+msgid "Filesystem credentials required."
+msgstr "Bestandssysteemgegevens vereist."
+
+#: includes/Staging.php:531
+msgid "Unable to initialize WP Filesystem."
+msgstr "WP Filesystem kan niet initialiseren."
+
 #: includes/Staging.php:538
 msgid "Unable to execute script (permission error)."
 msgstr "Kan script niet uitvoeren (toestemmingsfout)."
 
-#: includes/StagingCLI.php:96
-msgid "Invalid JSON response"
-msgstr "Ongeldig JSON-antwoord"
+#: includes/Staging.php:552
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
 
-#: includes/StagingMenu.php:53
-msgid "Staging Environment"
-msgstr "Testomgeving"
+#: includes/Staging.php:571
+#: views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Logstamopstelling"
 
-#: includes/StagingMenu.php:55
-msgid "Staging Actions"
-msgstr "Testomgeving acties"
-
-#: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "annuleren"
-
-#: build/staging/bundle.js:1
-msgid "Clone"
-msgstr "Dupliceren"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Clone Action"
-msgstr "Bevestig kloonactie"
-
-#: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Gekopieerd naar testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Clone to staging"
-msgstr "Kopieer naar testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Aangemaakt"
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Testomgeving aangemaakt"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Create staging site"
-msgstr "Testomgeving aanmaken"
-
-#: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Momenteel bewerken"
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Verwijderen"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Verwijderen bevestigen"
-
-#: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
-
-#: build/staging/bundle.js:1
-msgid "Deleted Staging"
-msgstr "Testomgeving verwijderd"
-
-#: build/staging/bundle.js:1
-msgid "Deleting the staging site, this should take about a minute."
-msgstr "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Delete Staging Site"
-msgstr "Testomgeving verwijderen"
-
-#: build/staging/bundle.js:1
-msgid "Deploy"
-msgstr "Implementeren"
-
-#: build/staging/bundle.js:1
-msgid "Deploy all changes"
-msgstr "Alle wijzigingen implementeren"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Bevestig implementatie"
-
-#: build/staging/bundle.js:1
-msgid "Deploy database only"
-msgstr "Alleen database implementeren"
-
-#: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
-
-#: build/staging/bundle.js:1
-msgid "Deploy files only"
-msgstr "Alleen bestanden implementeren"
-
-#: build/staging/bundle.js:1
-msgid "Deployed"
-msgstr "Geïmplementeerd"
-
-#: build/staging/bundle.js:1
-msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Site implementeren"
-
-#: build/staging/bundle.js:1
-msgid "Error"
-msgstr "Foutmelding"
-
-#: build/staging/bundle.js:1
-msgid "You don't have a staging site yet."
-msgstr "U heeft nog geen testomgeving."
-
-#: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "Momenteel niet bewerkt"
-
-#: build/staging/bundle.js:1
-msgid "Proceed"
-msgstr "Doorgaan"
-
-#: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Productie site"
-
-#: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
-
-#: build/staging/bundle.js:1
-msgid "Switch"
-msgstr "Schakelaar"
-
-#: build/staging/bundle.js:1
-msgid "Switching"
-msgstr "Schakelen"
-
-#: build/staging/bundle.js:1
-msgid "Switch to Production"
-msgstr "Overschakelen naar productie"
-
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "Dit zal je naar de productieomgeving navigeren"
-
-#: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "De productieomgeving nu laden."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
-
-#: build/staging/bundle.js:1
-msgid "Switch to Staging"
-msgstr "Overschakelen naar testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the staging environment"
-msgstr "Dit brengt u naar de testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "De testomgeving wordt nu geladen."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "Er is een onbekende fout opgetreden."
-
-#: includes/StagingMenu.php:33
-msgctxt "Menu item text"
-msgid "Staging"
-msgstr "Testomgeving"
+#: includes/Staging.php:585
+msgid "Don't have capabilities to access this page"
+msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
 
 #: includes/StagingCLI.php:19
 msgid "No sub-command provided"
@@ -266,6 +90,10 @@ msgstr "Ongeldig implementatietype"
 msgid "Invalid action"
 msgstr "Ongeldige actie"
 
+#: includes/StagingCLI.php:96
+msgid "Invalid JSON response"
+msgstr "Ongeldig JSON-antwoord"
+
 #: includes/StagingCLI.php:231
 msgid "Error: "
 msgstr "Fout: "
@@ -274,30 +102,18 @@ msgstr "Fout: "
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "De opgegeven $data was geen geldig array of JSON-tekenreeks."
 
-#: includes/Staging.php:527
-msgid "Filesystem credentials required."
-msgstr "Bestandssysteemgegevens vereist."
+#: includes/StagingMenu.php:33
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Testomgeving"
 
-#: includes/Staging.php:531
-msgid "Unable to initialize WP Filesystem."
-msgstr "WP Filesystem kan niet initialiseren."
+#: includes/StagingMenu.php:53
+msgid "Staging Environment"
+msgstr "Testomgeving"
 
-#: build/staging/bundle.js:1
-msgid "Working…"
-msgstr "Werkend..."
-
-#: includes/Staging.php:552
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
-
-#: includes/Staging.php:571
-#: views/staging-log.php:11
-msgid "Log Staging"
-msgstr "Logstamopstelling"
-
-#: includes/Staging.php:585
-msgid "Don't have capabilities to access this page"
-msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
+#: includes/StagingMenu.php:55
+msgid "Staging Actions"
+msgstr "Testomgeving acties"
 
 #: includes/StagingMenu.php:71
 #: includes/StagingMenu.php:72
@@ -357,3 +173,187 @@ msgstr "Volgend"
 #: views/staging-log.php:140
 msgid "No log found for selected date."
 msgstr "Geen logboek gevonden voor de geselecteerde datum."
+
+#: build/staging/bundle.js:1
+msgid "Production Site"
+msgstr "Productie site"
+
+#: build/staging/bundle.js:1
+msgid "Currently editing"
+msgstr "Momenteel bewerken"
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr "Momenteel niet bewerkt"
+
+#: build/staging/bundle.js:1
+msgid "Clone"
+msgstr "Dupliceren"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Clone Action"
+msgstr "Bevestig kloonactie"
+
+#: build/staging/bundle.js:1
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
+
+#: build/staging/bundle.js:1
+msgid "Clone to staging"
+msgstr "Kopieer naar testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Staging Site"
+msgstr "Testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "You don't have a staging site yet."
+msgstr "U heeft nog geen testomgeving."
+
+#: build/staging/bundle.js:1
+msgid "Create staging site"
+msgstr "Testomgeving aanmaken"
+
+#: build/staging/bundle.js:1
+msgid "Delete Staging Site"
+msgstr "Testomgeving verwijderen"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+
+#: build/staging/bundle.js:1
+msgid "Deleted Staging"
+msgstr "Testomgeving verwijderd"
+
+#: build/staging/bundle.js:1
+msgid "Deleting the staging site, this should take about a minute."
+msgstr "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Cancel"
+msgstr "annuleren"
+
+#: build/staging/bundle.js:1
+msgid "Cloned to Staging"
+msgstr "Gekopieerd naar testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Testomgeving aangemaakt"
+
+#: build/staging/bundle.js:1
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Created"
+msgstr "Aangemaakt"
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Verwijderen bevestigen"
+
+#: build/staging/bundle.js:1
+msgid "Deploy"
+msgstr "Implementeren"
+
+#: build/staging/bundle.js:1
+msgid "Deploy all changes"
+msgstr "Alle wijzigingen implementeren"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Bevestig implementatie"
+
+#: build/staging/bundle.js:1
+msgid "Deploy database only"
+msgstr "Alleen database implementeren"
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
+
+#: build/staging/bundle.js:1
+msgid "Deploy files only"
+msgstr "Alleen bestanden implementeren"
+
+#: build/staging/bundle.js:1
+msgid "Deployed"
+msgstr "Geïmplementeerd"
+
+#: build/staging/bundle.js:1
+msgid "Deploying from staging to production, this should take about a minute."
+msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Site implementeren"
+
+#: build/staging/bundle.js:1
+msgid "Error"
+msgstr "Foutmelding"
+
+#: build/staging/bundle.js:1
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
+
+#: build/staging/bundle.js:1
+msgid "Proceed"
+msgstr "Doorgaan"
+
+#: build/staging/bundle.js:1
+msgid "Switch"
+msgstr "Schakelaar"
+
+#: build/staging/bundle.js:1
+msgid "Switch to Production"
+msgstr "Overschakelen naar productie"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
+msgstr "Dit zal je naar de productieomgeving navigeren"
+
+#: build/staging/bundle.js:1
+msgid "Loading the production environment now."
+msgstr "De productieomgeving nu laden."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
+
+#: build/staging/bundle.js:1
+msgid "Switch to Staging"
+msgstr "Overschakelen naar testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
+msgstr "Dit brengt u naar de testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
+msgstr "De testomgeving wordt nu geladen."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Switching"
+msgstr "Schakelen"
+
+#: build/staging/bundle.js:1
+msgid "An unknown error has occurred."
+msgstr "Er is een onbekende fout opgetreden."
+
+#: build/staging/bundle.js:1
+msgid "Working…"
+msgstr "Werkend..."

@@ -1,5 +1,5 @@
 {
-    "translation-revision-date": "2025-02-19 13:44",
+    "translation-revision-date": "2026-04-22T20:40:22+00:00",
     "generator": "WP-CLI\/2.12.0",
     "source": "build\/staging\/bundle.js",
     "domain": "messages",
@@ -10,8 +10,14 @@
                 "lang": "de_DE",
                 "plural-forms": "nplurals=2; plural=(n != 1);"
             },
-            "Cancel": [
-                "Abbrechen"
+            "Production Site": [
+                "Produktionsstandort"
+            ],
+            "Currently editing": [
+                "Aktuell bearbeiten"
+            ],
+            "Not currently editing": [
+                "Derzeit nicht bearbeiten"
             ],
             "Clone": [
                 "Klonen"
@@ -22,35 +28,20 @@
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
                 "Dies wird alle Inhalte in der Staging-Umgebung \u00fcberschreiben und zu einem exakten Klon der aktuellen Produktionsseite aktualisieren. Sind Sie sicher, dass Sie fortfahren m\u00f6chten?"
             ],
-            "Cloned to Staging": [
-                "In Staging-Umgebung geklont"
-            ],
-            "Cloning production to staging, this should take about a minute.": [
-                "Klonen der Produktionsumgebung in die Staging-Umgebung, dies sollte ungef\u00e4hr eine Minute dauern."
-            ],
             "Clone to staging": [
                 "In Staging-Umgebung klonen"
             ],
-            "Created": [
-                "Erstellt"
+            "Staging Site": [
+                "Staging-Seite"
             ],
-            "Staging Created": [
-                "Staging-Umgebung erstellt"
-            ],
-            "Creating a staging site, this should take about a minute.": [
-                "Erstellen einer Staging-Site sollte eine Minute dauern."
+            "You don't have a staging site yet.": [
+                "Sie haben noch keine Staging-Site."
             ],
             "Create staging site": [
                 "Staging-Site erstellen"
             ],
-            "Currently editing": [
-                "Aktuell bearbeiten"
-            ],
-            "Delete": [
-                "L\u00f6schen"
-            ],
-            "Confirm Delete": [
-                "L\u00f6schen best\u00e4tigen"
+            "Delete Staging Site": [
+                "Staging-Site l\u00f6schen"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
                 "Staging-Site wird dauerhaft gel\u00f6scht. Sind Sie sicher, dass Sie fortfahren m\u00f6chten? Sie k\u00f6nnen jederzeit eine andere Staging-Site neu erstellen, aber alle spezifischen \u00c4nderungen, die Sie an dieser Staging-Site vorgenommen haben, gehen verloren."
@@ -61,8 +52,29 @@
             "Deleting the staging site, this should take about a minute.": [
                 "Die Staging-Seite wird gel\u00f6scht, dies sollte ungef\u00e4hr eine Minute dauern."
             ],
-            "Delete Staging Site": [
-                "Staging-Site l\u00f6schen"
+            "Cancel": [
+                "Abbrechen"
+            ],
+            "Cloned to Staging": [
+                "In Staging-Umgebung geklont"
+            ],
+            "Cloning production to staging, this should take about a minute.": [
+                "Klonen der Produktionsumgebung in die Staging-Umgebung, dies sollte ungef\u00e4hr eine Minute dauern."
+            ],
+            "Staging Created": [
+                "Staging-Umgebung erstellt"
+            ],
+            "Creating a staging site, this should take about a minute.": [
+                "Erstellen einer Staging-Site sollte eine Minute dauern."
+            ],
+            "Created": [
+                "Erstellt"
+            ],
+            "Delete": [
+                "L\u00f6schen"
+            ],
+            "Confirm Delete": [
+                "L\u00f6schen best\u00e4tigen"
             ],
             "Deploy": [
                 "Deploy"
@@ -94,28 +106,13 @@
             "Error": [
                 "Fehler"
             ],
-            "You don't have a staging site yet.": [
-                "Sie haben noch keine Staging-Site."
-            ],
-            "Not currently editing": [
-                "Derzeit nicht bearbeiten"
+            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
+                "Eine Staging-Site ist eine Kopie Ihrer Live-Site, die eine sichere Umgebung zum Experimentieren, Testen von Aktualisierungen und Verteilen bietet, wenn sie bereit sind."
             ],
             "Proceed": [
                 "Fortfahren"
             ],
-            "Production Site": [
-                "Produktionsstandort"
-            ],
-            "Staging Site": [
-                "Staging-Seite"
-            ],
-            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Eine Staging-Site ist eine Kopie Ihrer Live-Site, die eine sichere Umgebung zum Experimentieren, Testen von Aktualisierungen und Verteilen bietet, wenn sie bereit sind."
-            ],
             "Switch": [
-                "Wechseln"
-            ],
-            "Switching": [
                 "Wechseln"
             ],
             "Switch to Production": [
@@ -141,6 +138,9 @@
             ],
             "Switching to the staging environment, this should take about a minute.": [
                 "Beim Wechsel auf die Staging-Umgebung sollte dies ungef\u00e4hr eine Minute dauern."
+            ],
+            "Switching": [
+                "Wechseln"
             ],
             "An unknown error has occurred.": [
                 "Ein unbekannter Fehler ist aufgetreten."

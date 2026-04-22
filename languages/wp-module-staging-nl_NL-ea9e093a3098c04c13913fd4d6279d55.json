@@ -1,5 +1,5 @@
 {
-    "translation-revision-date": "2025-02-19 13:44",
+    "translation-revision-date": "2026-04-22T20:40:22+00:00",
     "generator": "WP-CLI\/2.12.0",
     "source": "build\/staging\/bundle.js",
     "domain": "messages",
@@ -10,8 +10,14 @@
                 "lang": "nl_NL",
                 "plural-forms": "nplurals=2; plural=(n != 1);"
             },
-            "Cancel": [
-                "annuleren"
+            "Production Site": [
+                "Productie site"
+            ],
+            "Currently editing": [
+                "Momenteel bewerken"
+            ],
+            "Not currently editing": [
+                "Momenteel niet bewerkt"
             ],
             "Clone": [
                 "Dupliceren"
@@ -22,35 +28,20 @@
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
                 "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
             ],
-            "Cloned to Staging": [
-                "Gekopieerd naar testomgeving"
-            ],
-            "Cloning production to staging, this should take about a minute.": [
-                "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
-            ],
             "Clone to staging": [
                 "Kopieer naar testomgeving"
             ],
-            "Created": [
-                "Aangemaakt"
+            "Staging Site": [
+                "Testomgeving"
             ],
-            "Staging Created": [
-                "Testomgeving aangemaakt"
-            ],
-            "Creating a staging site, this should take about a minute.": [
-                "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
+            "You don't have a staging site yet.": [
+                "U heeft nog geen testomgeving."
             ],
             "Create staging site": [
                 "Testomgeving aanmaken"
             ],
-            "Currently editing": [
-                "Momenteel bewerken"
-            ],
-            "Delete": [
-                "Verwijderen"
-            ],
-            "Confirm Delete": [
-                "Verwijderen bevestigen"
+            "Delete Staging Site": [
+                "Testomgeving verwijderen"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
                 "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
@@ -61,8 +52,29 @@
             "Deleting the staging site, this should take about a minute.": [
                 "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
             ],
-            "Delete Staging Site": [
-                "Testomgeving verwijderen"
+            "Cancel": [
+                "annuleren"
+            ],
+            "Cloned to Staging": [
+                "Gekopieerd naar testomgeving"
+            ],
+            "Cloning production to staging, this should take about a minute.": [
+                "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
+            ],
+            "Staging Created": [
+                "Testomgeving aangemaakt"
+            ],
+            "Creating a staging site, this should take about a minute.": [
+                "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
+            ],
+            "Created": [
+                "Aangemaakt"
+            ],
+            "Delete": [
+                "Verwijderen"
+            ],
+            "Confirm Delete": [
+                "Verwijderen bevestigen"
             ],
             "Deploy": [
                 "Implementeren"
@@ -94,29 +106,14 @@
             "Error": [
                 "Foutmelding"
             ],
-            "You don't have a staging site yet.": [
-                "U heeft nog geen testomgeving."
-            ],
-            "Not currently editing": [
-                "Momenteel niet bewerkt"
+            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
+                "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
             ],
             "Proceed": [
                 "Doorgaan"
             ],
-            "Production Site": [
-                "Productie site"
-            ],
-            "Staging Site": [
-                "Testomgeving"
-            ],
-            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
-            ],
             "Switch": [
                 "Schakelaar"
-            ],
-            "Switching": [
-                "Schakelen"
             ],
             "Switch to Production": [
                 "Overschakelen naar productie"
@@ -141,6 +138,9 @@
             ],
             "Switching to the staging environment, this should take about a minute.": [
                 "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
+            ],
+            "Switching": [
+                "Schakelen"
             ],
             "An unknown error has occurred.": [
                 "Er is een onbekende fout opgetreden."

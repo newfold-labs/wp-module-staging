@@ -1,5 +1,5 @@
 {
-    "translation-revision-date": "2025-02-19 13:44",
+    "translation-revision-date": "2026-04-22T20:40:22+00:00",
     "generator": "WP-CLI\/2.12.0",
     "source": "build\/staging\/bundle.js",
     "domain": "messages",
@@ -10,8 +10,14 @@
                 "lang": "fr_FR",
                 "plural-forms": "nplurals=2; plural=(n > 1);"
             },
-            "Cancel": [
-                "Abandonner"
+            "Production Site": [
+                "Site de production"
+            ],
+            "Currently editing": [
+                "En cours d'\u00e9dition"
+            ],
+            "Not currently editing": [
+                "Pas d'\u00e9dition pour le moment"
             ],
             "Clone": [
                 "Cloner"
@@ -22,35 +28,20 @@
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
                 "Ceci va \u00e9craser tout ce qui est en cours de pr\u00e9-production et le mettre \u00e0 jour vers un clone exact du site de production actuel. \u00cates-vous s\u00fbr de vouloir continuer ?"
             ],
-            "Cloned to Staging": [
-                "Clon\u00e9 en pr\u00e9-production"
-            ],
-            "Cloning production to staging, this should take about a minute.": [
-                "Clonage de la production vers la pr\u00e9-production, cela devrait prendre environ une minute."
-            ],
             "Clone to staging": [
                 "Cloner vers la pr\u00e9-production"
             ],
-            "Created": [
-                "Cr\u00e9\u00e9"
+            "Staging Site": [
+                "Site de pr\u00e9-production"
             ],
-            "Staging Created": [
-                "Pr\u00e9-production cr\u00e9\u00e9e"
-            ],
-            "Creating a staging site, this should take about a minute.": [
-                "Cr\u00e9er un site de pr\u00e9-production, cela devrait prendre environ une minute."
+            "You don't have a staging site yet.": [
+                "Vous n'avez pas encore de site de pr\u00e9-production."
             ],
             "Create staging site": [
                 "Cr\u00e9er un site de pr\u00e9-production"
             ],
-            "Currently editing": [
-                "En cours d'\u00e9dition"
-            ],
-            "Delete": [
-                "Supprimez"
-            ],
-            "Confirm Delete": [
-                "Confirmer la suppression"
+            "Delete Staging Site": [
+                "Supprimer le site de pr\u00e9-production"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
                 "Ceci supprimera d\u00e9finitivement le site de pr\u00e9-production. \u00cates-vous s\u00fbr de vouloir continuer ? Vous pouvez recr\u00e9er un autre site de pr\u00e9-production \u00e0 tout moment, mais toutes les modifications sp\u00e9cifiques que vous avez apport\u00e9es \u00e0 ce site de pr\u00e9-production seront perdues."
@@ -61,8 +52,29 @@
             "Deleting the staging site, this should take about a minute.": [
                 "Suppression du site de pr\u00e9-production, cela devrait prendre environ une minute."
             ],
-            "Delete Staging Site": [
-                "Supprimer le site de pr\u00e9-production"
+            "Cancel": [
+                "Abandonner"
+            ],
+            "Cloned to Staging": [
+                "Clon\u00e9 en pr\u00e9-production"
+            ],
+            "Cloning production to staging, this should take about a minute.": [
+                "Clonage de la production vers la pr\u00e9-production, cela devrait prendre environ une minute."
+            ],
+            "Staging Created": [
+                "Pr\u00e9-production cr\u00e9\u00e9e"
+            ],
+            "Creating a staging site, this should take about a minute.": [
+                "Cr\u00e9er un site de pr\u00e9-production, cela devrait prendre environ une minute."
+            ],
+            "Created": [
+                "Cr\u00e9\u00e9"
+            ],
+            "Delete": [
+                "Supprimez"
+            ],
+            "Confirm Delete": [
+                "Confirmer la suppression"
             ],
             "Deploy": [
                 "D\u00e9ployer"
@@ -94,29 +106,14 @@
             "Error": [
                 "Erreur"
             ],
-            "You don't have a staging site yet.": [
-                "Vous n'avez pas encore de site de pr\u00e9-production."
-            ],
-            "Not currently editing": [
-                "Pas d'\u00e9dition pour le moment"
+            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
+                "Un site de pr\u00e9-production est un duplicata de votre site en direct, offrant un environnement s\u00e9curis\u00e9 pour exp\u00e9rimenter, tester les mises \u00e0 jour et d\u00e9ployer quand il est pr\u00eat."
             ],
             "Proceed": [
                 "Proc\u00e9der"
             ],
-            "Production Site": [
-                "Site de production"
-            ],
-            "Staging Site": [
-                "Site de pr\u00e9-production"
-            ],
-            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Un site de pr\u00e9-production est un duplicata de votre site en direct, offrant un environnement s\u00e9curis\u00e9 pour exp\u00e9rimenter, tester les mises \u00e0 jour et d\u00e9ployer quand il est pr\u00eat."
-            ],
             "Switch": [
                 "Commuter"
-            ],
-            "Switching": [
-                "Changement en cours"
             ],
             "Switch to Production": [
                 "Passer \u00e0 la production"
@@ -141,6 +138,9 @@
             ],
             "Switching to the staging environment, this should take about a minute.": [
                 "Passage \u00e0 l'environnement de pr\u00e9-production, cela devrait prendre environ une minute."
+            ],
+            "Switching": [
+                "Changement en cours"
             ],
             "An unknown error has occurred.": [
                 "Une erreur inconnue s'est produite."
