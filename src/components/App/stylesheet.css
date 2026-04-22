@@ -77,3 +77,22 @@
 	animation: nfd-staging-loader-spin 0.75s linear infinite;
 	z-index: 2;
 }
+
+/* Bluehost (and Bluehost India): animated logo loader; other brands use the spinner above */
+body.nfd-brand--bluehost .newfold-staging-page.is-thinking > .nfd-container:after,
+body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-container:after {
+	animation: none;
+	border: none;
+	border-radius: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	top: 0;
+	left: 0;
+	transform: none;
+	background-image: url('../images/loader.svg');
+	background-position: center center;
+	background-size: 200px auto;
+	background-repeat: no-repeat;
+	opacity: 1;
+}
