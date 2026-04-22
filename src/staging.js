@@ -51,6 +51,11 @@ export const StagingPortalApp = () => {
 	const [ container, setContainer ] = useState( null );
 
 	useEffect( () => {
+		const brand = NewfoldRuntime.sdk?.plugin?.brand;
+		if ( brand ) {
+			document.body.classList.add( `nfd-brand--${ brand }` );
+		}
+
 		const registry = window.NFDPortalRegistry;
 		// Check for required registry
 		if ( ! registry ) {
