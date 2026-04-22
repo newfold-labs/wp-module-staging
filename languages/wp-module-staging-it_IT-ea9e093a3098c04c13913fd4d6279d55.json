@@ -1,5 +1,5 @@
 {
-    "translation-revision-date": "2025-02-19 13:44",
+    "translation-revision-date": "2026-04-22T20:40:22+00:00",
     "generator": "WP-CLI\/2.12.0",
     "source": "build\/staging\/bundle.js",
     "domain": "messages",
@@ -10,8 +10,14 @@
                 "lang": "it_IT",
                 "plural-forms": "nplurals=2; plural=(n != 1);"
             },
-            "Cancel": [
-                "Annulla"
+            "Production Site": [
+                "Sito Di Produzione"
+            ],
+            "Currently editing": [
+                "Modifica attualmente"
+            ],
+            "Not currently editing": [
+                "Non \u00e8 attualmente in modifica"
             ],
             "Clone": [
                 "Clona"
@@ -22,35 +28,20 @@
             "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?": [
                 "Questo sovrascriver\u00e0 qualsiasi cosa nell'ambiente di preproduzione e lo aggiorner\u00e0 ad un clone esatto del sito di produzione corrente. Sei sicuro di voler procedere?"
             ],
-            "Cloned to Staging": [
-                "Clonato in preproduzione"
-            ],
-            "Cloning production to staging, this should take about a minute.": [
-                "Clonazione da produzione a preproduzione, questo dovrebbe richiedere circa un minuto."
-            ],
             "Clone to staging": [
                 "Clona in preproduzione"
             ],
-            "Created": [
-                "Creato"
+            "Staging Site": [
+                "Sito di preproduzione"
             ],
-            "Staging Created": [
-                "Preproduzione creata"
-            ],
-            "Creating a staging site, this should take about a minute.": [
-                "Creazione del sito di preproduzione, questo dovrebbe richiedere circa un minuto."
+            "You don't have a staging site yet.": [
+                "Non hai ancora un sito di preproduzione."
             ],
             "Create staging site": [
                 "Crea sito di preproduzione"
             ],
-            "Currently editing": [
-                "Modifica attualmente"
-            ],
-            "Delete": [
-                "Elimina"
-            ],
-            "Confirm Delete": [
-                "Conferma Eliminazione"
+            "Delete Staging Site": [
+                "Elimina sito di preproduzione"
             ],
             "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost.": [
                 "Questo eliminer\u00e0 definitivamente il sito di preproduzione. Sei sicuro di voler procedere? \u00c8 possibile ricreare un altro sito di preproduzione in qualsiasi momento, ma tutte le modifiche specifiche apportate a questo sito andranno perse."
@@ -61,8 +52,29 @@
             "Deleting the staging site, this should take about a minute.": [
                 "Eliminazione del sito di preproduzione, questo dovrebbe richiedere circa un minuto."
             ],
-            "Delete Staging Site": [
-                "Elimina sito di preproduzione"
+            "Cancel": [
+                "Annulla"
+            ],
+            "Cloned to Staging": [
+                "Clonato in preproduzione"
+            ],
+            "Cloning production to staging, this should take about a minute.": [
+                "Clonazione da produzione a preproduzione, questo dovrebbe richiedere circa un minuto."
+            ],
+            "Staging Created": [
+                "Preproduzione creata"
+            ],
+            "Creating a staging site, this should take about a minute.": [
+                "Creazione del sito di preproduzione, questo dovrebbe richiedere circa un minuto."
+            ],
+            "Created": [
+                "Creato"
+            ],
+            "Delete": [
+                "Elimina"
+            ],
+            "Confirm Delete": [
+                "Conferma Eliminazione"
             ],
             "Deploy": [
                 "Dispiega"
@@ -94,29 +106,14 @@
             "Error": [
                 "Errore"
             ],
-            "You don't have a staging site yet.": [
-                "Non hai ancora un sito di preproduzione."
-            ],
-            "Not currently editing": [
-                "Non \u00e8 attualmente in modifica"
+            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
+                "Un sito di preproduzione \u00e8 un duplicato del tuo sito in produzione, che offre un ambiente sicuro per sperimentare, testare gli aggiornamenti e distribuire quando sei pronto."
             ],
             "Proceed": [
                 "Procedere"
             ],
-            "Production Site": [
-                "Sito Di Produzione"
-            ],
-            "Staging Site": [
-                "Sito di preproduzione"
-            ],
-            "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready.": [
-                "Un sito di preproduzione \u00e8 un duplicato del tuo sito in produzione, che offre un ambiente sicuro per sperimentare, testare gli aggiornamenti e distribuire quando sei pronto."
-            ],
             "Switch": [
                 "Cambia"
-            ],
-            "Switching": [
-                "Commutazione"
             ],
             "Switch to Production": [
                 "Passa alla produzione"
@@ -141,6 +138,9 @@
             ],
             "Switching to the staging environment, this should take about a minute.": [
                 "Passaggio all'ambiente di preproduzione, questo dovrebbe richiedere circa un minuto."
+            ],
+            "Switching": [
+                "Commutazione"
             ],
             "An unknown error has occurred.": [
                 "Si \u00e8 verificato un errore sconosciuto."
