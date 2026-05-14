@@ -20,7 +20,7 @@
   "devDependencies": {
     "@newfold/wp-module-runtime": "^1.2.2",
     "@tailwindcss/forms": "^0.5.11",
-    "@wordpress/scripts": "^32.1.0",
+    "@wordpress/scripts": "^32.2.0",
     "css-minimizer-webpack-plugin": "^8.0.0",
     "postcss": "^8.5.14",
     "postcss-loader": "^8.2.1",
