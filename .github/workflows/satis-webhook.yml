@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read # Required to clone the repository for checkout.
+    timeout-minutes: 30
     steps:
 
       - name: Checkout
