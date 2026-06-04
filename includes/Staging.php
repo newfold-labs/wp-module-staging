@@ -363,19 +363,386 @@ class Staging {
 	/**
 	 * Deploy changes from staging to production.
 	 *
+	 * Long-running deploys run asynchronously so the HTTP response returns before
+	 * Cloudflare or other proxies hit their read timeout (often 120 seconds).
+	 *
 	 * @param string $type Deployment type. One of `db`, `files`, or `all`.
 	 *
 	 * @return array|\WP_Error
 	 */
 	public function deployToProduction( $type = 'all' ) {
+		return $this->runCommand( $this->getDeployCommandForType( $type ) );
+	}
+
+	/**
+	 * Get the current status of a deploy job (for polling after async start).
+	 *
+	 * @param string $type Deployment type. One of `db`, `files`, or `all`.
+	 *
+	 * @return array
+	 */
+	public function getDeployStatus( $type = 'all' ) {
+		return $this->getDeployCommandStatus( $this->getDeployCommandForType( $type ) );
+	}
+
+	/**
+	 * Map REST deploy type to the staging CLI command name.
+	 *
+	 * @param string $type Deployment type.
+	 *
+	 * @return string
+	 */
+	protected function getDeployCommandForType( $type ) {
 		switch ( $type ) {
 			case 'db':
-				return $this->runCommand( 'deploy_db' );
+				return 'deploy_db';
 			case 'files':
-				return $this->runCommand( 'deploy_files' );
+				return 'deploy_files';
 			default:
-				return $this->runCommand( 'deploy_files_db' );
+				return 'deploy_files_db';
 		}
+	}
+
+	/**
+	 * Whether the command is a long-running deploy operation.
+	 *
+	 * @param string $command CLI command name.
+	 *
+	 * @return bool
+	 */
+	protected function isDeployCommand( $command ) {
+		return in_array( $command, array( 'deploy_db', 'deploy_files', 'deploy_files_db' ), true );
+	}
+
+	/**
+	 * Path to the JSON file that stores async deploy progress/result.
+	 *
+	 * @return string
+	 */
+	protected function getDeployResultPath() {
+		return trailingslashit( $this->getProductionDir() ) . 'nfd-private/nfd-staging-deploy-result.json';
+	}
+
+	/**
+	 * Whether a deploy is already running.
+	 *
+	 * @return bool
+	 */
+	protected function isDeployInProgress() {
+		$result = $this->readDeployResult();
+		if ( is_array( $result ) && isset( $result['status'] ) && 'running' === $result['status'] ) {
+			return true;
+		}
+
+		return (bool) get_transient( 'nfd_staging_lock' );
+	}
+
+	/**
+	 * Persist async deploy progress or result to disk.
+	 *
+	 * @param array $data Result payload.
+	 */
+	protected function writeDeployResult( array $data ) {
+		$path = $this->getDeployResultPath();
+		$dir  = dirname( $path );
+		if ( ! is_dir( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $path, wp_json_encode( $data ) );
+	}
+
+	/**
+	 * Read async deploy progress or result from disk.
+	 *
+	 * @return array|null
+	 */
+	protected function readDeployResult() {
+		$path = $this->getDeployResultPath();
+		if ( ! file_exists( $path ) ) {
+			return null;
+		}
+		$raw = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( ! $raw ) {
+			return null;
+		}
+		$data = json_decode( $raw, true );
+		return is_array( $data ) ? $data : null;
+	}
+
+	/**
+	 * Parse the timestamp prefix from a staging log line.
+	 *
+	 * @param string $line Log line.
+	 *
+	 * @return int|null Unix timestamp, or null when not parseable.
+	 */
+	protected function parseLogLineTimestamp( $line ) {
+		if ( preg_match( '/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $line, $matches ) ) {
+			$parsed = strtotime( $matches[1] );
+			return $parsed ? $parsed : null;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Resolve deploy status from the staging log (fallback when the HTTP request timed out).
+	 *
+	 * @param string   $command          CLI command name.
+	 * @param int|null $since_timestamp  Only consider log lines at or after this Unix time.
+	 *
+	 * @return array|null
+	 */
+	protected function getDeployStatusFromLog( $command, $since_timestamp = null ) {
+		$log_file = trailingslashit( $this->getProductionDir() ) . 'nfd-private/nfd-staging.log';
+		if ( ! file_exists( $log_file ) ) {
+			return null;
+		}
+
+		$success_step = $this->getDeploySuccessLogStep( $command );
+		if ( ! $success_step ) {
+			return null;
+		}
+
+		$lines = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( ! is_array( $lines ) ) {
+			return null;
+		}
+
+		$lines = array_reverse( $lines );
+		foreach ( $lines as $line ) {
+			$line_time = $this->parseLogLineTimestamp( $line );
+			if ( $since_timestamp && $line_time && $line_time < ( $since_timestamp - 30 ) ) {
+				continue;
+			}
+
+			// Only treat deploy_* step errors as failures (ignore rsync warnings on prepare_new_content_dirs).
+			if ( preg_match( '/\[ERROR\]\s+\[deploy_/', $line ) ) {
+				return array(
+					'status'  => 'error',
+					'command' => $command,
+					'message' => __( 'Deployment failed. Check the staging log for details.', 'wp-module-staging' ),
+				);
+			}
+			if ( false !== strpos( $line, '[SUCCESS]' ) && false !== strpos( $line, '[' . $success_step . ']' ) ) {
+				return array(
+					'status'  => 'success',
+					'command' => $command,
+					'message' => $this->getDeploySuccessMessage( $command ),
+				);
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Log step name that indicates a successful deploy for the given command.
+	 *
+	 * @param string $command CLI command name.
+	 *
+	 * @return string
+	 */
+	protected function getDeploySuccessLogStep( $command ) {
+		$map = array(
+			'deploy_files'    => 'deploy_files:end',
+			'deploy_db'       => 'deploy_db:end',
+			'deploy_files_db' => 'deploy_files_db:end',
+		);
+
+		return isset( $map[ $command ] ) ? $map[ $command ] : '';
+	}
+
+	/**
+	 * User-facing success message for a completed deploy command.
+	 *
+	 * @param string $command CLI command name.
+	 *
+	 * @return string
+	 */
+	protected function getDeploySuccessMessage( $command ) {
+		$messages = array(
+			'deploy_files'    => __( 'Files deployed successfully.', 'wp-module-staging' ),
+			'deploy_db'       => __( 'Database deployed successfully.', 'wp-module-staging' ),
+			'deploy_files_db' => __( 'Files and Database deployed successfully.', 'wp-module-staging' ),
+		);
+
+		return isset( $messages[ $command ] ) ? $messages[ $command ] : __( 'Deployment completed successfully.', 'wp-module-staging' );
+	}
+
+	/**
+	 * Resolve the current status of a deploy command.
+	 *
+	 * @param string $command CLI command name.
+	 *
+	 * @return array
+	 */
+	protected function getDeployCommandStatus( $command ) {
+		$result       = $this->readDeployResult();
+		$since        = is_array( $result ) && ! empty( $result['started_at'] ) ? (int) $result['started_at'] : null;
+		$same_command = is_array( $result ) && ( empty( $result['command'] ) || $result['command'] === $command );
+
+		if ( $same_command && is_array( $result ) ) {
+			if ( 'running' !== $result['status'] ) {
+				return $result;
+			}
+			$since = ! empty( $result['started_at'] ) ? (int) $result['started_at'] : $since;
+		}
+
+		if ( $this->isDeployInProgress() ) {
+			return array(
+				'status'  => 'running',
+				'command' => $command,
+				'message' => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+			);
+		}
+
+		$log_status = $this->getDeployStatusFromLog( $command, $since );
+		if ( $log_status ) {
+			if ( 'success' === $log_status['status'] ) {
+				$this->writeDeployResult( $log_status );
+			}
+			return $log_status;
+		}
+
+		return array(
+			'status'  => 'running',
+			'command' => $command,
+			'message' => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+		);
+	}
+
+	/**
+	 * Start deploy in a shutdown handler so the REST response can return immediately.
+	 *
+	 * @param string $script  Path to the staging shell script.
+	 * @param string $command Escaped CLI argument string.
+	 *
+	 * @return array|\WP_Error
+	 */
+	protected function startAsyncDeploy( $script, $command ) {
+		if ( $this->isDeployInProgress() ) {
+			return $this->getDeployCommandStatus( $command );
+		}
+
+		$started_at = time();
+
+		$this->writeDeployResult(
+			array(
+				'status'     => 'running',
+				'command'    => $command,
+				'started_at' => $started_at,
+				'message'    => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+			)
+		);
+
+		$instance = $this;
+		add_action(
+			'shutdown',
+			static function () use ( $instance, $script, $command, $started_at ) {
+				if ( function_exists( 'fastcgi_finish_request' ) ) {
+					fastcgi_finish_request();
+				}
+				ignore_user_abort( true );
+				set_time_limit( 0 );
+
+				$result = $instance->executeStagingScript( $script, $command );
+
+				if ( is_wp_error( $result ) ) {
+					$log_status = $instance->getDeployStatusFromLog( $command, $started_at );
+					if ( is_array( $log_status ) && 'success' === $log_status['status'] ) {
+						$instance->writeDeployResult(
+							array_merge(
+								$log_status,
+								array( 'started_at' => $started_at )
+							)
+						);
+						wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
+						return;
+					}
+
+					$instance->writeDeployResult(
+						array(
+							'status'     => 'error',
+							'command'    => $command,
+							'started_at' => $started_at,
+							'message'    => $result->get_error_message(),
+						)
+					);
+					return;
+				}
+
+				$instance->writeDeployResult(
+					array_merge(
+						(array) $result,
+						array(
+							'command'    => $command,
+							'started_at' => $started_at,
+						)
+					)
+				);
+				wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
+			},
+			0
+		);
+
+		return array(
+			'status'     => 'running',
+			'command'    => $command,
+			'started_at' => $started_at,
+			'message'    => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+		);
+	}
+
+	/**
+	 * Run the staging shell script and parse its JSON stdout.
+	 *
+	 * @param string $script  Path to the staging shell script.
+	 * @param string $command Escaped CLI argument string.
+	 *
+	 * @return array|\WP_Error
+	 */
+	protected function executeStagingScript( $script, $command ) {
+		do_action( 'newfold_staging_command', $command ); // bh_staging_command
+
+		$json = exec( "{$script} {$command}" ); // phpcs:ignore
+
+		return $this->parseStagingScriptResponse( $json );
+	}
+
+	/**
+	 * Decode JSON stdout from the staging shell script.
+	 *
+	 * @param string|false|null $json Raw stdout from the staging script.
+	 *
+	 * @return array|\WP_Error
+	 */
+	protected function parseStagingScriptResponse( $json ) {
+		if ( ! is_string( $json ) || '' === $json ) {
+			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
+		}
+
+		$response = json_decode( $json, true );
+
+		if ( ! is_array( $response ) ) {
+			$cloudflare = json_decode( $json, true );
+			if ( is_array( $cloudflare ) && ! empty( $cloudflare['cloudflare_error'] ) ) {
+				return new \WP_Error(
+					'origin_timeout',
+					__( 'The deployment is still running. Please wait and check again shortly.', 'wp-module-staging' ),
+					array( 'status' => 524 )
+				);
+			}
+
+			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
+		}
+
+		if ( isset( $response['status'], $response['message'] ) && 'error' === $response['status'] ) {
+			return new \WP_Error( 'error_response', $response['message'] );
+		}
+
+		return $response;
 	}
 
 	/**
@@ -541,20 +908,14 @@ class Staging {
 
 		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' ); // phpcs:ignore
 
-		do_action( 'newfold_staging_command', $command ); // bh_staging_command
-
-		$json = exec( "{$script} {$command}" ); // phpcs:ignore
-
-		// Check if we can properly decode the JSON
-		$response = json_decode( $json, true );
-
-		if ( ! $response ) {
-			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
+		if ( $this->isDeployCommand( $command ) ) {
+			return $this->startAsyncDeploy( $script, $command );
 		}
 
-		// Check if response is an error response.
-		if ( isset( $response->status, $response->message ) && 'error' === $response->status ) {
-			return new \WP_Error( 'error_response', $response->message );
+		$response = $this->executeStagingScript( $script, $command );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
