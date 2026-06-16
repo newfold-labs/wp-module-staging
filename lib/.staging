@@ -28,7 +28,7 @@ DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-pl
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_CHARSET="${DB_CHARSET:-utf8mb4}"
+# Optional override via environment; otherwise resolved before export/import.
 STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
@@ -66,6 +66,21 @@ log() {
 
   # 4. Write in log (never stdout)
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
+}
+
+# Prefer utf8mb4 for 4-byte characters; fall back to utf8 on older servers.
+ensure_db_charset() {
+  if [ -n "${DB_CHARSET:-}" ]; then
+    return
+  fi
+
+  DB_CHARSET=utf8mb4
+  local charset_check
+  charset_check=$(wp db query "SHOW CHARACTER SET LIKE 'utf8mb4';" --skip-column-names --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null | head -n1)
+  if [ "$charset_check" != "utf8mb4" ]; then
+    DB_CHARSET=utf8
+    log "DEBUG" "charset" "utf8mb4 unavailable; using utf8 for export/import"
+  fi
 }
 
 # --- Staging lock (WordPress transient) ---
@@ -600,6 +615,7 @@ create() {
   fi
 
   # Export database
+  ensure_db_charset
   log "INFO" "create" "[STEP] Export database."
   set +e
   EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
@@ -1021,6 +1037,7 @@ sso_production() {
 
 clone() {
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+  ensure_db_charset
   trap 'delete_temp_staging 5 "Clone failed unexpectedly."' ERR
 
   log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
@@ -1173,6 +1190,7 @@ _restore_db_from_backup() {
 
 deploy_db() {
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+  ensure_db_charset
 
   # Disable global set -e and handle errors manually
   set +e
