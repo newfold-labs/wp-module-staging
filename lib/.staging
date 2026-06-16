@@ -28,6 +28,7 @@ DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-pl
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+DB_CHARSET="${DB_CHARSET:-utf8mb4}"
 STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
@@ -601,7 +602,7 @@ create() {
   # Export database
   log "INFO" "create" "[STEP] Export database."
   set +e
-  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set=utf8mb4 --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
+  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
   EXPORT_STATUS=$?
   set -e
   log "DEBUG" "create:db_export" "wp db export exit code: $EXPORT_STATUS"
@@ -729,13 +730,13 @@ create() {
   # Import database
   log "INFO" "create" "[STEP] Import database."
   set +e
-  DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --default-character-set=utf8mb4 --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --default-character-set="$DB_CHARSET" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   DISABLE_FK_STATUS=$?
 
-  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --default-character-set=utf8mb4 --skip-themes --skip-plugins --quiet 2>&1)
+  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins --quiet 2>&1)
   IMPORT_STATUS=$?
 
-  ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --default-character-set="$DB_CHARSET" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   ENABLE_FK_STATUS=$?
   set -e
 
@@ -1038,7 +1039,7 @@ clone() {
 
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
-  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set=utf8mb4 --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins --quiet
 
   # Updating table prefix in SQL file
   log "INFO" "clone:sed_prefix" "Updating table prefixes in .export-sql"
@@ -1096,7 +1097,7 @@ clone() {
 
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
-  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --default-character-set=utf8mb4 --skip-themes --skip-plugins --quiet
+  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins --quiet
    if [ "0" != "$USER_ID" ]; then
      wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
    fi
@@ -1162,7 +1163,7 @@ _restore_db_from_backup() {
   local BACKUP="$1"
   log "INFO" "deploy_db:restore" "Restoring original production database from backup $BACKUP"
   set +e
-  if gzip -d < "$BACKUP" | wp db import - --default-character-set=utf8mb4 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1; then
+  if gzip -d < "$BACKUP" | wp db import - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1; then
     log "INFO" "deploy_db:restore" "Database restored successfully from backup."
   else
     log "ERROR" "deploy_db:restore" "Failed to restore database from backup. Manual intervention needed."
@@ -1208,7 +1209,7 @@ deploy_db() {
 
   # 1. Backup database production site
   log "INFO" "deploy_db" "Backing up production database to $COMPRESSED_BACKUP"
-  wp db export - --default-character-set=utf8mb4 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
+  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
   if [ $? -ne 0 ]; then
     fail_and_exit "Failed to backup production database."
   fi
@@ -1229,7 +1230,7 @@ deploy_db() {
 
     # 3. Export del database di staging
     log "INFO" "deploy_db" "Exporting staging database"
-    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set=utf8mb4 --skip-themes --skip-plugins 2>&1)
+    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$DB_CHARSET" --skip-themes --skip-plugins 2>&1)
     RC=$?
     log "DEBUG" "deploy_db" "staging export exit code: $RC; output: $OUTPUT"
     if [ $RC -ne 0 ]; then
@@ -1263,7 +1264,7 @@ deploy_db() {
     # 5. Import staging in production
     log "INFO" "deploy_db" "Importing staging DB into production"
 
-    DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --default-character-set=utf8mb4 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --default-character-set="$DB_CHARSET" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
     DISABLE_FK_STATUS=$?
     log "DEBUG" "deploy_db:disable_fk" "Exit code: $DISABLE_FK_STATUS"
     if [ $DISABLE_FK_STATUS -ne 0 ]; then
@@ -1272,7 +1273,7 @@ deploy_db() {
       done <<< "$DISABLE_FK_OUTPUT"
     fi
 
-    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --default-character-set=utf8mb4 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
+    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$DB_CHARSET" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
     OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
     RC=${RC:-0}
     log "DEBUG" "deploy_db" "import exit code: $RC; raw output length: ${#OUTPUT}"
@@ -1293,7 +1294,7 @@ deploy_db() {
       fail_and_exit "Unable to import staging database into production. Output: $OUTPUT"
     fi
 
-    ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --default-character-set="$DB_CHARSET" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
     ENABLE_FK_STATUS=$?
     log "DEBUG" "deploy_db:enable_fk" "Exit code: $ENABLE_FK_STATUS"
     if [ $ENABLE_FK_STATUS -ne 0 ]; then
