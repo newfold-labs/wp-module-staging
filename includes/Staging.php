@@ -616,14 +616,15 @@ class Staging {
 	/**
 	 * Start deploy in a shutdown handler so the REST response can return immediately.
 	 *
-	 * @param string $script  Path to the staging shell script.
-	 * @param string $command Escaped CLI argument string.
+	 * @param string $script         Path to the staging shell script.
+	 * @param string $command_name   CLI command name (e.g. deploy_db).
+	 * @param string $shell_command  Escaped CLI argument string for exec().
 	 *
 	 * @return array|\WP_Error
 	 */
-	protected function startAsyncDeploy( $script, $command ) {
+	protected function startAsyncDeploy( $script, $command_name, $shell_command ) {
 		if ( $this->isDeployInProgress() ) {
-			return $this->getDeployCommandStatus( $command );
+			return $this->getDeployCommandStatus( $command_name );
 		}
 
 		$started_at = time();
@@ -631,7 +632,7 @@ class Staging {
 		$this->writeDeployResult(
 			array(
 				'status'     => 'running',
-				'command'    => $command,
+				'command'    => $command_name,
 				'started_at' => $started_at,
 				'message'    => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
 			)
@@ -640,17 +641,17 @@ class Staging {
 		$instance = $this;
 		add_action(
 			'shutdown',
-			static function () use ( $instance, $script, $command, $started_at ) {
+			static function () use ( $instance, $script, $command_name, $shell_command, $started_at ) {
 				if ( function_exists( 'fastcgi_finish_request' ) ) {
 					fastcgi_finish_request();
 				}
 				ignore_user_abort( true );
 				set_time_limit( 0 );
 
-				$result = $instance->executeStagingScript( $script, $command );
+				$result = $instance->executeStagingScript( $script, $shell_command );
 
 				if ( is_wp_error( $result ) ) {
-					$log_status = $instance->getDeployStatusFromLog( $command, $started_at );
+					$log_status = $instance->getDeployStatusFromLog( $command_name, $started_at );
 					if ( is_array( $log_status ) && 'success' === $log_status['status'] ) {
 						$instance->writeDeployResult(
 							array_merge(
@@ -665,7 +666,7 @@ class Staging {
 					$instance->writeDeployResult(
 						array(
 							'status'     => 'error',
-							'command'    => $command,
+							'command'    => $command_name,
 							'started_at' => $started_at,
 							'message'    => $result->get_error_message(),
 						)
@@ -677,7 +678,7 @@ class Staging {
 					array_merge(
 						(array) $result,
 						array(
-							'command'    => $command,
+							'command'    => $command_name,
 							'started_at' => $started_at,
 						)
 					)
@@ -689,7 +690,7 @@ class Staging {
 
 		return array(
 			'status'     => 'running',
-			'command'    => $command,
+			'command'    => $command_name,
 			'started_at' => $started_at,
 			'message'    => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
 		);
@@ -809,8 +810,10 @@ class Staging {
 			'sso_staging'     => true,
 		);
 
+		$command_name = $command;
+
 		// Check if command is allowed
-		if ( ! array_key_exists( $command, $allowedCommands ) ) {
+		if ( ! array_key_exists( $command_name, $allowedCommands ) ) {
 			return new \WP_Error(
 				'invalid_command',
 				__( 'Invalid staging CLI command.', 'wp-module-staging' )
@@ -820,7 +823,7 @@ class Staging {
 		$config = $this->getConfig();
 
 		// If config is empty, then we are creating a staging environment.
-		if ( empty( $config ) || 'create' === $command ) {
+		if ( empty( $config ) || 'create' === $command_name ) {
 
 			$uniqueId = wp_rand( 1000, 9999 );
 
@@ -843,8 +846,8 @@ class Staging {
 
 		$plugin_slug = is_array( $plugin_basename ) && ! empty( $plugin_basename ) ? $plugin_basename[0] : null;
 
-		$command = array(
-			$command,
+		$command_args = array(
+			$command_name,
 			$token,
 			$config['production_dir'],
 			$config['staging_dir'],
@@ -857,15 +860,15 @@ class Staging {
 		);
 
 		if ( $args && is_array( $args ) ) {
-			$command = array_merge( $command, array_values( $args ) );
+			$command_args = array_merge( $command_args, array_values( $args ) );
 		}
 
-		$command = implode( ' ', array_map( 'escapeshellarg', $command ) );
+		$shell_command = implode( ' ', array_map( 'escapeshellarg', $command_args ) );
 
 		// Check for invalid characters
 		$invalidChars = array( ';', '&', '|' );
 		foreach ( $invalidChars as $char ) {
-			if ( false !== strpos( $command, $char ) ) {
+			if ( false !== strpos( $shell_command, $char ) ) {
 				return new \WP_Error(
 					'invalid_character',
 					// translators: Invalid character that was entered
@@ -908,11 +911,11 @@ class Staging {
 
 		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' ); // phpcs:ignore
 
-		if ( $this->isDeployCommand( $command ) ) {
-			return $this->startAsyncDeploy( $script, $command );
+		if ( $this->isDeployCommand( $command_name ) ) {
+			return $this->startAsyncDeploy( $script, $command_name, $shell_command );
 		}
 
-		$response = $this->executeStagingScript( $script, $command );
+		$response = $this->executeStagingScript( $script, $shell_command );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
