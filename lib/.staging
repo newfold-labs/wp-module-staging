@@ -217,6 +217,48 @@ move_content_dirs() {
   log "INFO" "move_content_dirs" "END: Finished moving content dirs from $FROM to $TO"
 }
 
+# --- Utility: Sync wp-includes/php-ai-client from source to destination ---
+# WordPress 7.0+ bundles the PHP AI Client SDK here. A fresh `wp core download` on
+# staging can leave this directory out of sync with production when AI connectors
+# (OpenAI, Gemini, etc.) are installed, breaking site switching.
+sync_php_ai_client() {
+  local FROM="$1"; local TO="$2"; local ON_ERROR="$3"
+  local SRC="$FROM/wp-includes/php-ai-client"
+  local DEST="$TO/wp-includes/php-ai-client"
+
+  if [ ! -d "$SRC" ]; then
+    log "INFO" "sync_php_ai_client" "No php-ai-client at $SRC, skipping."
+    return 0
+  fi
+
+  log "INFO" "sync_php_ai_client" "START: Syncing php-ai-client from $SRC to $DEST"
+  log "INFO" "sync_php_ai_client" "Removing existing destination: $DEST"
+  rm -rf "$DEST" || { log "ERROR" "sync_php_ai_client" "Unable to remove $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove php-ai-client directory."; }
+
+  log "INFO" "sync_php_ai_client" "Creating destination parent: $(dirname "$DEST")"
+  mkdir -p "$(dirname "$DEST")" || { log "ERROR" "sync_php_ai_client" "Unable to create $(dirname "$DEST")"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create php-ai-client parent directory."; }
+
+  if [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+    log "INFO" "sync_php_ai_client" "Copying from $SRC/ to $DEST"
+    set +e
+    RSYNC_OUTPUT=$(rsync -r "$SRC/" "$DEST" 2>&1)
+    RSYNC_EXIT=$?
+    set -e
+    log "DEBUG" "sync_php_ai_client" "rsync exit code: $RSYNC_EXIT"
+    if [ -n "$RSYNC_OUTPUT" ]; then
+      while IFS= read -r line; do log "ERROR" "sync_php_ai_client" "RSYNC: $line"; done <<< "$RSYNC_OUTPUT"
+    fi
+    if [ $RSYNC_EXIT -ne 0 ]; then
+      [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to sync php-ai-client directory."
+    fi
+    log "INFO" "sync_php_ai_client" "Rsync completed successfully."
+  else
+    log "INFO" "sync_php_ai_client" "Source directory is empty, skipping rsync."
+  fi
+
+  log "INFO" "sync_php_ai_client" "END: Finished syncing php-ai-client from $FROM to $TO"
+}
+
 # --- Authentication ---
 auth_action() {
   if [ ! -d "$CURRENT_DIR" ]; then
@@ -658,6 +700,7 @@ create() {
     if [ $CORE_STATUS -ne 0 ]; then
       delete_temp_staging 2 "Unable to install WordPress in staging directory."
     fi
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR" "delete_temp_staging 2 'Unable to sync php-ai-client.'"
   fi
 
   # Set core config
@@ -1109,6 +1152,7 @@ clone() {
   else
     WP_VER=$(wp core version)
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR"
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
   log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
@@ -1141,6 +1185,7 @@ deploy_files() {
   else
     WP_VER=$(wp core version)
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    sync_php_ai_client "$STAGING_DIR" "$PRODUCTION_DIR"
   fi
 
   prepare_new_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR" || {
