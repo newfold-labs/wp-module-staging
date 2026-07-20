@@ -928,7 +928,9 @@ destroy() {
 sso_staging() {
 
   log "DEBUG" "SSO staging"
-  if [ -z "$1" ]; then
+  # Prefer explicit function_param (from switchTo), then USER_ID from the current request.
+  local SSO_USER_ID="${11:-$USER_ID}"
+  if [ -z "$SSO_USER_ID" ] || [ "$SSO_USER_ID" = "0" ]; then
     error 'No user provided.'
   fi
 
@@ -970,9 +972,9 @@ sso_staging() {
     wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' \
     --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
 
-  log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
+  log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso for user $SSO_USER_ID"
 
-  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | head -n 1)
+  LINK=$(wp newfold sso --url-only --id="$SSO_USER_ID" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | head -n 1)
 
   # Remove newline (\n), carriage return (\r)
   LINK="${LINK//$'\n'/}"
@@ -990,18 +992,20 @@ sso_staging() {
     error "Unable to create SSO link for staging."
   fi
 
-  log "SUCCESS" "sso_staging" "SSO to staging successful for user $1."
+  log "SUCCESS" "sso_staging" "SSO to staging successful for user $SSO_USER_ID."
 
   echo '{"status":"success","load_page":"'"$LINK"'&redirect=admin.php?page=nfd-staging"}'
 }
 
 sso_production() {
   log "DEBUG" "SSO Production"
-  if [ -z "$1" ]; then
+  # Prefer explicit function_param (from switchTo), then USER_ID from the current request.
+  local SSO_USER_ID="${11:-$USER_ID}"
+  if [ -z "$SSO_USER_ID" ] || [ "$SSO_USER_ID" = "0" ]; then
     error 'No user provided.'
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
-  LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+  LINK=$(wp newfold sso --url-only --id="$SSO_USER_ID" --path=$PRODUCTION_DIR)
 
   # Remove newline (\n) e carriage return (\r) characters from the link
   LINK="${LINK//$'\n'/}"
@@ -1014,7 +1018,7 @@ sso_production() {
   # (this removes the Unicode codepoint U+FEFF anywhere)
   LINK="$(printf '%s' "$LINK" | perl -CS -pe 's/\x{FEFF}//g')"
 
-  log "SUCCESS" "sso_production" "SSO to production successful for user $USER_ID."
+  log "SUCCESS" "sso_production" "SSO to production successful for user $SSO_USER_ID."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
 }
 

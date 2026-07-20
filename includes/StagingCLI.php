@@ -121,9 +121,17 @@ class StagingCLI extends \WP_CLI_Command {
 	/**
 	 * Get an admin user ID.
 	 *
+	 * Prefers the currently logged-in administrator when available,
+	 * otherwise falls back to the first administrator found.
+	 *
 	 * @return int
 	 */
 	protected function get_admin_user_id() {
+
+		$current_user_id = get_current_user_id();
+		if ( $current_user_id && user_can( $current_user_id, 'manage_options' ) ) {
+			return $current_user_id;
+		}
 
 		$user_id = 0;
 
