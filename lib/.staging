@@ -107,20 +107,44 @@ run_or_fail() {
 rename_prefixed_keys_to_staging() {
   local wp_path="$1"
   local log_step="$2"
+  local db_prefix_like
+  local query_output
+  local staging_options_table="staging_${DB_PREFIX}options"
+  local staging_usermeta_table="staging_${DB_PREFIX}usermeta"
+  db_prefix_like=$(printf '%s' "$DB_PREFIX" | sed 's/[_%]/\\&/g')
   log "INFO" "$log_step" "Renaming prefix-dependent option names and meta keys to staging prefix"
   set +e
-  wp db query "UPDATE \`staging_${DB_PREFIX}options\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${DB_PREFIX}%';" \
-    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
-  local opt_status=$?
-  wp db query "UPDATE \`staging_${DB_PREFIX}usermeta\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${DB_PREFIX}%';" \
-    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
-  local meta_status=$?
-  set -e
-  if [ $opt_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed option names (exit=$opt_status)"
+  # Remove auto-created staging-prefixed rows when the imported copy still uses production prefix names.
+  query_output=$(wp db query "DELETE o1 FROM \`${staging_options_table}\` o1 INNER JOIN \`${staging_options_table}\` o2 ON o2.option_name = REPLACE(o1.option_name, 'staging_', '') WHERE o1.option_name LIKE 'staging\\_${db_prefix_like}%' AND o1.option_name != o2.option_name;" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  local opt_del_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
   fi
-  if [ $meta_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (exit=$meta_status)"
+  query_output=$(wp db query "UPDATE \`${staging_options_table}\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${db_prefix_like}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  local opt_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+  fi
+  query_output=$(wp db query "DELETE m1 FROM \`${staging_usermeta_table}\` m1 INNER JOIN \`${staging_usermeta_table}\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = REPLACE(m1.meta_key, 'staging_', '') WHERE m1.meta_key LIKE 'staging\\_${db_prefix_like}%' AND m1.meta_key != m2.meta_key;" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  local meta_del_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+  fi
+  query_output=$(wp db query "UPDATE \`${staging_usermeta_table}\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${db_prefix_like}%';" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  local meta_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+  fi
+  set -e
+  if [ $opt_del_status -ne 0 ] || [ $opt_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed option names (del=$opt_del_status, rename=$opt_status)"
+  fi
+  if [ $meta_del_status -ne 0 ] || [ $meta_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (del=$meta_del_status, rename=$meta_status)"
   fi
 }
 
@@ -762,6 +786,10 @@ create() {
     delete_temp_staging 3 "Unable to re-enable foreign key checks after import."
   fi
 
+  # Rename before any WP-CLI command boots WordPress (otherwise default staging_wp_user_roles is created and blocks rename).
+  log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
+  rename_prefixed_keys_to_staging "$STAGING_DIR" "create:rename_prefixed_keys"
+
   # Delete SQL export
   log "INFO" "create" "[STEP] Delete SQL export."
   log "DEBUG" "create:delete_sql_export" "Before of rm $STAGING_DIR/.export-sql"
@@ -819,9 +847,6 @@ create() {
     delete_temp_staging 4 "Unable to update URLs on staging."
   fi
   log "DEBUG" "create:after_search_replace" "Completed search replace URLs"
-
-  log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
-  rename_prefixed_keys_to_staging "$STAGING_DIR" "create:rename_prefixed_keys"
 
   log "DEBUG" "create:before_import_config" "Starting import config"
   # Import config
@@ -1097,6 +1122,8 @@ clone() {
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
+  log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
+  rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"
    if [ "0" != "$USER_ID" ]; then
      wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
    fi
@@ -1111,8 +1138,6 @@ clone() {
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
-  log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
-  rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"
   run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
