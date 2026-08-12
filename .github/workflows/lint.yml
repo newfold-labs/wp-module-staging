@@ -13,6 +13,8 @@ on:
       - '!build/**/*.php'
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
   cancel-in-progress: true
@@ -21,6 +23,9 @@ jobs:
   phpcs:
     name: Run PHP Code Sniffer
     runs-on: ubuntu-latest
+    permissions:
+      contents: read       # Required to clone the repository (checkout).
+      pull-requests: read  # Required for technote-space/get-diff-action to call the GitHub API on pull_request events.
     steps:
 
       - name: Checkout
