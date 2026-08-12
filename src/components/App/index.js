@@ -327,39 +327,137 @@ const App = () => {
 		} );
 	};
 
-	/**
-	 *
-	 * @param {string} type       One of 'all', 'files', or 'db'
-	 * @param          deployType
-	 */
-	const deployType = async ( deployType ) => {
-		await stagingApiFetch(
-			'staging/deploy',
-			{ type: deployType },
-			'POST',
-			( response ) => {
-				if ( response.hasOwnProperty( 'status' ) ) {
-					if ( response.status === 'success' ) {
-						makeNotice(
-							'deployed',
-							deployNoticeCompleteText,
-							response.message
-						);
-					} else {
-						setError( response.message );
-					}
-				} else {
-					setError( unknownErrorMsg );
-				}
-				setIsThinking( false );
-			}
+	const sleep = ( ms ) =>
+		new Promise( ( resolve ) => {
+			setTimeout( resolve, ms );
+		} );
+
+	const isCloudflareTimeout = ( error ) => {
+		const data = error?.data;
+		if ( data?.cloudflare_error || data?.error_code === 524 ) {
+			return true;
+		}
+		if ( error?.status === 524 || error?.code === 524 ) {
+			return true;
+		}
+		const message = String( error?.message || '' );
+		return (
+			message.includes( '524' ) ||
+			message.includes( 'origin_response_timeout' ) ||
+			message.includes( 'timed out' )
 		);
+	};
+
+	const pollDeployStatus = async ( deployTypeParam, attempt = 0 ) => {
+		const maxAttempts = 180;
+		const intervalMs = 5000;
+
+		if ( attempt >= maxAttempts ) {
+			setError( unknownErrorMsg );
+			setIsThinking( false );
+			return false;
+		}
+
+		if ( attempt > 0 ) {
+			await sleep( intervalMs );
+		}
+
+		try {
+			const response = await apiFetch( {
+				url: NewfoldRuntime.createApiUrl(
+					apiNamespace + 'staging/deploy',
+					{ type: deployTypeParam }
+				),
+				method: 'GET',
+			} );
+
+			if (
+				response.status === 'running' ||
+				response.status === 'unknown'
+			) {
+				return pollDeployStatus( deployTypeParam, attempt + 1 );
+			}
+			if ( response.status === 'success' ) {
+				makeNotice(
+					'deployed',
+					deployNoticeCompleteText,
+					response.message
+				);
+				setIsThinking( false );
+				return true;
+			}
+			if ( response.status === 'error' ) {
+				setError( response.message );
+				setIsThinking( false );
+				return false;
+			}
+			return pollDeployStatus( deployTypeParam, attempt + 1 );
+		} catch ( error ) {
+			if ( isCloudflareTimeout( error ) && attempt < maxAttempts ) {
+				return pollDeployStatus( deployTypeParam, attempt + 1 );
+			}
+			catchError( error );
+			return false;
+		}
+	};
+
+	const handleDeployResponse = async ( response, deployTypeParam ) => {
+		if ( ! response?.hasOwnProperty( 'status' ) ) {
+			setError( unknownErrorMsg );
+			setIsThinking( false );
+			return false;
+		}
+		if (
+			response.status === 'running' ||
+			response.status === 'unknown'
+		) {
+			return pollDeployStatus( deployTypeParam );
+		}
+		if ( response.status === 'success' ) {
+			makeNotice(
+				'deployed',
+				deployNoticeCompleteText,
+				response.message
+			);
+			setIsThinking( false );
+			return true;
+		}
+		setError( response.message );
+		setIsThinking( false );
+		return false;
+	};
+
+	/**
+	 * @param {string} deployTypeParam One of 'all', 'files', or 'db'
+	 * @return {Promise<boolean>} Whether the deploy step completed successfully.
+	 */
+	const deployType = async ( deployTypeParam ) => {
+		setIsThinking( true );
+		try {
+			const response = await apiFetch( {
+				url: NewfoldRuntime.createApiUrl(
+					apiNamespace + 'staging/deploy',
+					{ type: deployTypeParam }
+				),
+				method: 'POST',
+			} );
+			return handleDeployResponse( response, deployTypeParam );
+		} catch ( error ) {
+			if ( isCloudflareTimeout( error ) ) {
+				return pollDeployStatus( deployTypeParam );
+			}
+			catchError( error );
+			return false;
+		}
 	};
 
 	const deployStaging = async ( type ) => {
 		makeNotice( 'deploying', working, deployNoticeStartText, 'info', 8000 );
 		if ( type === 'all' ) {
-			await deployType( 'files' );
+			const filesOk = await deployType( 'files' );
+			if ( ! filesOk ) {
+				return;
+			}
 			await deployType( 'db' );
 		} else {
 			await deployType( type );

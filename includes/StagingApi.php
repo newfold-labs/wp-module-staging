@@ -81,15 +81,13 @@ class StagingApi extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( $this, 'deployToProduction' ),
 					'permission_callback' => array( $this, 'checkPermission' ),
-					'args'                => array(
-						'type' => array(
-							'default'           => 'all',
-							'enum'              => array( 'all', 'db', 'files' ),
-							'validate_callback' => function ( $value ) {
-								return in_array( $value, array( 'all', 'db', 'files' ), true );
-							},
-						),
-					),
+					'args'                => $this->getDeployTypeArgs(),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'getDeployStatus' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+					'args'                => $this->getDeployTypeArgs(),
 				),
 			)
 		);
@@ -171,6 +169,34 @@ class StagingApi extends \WP_REST_Controller {
 	 */
 	public function deployToProduction( \WP_REST_Request $request ) {
 		return rest_ensure_response( $this->staging->deployToProduction( $request->get_param( 'type' ) ) );
+	}
+
+	/**
+	 * Poll deploy progress (used when deploy runs asynchronously).
+	 *
+	 * @param \WP_REST_Request $request WordPress HTTP request model.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function getDeployStatus( \WP_REST_Request $request ) {
+		return rest_ensure_response( $this->staging->getDeployStatus( $request->get_param( 'type' ) ) );
+	}
+
+	/**
+	 * Shared REST args for deploy type on POST and GET deploy routes.
+	 *
+	 * @return array
+	 */
+	protected function getDeployTypeArgs() {
+		return array(
+			'type' => array(
+				'default'           => 'all',
+				'enum'              => array( 'all', 'db', 'files' ),
+				'validate_callback' => function ( $value ) {
+					return in_array( $value, array( 'all', 'db', 'files' ), true );
+				},
+			),
+		);
 	}
 
 	/**
