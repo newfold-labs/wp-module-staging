@@ -16,21 +16,30 @@ fi
 # --- Parse parameters and set globals early (needed for logging path) ---
 export PATH=/usr/local/bin:$PATH
 
-# --- WP-CLI wrapper: neutralize the object-cache drop-in for the duration of staging operations ---
+# --- WP-CLI wrapper: skip the object-cache drop-in for the duration of staging operations ---
 #
-# WordPress loads wp-content/object-cache.php (the Redis object-cache drop-in) on every WP-CLI
-# bootstrap, and it is NOT skipped by --skip-plugins/--skip-themes. When that drop-in's Redis
-# backend is unreachable -- daemon down, wrong/rotated credentials, or a foreign drop-in migrated
-# in from another host -- it can emit PHP warnings or a fatal "Error establishing a Redis
-# connection" screen. That output corrupts the single line of JSON this script returns to the
-# module (see Staging::runCommand), so create/clone/deploy fail with a generic "Something went
-# wrong" even though staging itself is fine. Support's manual workaround is to rename the drop-in.
+# WordPress loads wp-content/object-cache.php on every WP-CLI bootstrap, and it is NOT skipped by
+# --skip-plugins/--skip-themes. When that drop-in's backend is unreachable -- daemon down, rotated
+# credentials, or a foreign drop-in migrated in from another host -- it can print warnings or die
+# outright. Either way the JSON this script returns to the module is lost and create/clone/deploy
+# fail with a generic error even though staging itself is fine (RCA: INC1596374).
 #
-# Define WP_REDIS_DISABLED via WP-CLI --exec, which runs before WordPress boots (and before the
-# object cache is initialized), so the drop-in no-ops for these maintenance commands only. This
-# does not touch the customer's files and works for any drop-in (ours or third-party).
+# Two mechanisms, because neither covers everything on its own:
+#   1. enable_loading_object_cache_dropin (WP 5.8+) is core's own switch for exactly this, and it
+#      works for ANY drop-in, not just Redis ones. WP_CLI::add_wp_hook registers it before WP boots.
+#   2. WP_REDIS_DISABLED covers the case where advanced-cache.php pulled the drop-in in before
+#      wp_start_object_cache() got to run the filter.
+#
+# IMPORTANT: this makes wp_using_ext_object_cache() false inside these subprocesses while it stays
+# true for the site's web requests. Anything this script shares with PHP must therefore live
+# somewhere that does not move with the cache. Options are database backed and safe. Transients are
+# NOT: they follow the object cache, so a value written by PHP would be invisible here. That is why
+# auth_action() below reads an option rather than a transient.
+NFD_WP_EXEC="defined('WP_REDIS_DISABLED') || define('WP_REDIS_DISABLED', true);"
+NFD_WP_EXEC="${NFD_WP_EXEC} if ( class_exists('WP_CLI') && method_exists('WP_CLI', 'add_wp_hook') ) { WP_CLI::add_wp_hook('enable_loading_object_cache_dropin', '__return_false'); }"
+
 wp() {
-  command wp --exec="defined('WP_REDIS_DISABLED') || define('WP_REDIS_DISABLED', true);" "$@"
+  command wp --exec="$NFD_WP_EXEC" "$@"
 }
 
 PRODUCTION_DIR=$3
@@ -177,9 +186,35 @@ rename_prefixed_keys_to_production() {
   fi
 }
 
+# --- Resync cached options on the live site ---
+#
+# Everything above ran with the object-cache drop-in skipped, so option writes landed in the
+# database without evicting the copies a live persistent cache is still serving. That is not just
+# stale reads: update_option() on the PHP side reads the cached value, decides the row still
+# exists, issues an UPDATE that matches nothing, and drops the write. The option then cannot be
+# changed at all until the key is evicted.
+#
+# Staging::runCommand() does this too, but only for the install it runs in. A deploy is driven from
+# the staging site, and the drop-in namespaces keys by table prefix, so this copy is what covers
+# production's keys on that path. It is also what covers support running the script by hand.
+#
+# Deliberately `command wp`, not the wrapper, so the drop-in IS loaded and the real backend gets
+# the delete. A broken drop-in makes it a no-op, and it must never fail the run.
+resync_cached_options() {
+  [ -n "${PRODUCTION_DIR:-}" ] || return 0
+  # One bootstrap, not one per key: this runs on every exit path, including compat_check.
+  command wp eval 'foreach ( array( "staging_auth_token", "staging_config", "staging_environment", "nfd_coming_soon", "alloptions", "notoptions" ) as $k ) { wp_cache_delete( $k, "options" ); }' \
+    --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet >/dev/null 2>&1 || true
+}
+
 # --- Cleanup on exit ---
+#
+# Runs under `set -e`, and its exit status becomes the script's, which Staging::runCommand() now
+# treats as authoritative. Every command in here must therefore end in `|| true` or be otherwise
+# incapable of returning non-zero, or a successful run gets reported to the user as a failure.
 cleanup() {
   release_staging_lock
+  resync_cached_options
 }
 trap cleanup EXIT
 
@@ -241,12 +276,40 @@ auth_action() {
     mkdir -p "$CURRENT_DIR" || error 'Unable to create directory.'
   fi
   cd "$CURRENT_DIR" || error 'Unable to switch directory.'
-  TOKEN=$(wp transient get staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet)
-  if [ "$1" != "$TOKEN" ] || [ -z "$TOKEN" ]; then
-    wp transient delete staging_auth_token --path=$CURRENT_DIR
+
+  # Staging::runCommand() stores this as an option in the form "<token>.<expiry epoch>", not as a
+  # transient. Transients follow wp_using_ext_object_cache(), which is true for the web request that
+  # writes the token and false here because the wrapper above skips the drop-in, so a transient
+  # written by PHP would never be found. Options are database backed in both directions. The expiry
+  # rides along in the value because options have no TTL of their own.
+  # `|| true` because wp exits non-zero when the option is absent, and `set -e` would otherwise
+  # kill the script here with no JSON on stdout at all. An already consumed or missing token has
+  # to fall through to the authentication error below.
+  STORED=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  STORED_TOKEN=${STORED%%.*}
+  STORED_EXPIRES=${STORED##*.}
+
+  # Consume it up front so a single token can never be replayed, whatever the outcome below.
+  wp option delete staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true
+
+  if [ -z "$STORED_TOKEN" ] || [ "$1" != "$STORED_TOKEN" ]; then
     error 'Unable to authenticate the action.'
   fi
-  wp transient delete staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet
+
+  # Digits only, and short enough that `[ -le ]` can actually compare it. Without the length
+  # bound a value like 99999999999999999999999999 makes `[` fail with "integer expression
+  # expected" and return 2, which `if` reads as false, and the token would be accepted.
+  case "$STORED_EXPIRES" in
+    ''|*[!0-9]*) error 'Unable to authenticate the action.' ;;
+  esac
+  if [ "${#STORED_EXPIRES}" -gt 10 ]; then
+    error 'Unable to authenticate the action.'
+  fi
+
+  if [ "$STORED_EXPIRES" -le "$(date +%s)" ]; then
+    error 'Unable to authenticate the action.'
+  fi
+
   log "SUCCESS" "auth_action" "Authentication successful."
 }
 
@@ -273,12 +336,18 @@ lock_check() {
 
 # --- Compatibility check ---
 compatibility_check() {
-  if ! command -v wp &>/dev/null; then
+  # type -P looks only at the filesystem. `command -v` matches the wp() wrapper defined above, so
+  # this test would always pass once that function exists. Note the check is mostly belt and
+  # braces either way: the wp calls that set DB_HOST and friends run earlier, so a box with no
+  # WP-CLI has already failed under set -e before reaching this point.
+  if ! type -P wp >/dev/null 2>&1; then
     echo "WP-CLI is not available."
     exit 1
   fi
   if [ "compat_check" == "$1" ]; then
-    echo {"status":"success"}
+    # Must be quoted. Unquoted, the shell strips the double quotes and emits {status:success},
+    # which is not valid JSON, so this response never survived json_decode() on the PHP side.
+    echo '{"status":"success"}'
     exit
   fi
 }
