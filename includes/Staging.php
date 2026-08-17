@@ -477,7 +477,6 @@ class Staging {
 	 * @return array|\WP_Error
 	 */
 	protected function runCommand( $command, $args = null ) {
-
 		/*
 		 * Before anything reads or writes an option below. A previous run may have left the cache
 		 * out of step with the database, and update_option() silently drops writes in that state,
