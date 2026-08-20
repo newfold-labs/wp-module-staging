@@ -477,13 +477,16 @@ class Staging {
 	 * @return array|\WP_Error
 	 */
 	protected function runCommand( $command, $args = null ) {
+		// $command is rebuilt into the escaped argument string below, so keep the name to test against.
+		$command_name = $command;
+
 		/*
 		 * Before anything reads or writes an option below. A previous run may have left the cache
 		 * out of step with the database, and update_option() silently drops writes in that state,
 		 * including the staging_config write further down. compat_check is exempt because it writes
 		 * nothing and consuming plugins may call it often enough for the eviction cost to matter.
 		 */
-		if ( 'compat_check' !== $command ) {
+		if ( 'compat_check' !== $command_name ) {
 			$this->resync_object_cache();
 		}
 
@@ -627,7 +630,7 @@ class Staging {
 		exec( "{$script} {$command}", $output, $exit_status ); // phpcs:ignore
 
 		// The script wrote options with the cache bypassed, so put the two back in sync.
-		if ( 'compat_check' !== $command ) {
+		if ( 'compat_check' !== $command_name ) {
 			$this->resync_object_cache();
 		}
 
