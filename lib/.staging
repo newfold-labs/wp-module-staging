@@ -15,6 +15,24 @@ fi
 
 # --- Parse parameters and set globals early (needed for logging path) ---
 export PATH=/usr/local/bin:$PATH
+
+# --- WP-CLI wrapper: neutralize the object-cache drop-in for the duration of staging operations ---
+#
+# WordPress loads wp-content/object-cache.php (the Redis object-cache drop-in) on every WP-CLI
+# bootstrap, and it is NOT skipped by --skip-plugins/--skip-themes. When that drop-in's Redis
+# backend is unreachable -- daemon down, wrong/rotated credentials, or a foreign drop-in migrated
+# in from another host -- it can emit PHP warnings or a fatal "Error establishing a Redis
+# connection" screen. That output corrupts the single line of JSON this script returns to the
+# module (see Staging::runCommand), so create/clone/deploy fail with a generic "Something went
+# wrong" even though staging itself is fine. Support's manual workaround is to rename the drop-in.
+#
+# Define WP_REDIS_DISABLED via WP-CLI --exec, which runs before WordPress boots (and before the
+# object cache is initialized), so the drop-in no-ops for these maintenance commands only. This
+# does not touch the customer's files and works for any drop-in (ours or third-party).
+wp() {
+  command wp --exec="defined('WP_REDIS_DISABLED') || define('WP_REDIS_DISABLED', true);" "$@"
+}
+
 PRODUCTION_DIR=$3
 STAGING_DIR=$4
 PRODUCTION_URL=$5
