@@ -1066,7 +1066,14 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso"
 
-  LINK=$(wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | head -n 1)
+  # Deliberately `command wp`, not the wrapper: SSO_CLI stores its token with set_transient(), which
+  # follows wp_using_ext_object_cache(). Skipping the drop-in would put the token in wp_options while
+  # the web request that redeems the link looks in the object cache, failing every SSO login and
+  # counting each one towards the module's lockout. The URL is matched out of the stream rather than
+  # taken by line position so drop-in noise cannot be mistaken for it, and an empty result falls
+  # through to the guard below. Nothing here reaches the script's own stdout, so the JSON contract
+  # with Staging::runCommand() is unaffected either way.
+  LINK=$(command wp newfold sso --url-only --id="$1" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | grep -Eo 'https?://[^[:space:]]*admin-ajax\.php[^[:space:]]*' | tail -n 1)
 
   # Remove newline (\n), carriage return (\r)
   LINK="${LINK//$'\n'/}"
@@ -1095,7 +1102,14 @@ sso_production() {
     error 'No user provided.'
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
-  LINK=$(wp newfold sso --url-only --id=$1 --path=$PRODUCTION_DIR)
+  # Deliberately `command wp`, not the wrapper: SSO_CLI stores its token with set_transient(), which
+  # follows wp_using_ext_object_cache(). Skipping the drop-in would put the token in wp_options while
+  # the web request that redeems the link looks in the object cache, failing every SSO login and
+  # counting each one towards the module's lockout. The URL is matched out of the stream rather than
+  # taken by line position so drop-in noise cannot be mistaken for it, and an empty result falls
+  # through to the guard below. Nothing here reaches the script's own stdout, so the JSON contract
+  # with Staging::runCommand() is unaffected either way.
+  LINK=$(command wp newfold sso --url-only --id="$1" --path="$PRODUCTION_DIR" 2> >(while read -r line; do log "ERROR" "sso_production" "$line"; done) | grep -Eo 'https?://[^[:space:]]*admin-ajax\.php[^[:space:]]*' | tail -n 1)
 
   # Remove newline (\n) e carriage return (\r) characters from the link
   LINK="${LINK//$'\n'/}"
@@ -1107,6 +1121,11 @@ sso_production() {
   # If still contains BOM (or tr failed), fallback to perl
   # (this removes the Unicode codepoint U+FEFF anywhere)
   LINK="$(printf '%s' "$LINK" | perl -CS -pe 's/\x{FEFF}//g')"
+
+  if [ -z "$LINK" ]; then
+    log "ERROR" "sso_production" "Failed to generate SSO link (empty response)"
+    error "Unable to create SSO link for production."
+  fi
 
   log "SUCCESS" "sso_production" "SSO to production successful for user $USER_ID."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
