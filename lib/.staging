@@ -30,13 +30,20 @@ export PATH=/usr/local/bin:$PATH
 #   2. WP_REDIS_DISABLED covers the case where advanced-cache.php pulled the drop-in in before
 #      wp_start_object_cache() got to run the filter.
 #
+# The filter returns false only when the drop-in is not already in memory. Returning a flat false
+# is not safe: when advanced-cache.php has already required object-cache.php (Batcache does this),
+# core skips the branch that would call wp_using_ext_object_cache( true ), then requires
+# wp-includes/cache.php, which redeclares the 21 wp_cache_* functions the drop-in just defined and
+# fatals every command this script runs. Reporting the drop-in as loaded lets core take that branch
+# and leaves mechanism 2 to neutralize it.
+#
 # IMPORTANT: this makes wp_using_ext_object_cache() false inside these subprocesses while it stays
 # true for the site's web requests. Anything this script shares with PHP must therefore live
 # somewhere that does not move with the cache. Options are database backed and safe. Transients are
 # NOT: they follow the object cache, so a value written by PHP would be invisible here. That is why
 # auth_action() below reads an option rather than a transient.
 NFD_WP_EXEC="defined('WP_REDIS_DISABLED') || define('WP_REDIS_DISABLED', true);"
-NFD_WP_EXEC="${NFD_WP_EXEC} if ( class_exists('WP_CLI') && method_exists('WP_CLI', 'add_wp_hook') ) { WP_CLI::add_wp_hook('enable_loading_object_cache_dropin', '__return_false'); }"
+NFD_WP_EXEC="${NFD_WP_EXEC} if ( class_exists('WP_CLI') && method_exists('WP_CLI', 'add_wp_hook') ) { WP_CLI::add_wp_hook('enable_loading_object_cache_dropin', function () { return function_exists('wp_cache_init'); }); }"
 
 wp() {
   command wp --exec="$NFD_WP_EXEC" "$@"
