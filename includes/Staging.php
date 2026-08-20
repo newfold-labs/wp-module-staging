@@ -79,6 +79,9 @@ class Staging {
 
 		add_action( 'init', array( $this, 'clean_log' ) );
 
+		add_action( 'admin_init', array( $this, 'run_staging_health_check' ), 5 );
+		add_action( 'admin_notices', array( $this, 'render_staging_repair_notice' ) );
+
 		new Constants( $container );
 	}
 
@@ -214,6 +217,11 @@ class Staging {
 	 * @return string
 	 */
 	public function getProductionDir() {
+		$parsed = StagingPath::parse_staging_from_abspath( ABSPATH );
+		if ( null !== $parsed ) {
+			return $parsed['production_dir'];
+		}
+
 		return $this->getConfigValue( 'production_dir', ABSPATH );
 	}
 
@@ -223,6 +231,11 @@ class Staging {
 	 * @return string
 	 */
 	public function getProductionUrl() {
+		$parsed = StagingPath::parse_staging_from_url( site_url() );
+		if ( null !== $parsed ) {
+			return $parsed['production_url'];
+		}
+
 		return $this->getConfigValue( 'production_url', site_url() );
 	}
 
@@ -297,6 +310,14 @@ class Staging {
 	 * @return bool
 	 */
 	public function isStaging() {
+		if ( StagingPath::is_staging_abspath( ABSPATH ) ) {
+			return true;
+		}
+
+		if ( defined( 'WP_ENVIRONMENT_TYPE' ) && 'staging' === WP_ENVIRONMENT_TYPE ) {
+			return true;
+		}
+
 		return $this->isEnvironment( 'staging' );
 	}
 
@@ -306,6 +327,10 @@ class Staging {
 	 * @return bool
 	 */
 	public function isProduction() {
+		if ( StagingPath::is_staging_abspath( ABSPATH ) ) {
+			return false;
+		}
+
 		return $this->isEnvironment( 'production' );
 	}
 
@@ -622,5 +647,68 @@ class Staging {
 		if ( file_exists( ABSPATH . '/nfd-staging.log' ) ) {
 			wp_delete_file( ABSPATH . '/nfd-staging.log' );
 		}
+	}
+
+	/**
+	 * Run staging health check on relevant admin requests.
+	 *
+	 * @return void
+	 */
+	public function run_staging_health_check() {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! $this->should_run_health_check_on_this_request() ) {
+			return;
+		}
+
+		$health = new StagingHealthCheck( $this );
+		if ( $health->maybe_repair() ) {
+			$this->getConfig( false );
+		}
+	}
+
+	/**
+	 * Whether the current admin request should trigger a health check.
+	 *
+	 * @return bool
+	 */
+	protected function should_run_health_check_on_this_request() {
+		if ( isset( $_GET['page'] ) && container()->plugin()->id === $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return true;
+		}
+
+		if ( isset( $_GET['page'] ) && self::PAGE_SLUG === $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return true;
+		}
+
+		if ( StagingPath::is_staging_abspath( ABSPATH ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Show a one-time notice when auto-repair has run.
+	 *
+	 * @return void
+	 */
+	public function render_staging_repair_notice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! get_transient( StagingHealthCheck::get_notice_transient_key() ) ) {
+			return;
+		}
+
+		delete_transient( StagingHealthCheck::get_notice_transient_key() );
+
+		printf(
+			'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+			esc_html__( 'Staging configuration was automatically repaired.', 'wp-module-staging' )
+		);
 	}
 }
