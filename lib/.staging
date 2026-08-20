@@ -101,6 +101,28 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
 }
 
+# Prefer utf8mb4 for 4-byte characters; fall back to utf8 on older servers.
+resolve_db_charset() {
+  local wp_path="$1"
+
+  if [ -n "${DB_CHARSET:-}" ]; then
+    log "DEBUG" "charset" "Using DB_CHARSET=$DB_CHARSET (from environment) for $wp_path"
+    echo "$DB_CHARSET"
+    return
+  fi
+
+  local charset=utf8mb4
+  local charset_name
+  charset_name=$(wp db query "SHOW CHARACTER SET LIKE 'utf8mb4';" --skip-column-names --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null | awk 'NR==1 {print $1}')
+  if [ "$charset_name" != "utf8mb4" ]; then
+    charset=utf8
+    log "DEBUG" "charset" "utf8mb4 unavailable at $wp_path; using utf8"
+  else
+    log "DEBUG" "charset" "Using utf8mb4 at $wp_path"
+  fi
+  echo "$charset"
+}
+
 # --- Staging lock (WordPress transient) ---
 release_staging_lock() {
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
@@ -275,6 +297,48 @@ move_content_dirs() {
     fi
   done
   log "INFO" "move_content_dirs" "END: Finished moving content dirs from $FROM to $TO"
+}
+
+# --- Utility: Sync wp-includes/php-ai-client from source to destination ---
+# WordPress 7.0+ bundles the PHP AI Client SDK here. A fresh `wp core download` on
+# staging can leave this directory out of sync with production when AI connectors
+# (OpenAI, Gemini, etc.) are installed, breaking site switching.
+sync_php_ai_client() {
+  local FROM="$1"; local TO="$2"; local ON_ERROR="$3"
+  local SRC="$FROM/wp-includes/php-ai-client"
+  local DEST="$TO/wp-includes/php-ai-client"
+
+  if [ ! -d "$SRC" ]; then
+    log "INFO" "sync_php_ai_client" "No php-ai-client at $SRC, skipping."
+    return 0
+  fi
+
+  log "INFO" "sync_php_ai_client" "START: Syncing php-ai-client from $SRC to $DEST"
+  log "INFO" "sync_php_ai_client" "Removing existing destination: $DEST"
+  rm -rf "$DEST" || { log "ERROR" "sync_php_ai_client" "Unable to remove $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove php-ai-client directory."; }
+
+  log "INFO" "sync_php_ai_client" "Creating destination parent: $(dirname "$DEST")"
+  mkdir -p "$(dirname "$DEST")" || { log "ERROR" "sync_php_ai_client" "Unable to create $(dirname "$DEST")"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create php-ai-client parent directory."; }
+
+  if [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+    log "INFO" "sync_php_ai_client" "Copying from $SRC/ to $DEST"
+    set +e
+    RSYNC_OUTPUT=$(rsync -r "$SRC/" "$DEST" 2>&1)
+    RSYNC_EXIT=$?
+    set -e
+    log "DEBUG" "sync_php_ai_client" "rsync exit code: $RSYNC_EXIT"
+    if [ -n "$RSYNC_OUTPUT" ]; then
+      while IFS= read -r line; do log "ERROR" "sync_php_ai_client" "RSYNC: $line"; done <<< "$RSYNC_OUTPUT"
+    fi
+    if [ $RSYNC_EXIT -ne 0 ]; then
+      [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to sync php-ai-client directory."
+    fi
+    log "INFO" "sync_php_ai_client" "Rsync completed successfully."
+  else
+    log "INFO" "sync_php_ai_client" "Source directory is empty, skipping rsync."
+  fi
+
+  log "INFO" "sync_php_ai_client" "END: Finished syncing php-ai-client from $FROM to $TO"
 }
 
 # --- Authentication ---
@@ -693,9 +757,11 @@ create() {
   fi
 
   # Export database
+  local export_charset
+  export_charset=$(resolve_db_charset "$PRODUCTION_DIR")
   log "INFO" "create" "[STEP] Export database."
   set +e
-  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
+  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
   EXPORT_STATUS=$?
   set -e
   log "DEBUG" "create:db_export" "wp db export exit code: $EXPORT_STATUS"
@@ -752,6 +818,7 @@ create() {
     if [ $CORE_STATUS -ne 0 ]; then
       delete_temp_staging 2 "Unable to install WordPress in staging directory."
     fi
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR" "delete_temp_staging 2 'Unable to sync php-ai-client.'"
   fi
 
   # Set core config
@@ -822,11 +889,13 @@ create() {
 
   # Import database
   log "INFO" "create" "[STEP] Import database."
+  local import_charset
+  import_charset=$(resolve_db_charset "$STAGING_DIR")
   set +e
   DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   DISABLE_FK_STATUS=$?
 
-  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet 2>&1)
+  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --skip-themes --skip-plugins --quiet 2>&1)
   IMPORT_STATUS=$?
 
   ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
@@ -1151,7 +1220,9 @@ clone() {
 
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
-  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
+  local export_charset
+  export_charset=$(resolve_db_charset "$PRODUCTION_DIR")
+  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins --quiet
 
   # Updating table prefix in SQL file
   log "INFO" "clone:sed_prefix" "Updating table prefixes in .export-sql"
@@ -1209,7 +1280,9 @@ clone() {
 
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
-  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
+  local import_charset
+  import_charset=$(resolve_db_charset "$STAGING_DIR")
+  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --skip-themes --skip-plugins --quiet
    if [ "0" != "$USER_ID" ]; then
      wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
    fi
@@ -1222,6 +1295,7 @@ clone() {
   else
     WP_VER=$(wp core version)
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR"
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
   log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
@@ -1254,6 +1328,7 @@ deploy_files() {
   else
     WP_VER=$(wp core version)
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    sync_php_ai_client "$STAGING_DIR" "$PRODUCTION_DIR"
   fi
 
   prepare_new_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR" || {
@@ -1342,7 +1417,9 @@ deploy_db() {
 
     # 3. Export del database di staging
     log "INFO" "deploy_db" "Exporting staging database"
-    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins 2>&1)
+    local export_charset
+    export_charset=$(resolve_db_charset "$STAGING_DIR")
+    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins 2>&1)
     RC=$?
     log "DEBUG" "deploy_db" "staging export exit code: $RC; output: $OUTPUT"
     if [ $RC -ne 0 ]; then
@@ -1385,7 +1462,9 @@ deploy_db() {
       done <<< "$DISABLE_FK_OUTPUT"
     fi
 
-    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
+    local import_charset
+    import_charset=$(resolve_db_charset "$PRODUCTION_DIR")
+    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
     OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
     RC=${RC:-0}
     log "DEBUG" "deploy_db" "import exit code: $RC; raw output length: ${#OUTPUT}"

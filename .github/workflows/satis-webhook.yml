@@ -5,14 +5,18 @@ on:
     types:
       - created
 
+permissions: {}
+
 jobs:
   webhook:
     name: Send Webhook
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required to clone the repository (checkout). The repository dispatch uses secrets.WEBHOOK_TOKEN, not GITHUB_TOKEN.
     steps:
 
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set Package
         id: package
