@@ -1571,7 +1571,7 @@ rewrite_htaccess() {
 }
 
 # --- Main Entrypoint ---
-if [[ $(pwd) == *"staging"* ]]; then
+if [[ $(pwd) == *"/staging/"* ]]; then
   CURRENT_DIR=$STAGING_DIR
 else
   CURRENT_DIR=$PRODUCTION_DIR
