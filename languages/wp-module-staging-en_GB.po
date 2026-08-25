@@ -1,225 +1,87 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2026-08-25T14:57:14+00:00\n"
 "Last-Translator: Vara Prasad Maruboina <varaprasad.maruboina@newfold.com>\n"
 "Language-Team: English (British) <(nothing)>\n"
+"Language: en_GB\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-08-20T07:37:38+00:00\n"
-"Language: en_GB\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: includes/Staging.php:338
-msgid "Cloning can only be done from the production environment."
-msgstr "Cloning can only be done from the production environment."
-
-#: includes/Staging.php:363
-msgid "Staging environment already exists!"
-msgstr "Staging environment already exists!"
-
-#: includes/Staging.php:397
-msgid "You must switch to the production environment before destroying staging."
-msgstr "You must switch to the production environment before destroying staging."
-
-#: includes/Staging.php:419
-msgid "Switch to an environment you are already in, you cannot."
-msgstr "Switch to an environment you are already in, you cannot."
-
-#: includes/Staging.php:509
-msgid "Invalid staging CLI command."
-msgstr "Invalid staging CLI command."
-
-#. translators: Invalid character that was entered
-#: includes/Staging.php:576
-#, php-format
-msgid "Invalid character (%s) in command."
-msgstr "Invalid character (%s) in command."
-
-#: includes/Staging.php:585
-msgid "Unable to execute script (disabled_function)."
-msgstr "Unable to execute script (disabled_function)."
-
-#: includes/Staging.php:598
-msgid "Filesystem credentials required."
-msgstr "Filesystem credentials required."
-
-#: includes/Staging.php:602
-msgid "Unable to initialize WP Filesystem."
-msgstr "Unable to initialise WP Filesystem."
-
-#: includes/Staging.php:609
-msgid "Unable to execute script (permission error)."
-msgstr "Unable to execute script (permission error)."
-
-#: includes/Staging.php:661
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Something gone wrong, please get in touch with our support."
-
-#: includes/Staging.php:671
-msgid "The staging operation did not complete, please get in touch with our support."
-msgstr ""
-
-#: includes/Staging.php:694
-#: views/staging-log.php:11
-msgid "Log Staging"
-msgstr "Log Staging"
-
-#: includes/Staging.php:708
-msgid "Don't have capabilities to access this page"
-msgstr "Don't have capabilities to access this page"
-
-#: includes/StagingCLI.php:19
-msgid "No sub-command provided"
-msgstr "No sub-command provided"
-
-#: includes/StagingCLI.php:39
-msgid "Invalid user."
-msgstr "Invalid user."
-
-#: includes/StagingCLI.php:67
-msgid "Invalid deploy type"
-msgstr "Invalid deployment type"
-
-#: includes/StagingCLI.php:84
-msgid "Invalid action"
-msgstr "Invalid action"
-
-#: includes/StagingCLI.php:96
-msgid "Invalid JSON response"
-msgstr "Invalid JSON response"
-
-#: includes/StagingCLI.php:231
-msgid "Error: "
-msgstr "Error: "
-
-#: includes/StagingCLI.php:280
-msgid "Provided $data wasn't valid array or JSON string."
-msgstr "Provided $data was not a valid array or JSON string."
-
-#: includes/StagingMenu.php:33
-msgctxt "Menu item text"
-msgid "Staging"
-msgstr "Staging"
-
-#: includes/StagingMenu.php:53
-msgid "Staging Environment"
-msgstr "Staging Environment"
-
-#: includes/StagingMenu.php:55
-msgid "Staging Actions"
-msgstr "Staging Actions"
-
-#: includes/StagingMenu.php:71
-#: includes/StagingMenu.php:72
-msgid "Staging"
-msgstr "Staging"
-
-#: views/staging-log.php:14
-msgid "Production DIR:"
-msgstr "Production DIR:"
-
-#: views/staging-log.php:15
-msgid "Production URL:"
-msgstr "Production URL:"
-
-#: views/staging-log.php:16
-msgid "Staging DIR:"
-msgstr "Staging DIR:"
-
-#: views/staging-log.php:17
-msgid "Staging URL:"
-msgstr "Staging URL:"
-
-#: views/staging-log.php:18
-msgid "Staging environment:"
-msgstr "Staging environment:"
-
-#: views/staging-log.php:24
-msgid "Filter by date (YYYY-MM-DD):"
-msgstr "Filter by date (YYYY-MM-DD):"
-
-#: views/staging-log.php:26
-msgid "Items per page:"
-msgstr "Items per page:"
-
-#: views/staging-log.php:32
-msgid "Save"
-msgstr "Save"
-
-#: views/staging-log.php:34
-msgid "Reset"
-msgstr "Reset"
-
-#: views/staging-log.php:39
-msgid "Log"
-msgstr "Log"
-
-#: views/staging-log.php:63
-#: views/staging-log.php:65
-msgid "Prev"
-msgstr "Prev"
-
-#: views/staging-log.php:132
-#: views/staging-log.php:134
-msgid "Next"
-msgstr "Next"
-
-#: views/staging-log.php:140
-msgid "No log found for selected date."
-msgstr "No log found for selected date."
+#: build/staging/bundle.js:1
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 
 #: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Production Site"
+msgid "An unknown error has occurred."
+msgstr "An unknown error has occurred."
 
 #: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Currently editing"
-
-#: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "Not currently editing"
+msgid "Cancel"
+msgstr "Cancel"
 
 #: build/staging/bundle.js:1
 msgid "Clone"
 msgstr "Clone"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Clone Action"
-msgstr "Confirm Clone Action"
-
-#: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-
-#: build/staging/bundle.js:1
 msgid "Clone to staging"
 msgstr "Clone to staging"
 
 #: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Staging Site"
+msgid "Cloned to Staging"
+msgstr "Cloned to Staging"
+
+#: includes/Staging.php:338
+msgid "Cloning can only be done from the production environment."
+msgstr "Cloning can only be done from the production environment."
 
 #: build/staging/bundle.js:1
-msgid "You don't have a staging site yet."
-msgstr "You don't have a staging site yet."
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Cloning production to staging, this should take about a minute."
+
+#: build/staging/bundle.js:1
+msgid "Confirm Clone Action"
+msgstr "Confirm Clone Action"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Confirm Delete"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Confirm Deployment"
 
 #: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr "Create staging site"
 
 #: build/staging/bundle.js:1
-msgid "Delete Staging Site"
-msgstr "Delete Staging Site"
+msgid "Created"
+msgstr "Created"
 
 #: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Creating a staging site, this should take about a minute."
+
+#: build/staging/bundle.js:1
+msgid "Currently editing"
+msgstr "Currently editing"
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Delete"
+
+#: build/staging/bundle.js:1
+msgid "Delete Staging Site"
+msgstr "Delete Staging Site"
 
 #: build/staging/bundle.js:1
 msgid "Deleted Staging"
@@ -230,56 +92,20 @@ msgid "Deleting the staging site, this should take about a minute."
 msgstr "Deleting the staging site, this should take about a minute."
 
 #: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "Cancel"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Cloned to Staging"
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Cloning production to staging, this should take about a minute."
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Staging Created"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Creating a staging site, this should take about a minute."
-
-#: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Created"
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Delete"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Confirm Delete"
-
-#: build/staging/bundle.js:1
 msgid "Deploy"
 msgstr "Deploy"
+
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Deploy Site"
 
 #: build/staging/bundle.js:1
 msgid "Deploy all changes"
 msgstr "Deploy all changes"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Confirm Deployment"
-
-#: build/staging/bundle.js:1
 msgid "Deploy database only"
 msgstr "Deploy database only"
-
-#: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
 
 #: build/staging/bundle.js:1
 msgid "Deploy files only"
@@ -293,21 +119,164 @@ msgstr "Deployed"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Deploying from staging to production, this should take about a minute."
 
-#: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Deploy Site"
+#: includes/Staging.php:708
+msgid "Don't have capabilities to access this page"
+msgstr "Don't have capabilities to access this page"
 
 #: build/staging/bundle.js:1
 msgid "Error"
 msgstr "Error"
 
+#: includes/StagingCLI.php:231
+msgid "Error: "
+msgstr "Error: "
+
+#: includes/Staging.php:598
+msgid "Filesystem credentials required."
+msgstr "Filesystem credentials required."
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr "Filter by date (YYYY-MM-DD):"
+
+#: includes/StagingCLI.php:96
+msgid "Invalid JSON response"
+msgstr "Invalid JSON response"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Invalid action"
+
+#. translators: Invalid character that was entered
+#: includes/Staging.php:576
+#, php-format
+msgid "Invalid character (%s) in command."
+msgstr "Invalid character (%s) in command."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Invalid deployment type"
+
+#: includes/Staging.php:509
+msgid "Invalid staging CLI command."
+msgstr "Invalid staging CLI command."
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Invalid user."
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr "Items per page:"
+
 #: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgid "Loading the production environment now."
+msgstr "Loading the production environment now."
+
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
+msgstr "Loading the staging environment now."
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr "Log"
+
+#: includes/Staging.php:694 views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Log Staging"
+
+#: views/staging-log.php:132 views/staging-log.php:134
+msgid "Next"
+msgstr "Next"
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
+msgstr "No log found for selected date."
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "No sub-command provided"
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr "Not currently editing"
+
+#: views/staging-log.php:63 views/staging-log.php:65
+msgid "Prev"
+msgstr "Prev"
 
 #: build/staging/bundle.js:1
 msgid "Proceed"
 msgstr "Proceed"
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr "Production DIR:"
+
+#: build/staging/bundle.js:1
+msgid "Production Site"
+msgstr "Production Site"
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr "Production URL:"
+
+#: includes/StagingCLI.php:280
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "Provided $data was not a valid array or JSON string."
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr "Reset"
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr "Save"
+
+#: includes/Staging.php:661
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Something gone wrong, please get in touch with our support."
+
+#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
+msgid "Staging"
+msgstr "Staging"
+
+#: includes/StagingMenu.php:33
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Staging"
+
+#: includes/StagingMenu.php:55
+msgid "Staging Actions"
+msgstr "Staging Actions"
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Staging Created"
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr "Staging DIR:"
+
+#: includes/StagingMenu.php:53
+msgid "Staging Environment"
+msgstr "Staging Environment"
+
+#: build/staging/bundle.js:1
+msgid "Staging Site"
+msgstr "Staging Site"
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr "Staging URL:"
+
+#: includes/Staging.php:363
+msgid "Staging environment already exists!"
+msgstr "Staging environment already exists!"
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr "Staging environment:"
 
 #: build/staging/bundle.js:1
 msgid "Switch"
@@ -318,41 +287,69 @@ msgid "Switch to Production"
 msgstr "Switch to Production"
 
 #: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "This will navigate you to the production environment"
-
-#: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "Loading the production environment now."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Switching to the production environment, this should take about a minute."
-
-#: build/staging/bundle.js:1
 msgid "Switch to Staging"
 msgstr "Switch to Staging"
 
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the staging environment"
-msgstr "This will navigate you to the staging environment"
-
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "Loading the staging environment now."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Switching to the staging environment, this should take about a minute."
+#: includes/Staging.php:419
+msgid "Switch to an environment you are already in, you cannot."
+msgstr "Switch to an environment you are already in, you cannot."
 
 #: build/staging/bundle.js:1
 msgid "Switching"
 msgstr "Switching"
 
 #: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "An unknown error has occurred."
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "Switching to the production environment, this should take about a minute."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Switching to the staging environment, this should take about a minute."
+
+#: includes/Staging.php:671
+msgid "The staging operation did not complete, please get in touch with our support."
+msgstr "The staging operation did not complete, please get in touch with our support."
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
+msgstr "This will navigate you to the production environment"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
+msgstr "This will navigate you to the staging environment"
+
+#: build/staging/bundle.js:1
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+
+#: includes/Staging.php:585
+msgid "Unable to execute script (disabled_function)."
+msgstr "Unable to execute script (disabled_function)."
+
+#: includes/Staging.php:609
+msgid "Unable to execute script (permission error)."
+msgstr "Unable to execute script (permission error)."
+
+#: includes/Staging.php:602
+msgid "Unable to initialize WP Filesystem."
+msgstr "Unable to initialise WP Filesystem."
 
 #: build/staging/bundle.js:1
 msgid "Working…"
 msgstr "Working..."
+
+#: build/staging/bundle.js:1
+msgid "You don't have a staging site yet."
+msgstr "You don't have a staging site yet."
+
+#: includes/Staging.php:397
+msgid "You must switch to the production environment before destroying staging."
+msgstr "You must switch to the production environment before destroying staging."
