@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-04-22T20:40:22+00:00\n"
+"PO-Revision-Date: 2026-08-20T07:37:38+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
@@ -19,58 +19,62 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: includes/Staging.php:331
+#: includes/Staging.php:338
 msgid "Cloning can only be done from the production environment."
 msgstr "La clonazione può essere fatta solo dall'ambiente di produzione."
 
-#: includes/Staging.php:356
+#: includes/Staging.php:363
 msgid "Staging environment already exists!"
 msgstr "L'ambiente di preproduzione esiste già!"
 
-#: includes/Staging.php:390
+#: includes/Staging.php:397
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Devi passare all'ambiente di produzione prima di eliminare la preproduzione."
 
-#: includes/Staging.php:412
+#: includes/Staging.php:419
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Passa a un ambiente in cui sei già, non puoi."
 
-#: includes/Staging.php:449
+#: includes/Staging.php:509
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI di preproduzione non valido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:505
+#: includes/Staging.php:576
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Carattere non valido (%s) nel comando."
 
-#: includes/Staging.php:514
+#: includes/Staging.php:585
 msgid "Unable to execute script (disabled_function)."
 msgstr "Impossibile eseguire lo script (disabled_function)."
 
-#: includes/Staging.php:527
+#: includes/Staging.php:598
 msgid "Filesystem credentials required."
 msgstr "Credenziali del file system richieste."
 
-#: includes/Staging.php:531
+#: includes/Staging.php:602
 msgid "Unable to initialize WP Filesystem."
 msgstr "Impossibile inizializzare il file system WP."
 
-#: includes/Staging.php:538
+#: includes/Staging.php:609
 msgid "Unable to execute script (permission error)."
 msgstr "Impossibile eseguire lo script (errore di autorizzazione)."
 
-#: includes/Staging.php:552
+#: includes/Staging.php:661
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Qualcosa è andato storto, per favore contattate il nostro supporto."
 
-#: includes/Staging.php:571
+#: includes/Staging.php:671
+msgid "The staging operation did not complete, please get in touch with our support."
+msgstr ""
+
+#: includes/Staging.php:694
 #: views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Stadio del tronco"
 
-#: includes/Staging.php:585
+#: includes/Staging.php:708
 msgid "Don't have capabilities to access this page"
 msgstr "Non ho la possibilità di accedere a questa pagina"
 
