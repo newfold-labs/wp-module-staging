@@ -220,6 +220,200 @@ normalize_fk_names() {
   return 0
 }
 
+normalize_trigger_names() {
+  local sql_file="$1"
+  local log_step="$2"
+  local name_prefix="${3:-}"
+  local tmp_err
+  local tmp_sql
+  local trigger_count
+  tmp_err=$(mktemp)
+  tmp_sql=$(mktemp)
+
+  log "INFO" "$log_step" "Normalizing/uniquifying trigger names"
+
+  set +e
+  NFD_TRIGGER_PREFIX="$name_prefix" perl -0777 -ne '
+    BEGIN {
+      our %seen = ();
+      our $prefix = $ENV{NFD_TRIGGER_PREFIX} // "";
+      our $max_len = 64;
+      our $count = 0;
+    }
+    sub build_trigger_base {
+      my ($raw) = @_;
+      my $base = $raw;
+      $base =~ s/^prod_//;
+      $base =~ s/^staging_// if $prefix ne "" && $prefix ne "staging_";
+      if ($prefix ne "" && $base !~ /^\Q$prefix\E/i) {
+        $base = $prefix . $base;
+      }
+      return $base;
+    }
+    sub alloc_trigger_name {
+      my ($raw) = @_;
+      my $base = build_trigger_base($raw);
+      $base = substr($base, 0, $max_len) if length($base) > $max_len;
+
+      my $name = $base;
+      my $i = 1;
+      while (exists $seen{lc $name}) {
+        my $suffix = "_" . $i;
+        my $max = $max_len - length($suffix);
+        my $stem = $max > 0 ? substr($base, 0, $max) : "";
+        $name = $stem . $suffix;
+        $i++;
+      }
+
+      $seen{lc $name} = 1;
+      return $name;
+    }
+
+    sub is_mysqldump_trigger_def {
+      my ($pos) = @_;
+      return 0 if $pos <= 0;
+      my $start = $pos > 600 ? $pos - 600 : 0;
+      my $before = substr($_, $start, $pos - $start);
+      return $before =~ /(?:\/\*!50003\s+CREATE|CREATE(?:\s+OR\s+REPLACE)?\s+TRIGGER|\/\*!50032\s+DROP\s+TRIGGER)/i;
+    }
+    sub is_reserved_trigger_name {
+      my ($raw) = @_;
+      return 1 if $raw =~ /^(?i:if|for|to|on|and|or|none)$/;
+      return 0;
+    }
+
+    my @creates;
+    my %raw_to_uniq;
+    my $create_re = qr/TRIGGER\s+(?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_]{2,}))(?=[\s\S]{0,120}?(?:\b(?:AFTER|BEFORE)\b|\bFOR\s+EACH\b))/i;
+    while (/$create_re/g) {
+      next unless is_mysqldump_trigger_def($-[0]);
+      my $raw = defined $1 ? $1 : $2;
+      next if is_reserved_trigger_name($raw);
+      push @creates, {
+        start => $-[0],
+        end   => $+[0],
+        raw   => $raw,
+      };
+    }
+
+    for my $create (@creates) {
+      next if exists $raw_to_uniq{lc $create->{raw}};
+      $raw_to_uniq{lc $create->{raw}} = alloc_trigger_name($create->{raw});
+    }
+
+    for my $create (reverse @creates) {
+      my $uniq = $raw_to_uniq{lc $create->{raw}};
+      $count++;
+      print STDERR "NFD_TRIGGER_NAME=$uniq\n";
+
+      my $trigger_start = $create->{start};
+      my $trigger_end = $create->{end};
+      my $trigger_text = substr($_, $trigger_start, $trigger_end - $trigger_start);
+      $trigger_text =~ s/TRIGGER\s+(?:`\Q$create->{raw}\E`|\Q$create->{raw}\E)/TRIGGER `$uniq`/i;
+      substr($_, $trigger_start, $trigger_end - $trigger_start, $trigger_text);
+    }
+
+    # Rewrite mysqldump /*!50032 DROP TRIGGER ... */ blocks (often before CREATE) so imports
+    # never drop production trigger names in a shared schema.
+    s{
+      (DROP\s+TRIGGER\s+IF\s+EXISTS\s+)
+      (?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_]{2,}))
+    }{
+      my $raw = defined $2 ? $2 : $3;
+      exists $raw_to_uniq{lc $raw}
+        ? $1 . "`$raw_to_uniq{lc $raw}`"
+        : $&
+    }ige;
+
+    print $_;
+    print STDERR "NFD_TRIGGER_COUNT=$count\n";
+  ' "$sql_file" >"$tmp_sql" 2>"$tmp_err"
+  local status=$?
+  set -e
+
+  if [ $status -ne 0 ]; then
+    if [ -s "$tmp_err" ]; then
+      while IFS= read -r line; do
+        log "ERROR" "$log_step" "$line"
+      done < "$tmp_err"
+    fi
+    rm -f "$tmp_err" "$tmp_sql"
+    return 1
+  fi
+
+  trigger_count=$(grep '^NFD_TRIGGER_COUNT=' "$tmp_err" | tail -n1 | cut -d= -f2 | tr -d '[:space:]')
+  log "INFO" "$log_step" "Normalized ${trigger_count:-0} trigger definition(s)"
+
+  if [ -n "$trigger_count" ] && [ "$trigger_count" != "0" ]; then
+    grep '^NFD_TRIGGER_NAME=' "$tmp_err" | cut -d= -f2 | sort -u > "${sql_file}.trigger-names"
+  else
+    : > "${sql_file}.trigger-names"
+  fi
+
+  if [ -z "$trigger_count" ] || [ "$trigger_count" = "0" ]; then
+    if grep -Eqi 'TRIGGER[[:space:]]+(`[^`]+`|[A-Za-z0-9_]+)' "$sql_file"; then
+      log "ERROR" "$log_step" "SQL dump contains TRIGGER statements but none were normalized."
+      rm -f "$tmp_err" "$tmp_sql"
+      return 1
+    fi
+  fi
+
+  if ! mv "$tmp_sql" "$sql_file"; then
+    log "ERROR" "$log_step" "Unable to replace SQL file with normalized trigger names."
+    rm -f "$tmp_err" "$tmp_sql"
+    return 1
+  fi
+
+  rm -f "$tmp_err"
+  return 0
+}
+
+# Drop triggers that will be created by the SQL dump before import.
+# Args: $1 = SQL file path, $2 = log step label.
+drop_triggers_from_sql_dump() {
+  local sql_file="$1"
+  local log_step="$2"
+
+  log "INFO" "$log_step" "Dropping triggers referenced in SQL dump before import"
+  set +e
+  local trigger_names
+  if [ -s "${sql_file}.trigger-names" ]; then
+    trigger_names=$(cat "${sql_file}.trigger-names")
+    rm -f "${sql_file}.trigger-names"
+  else
+    trigger_names=$(perl -0777 -ne '
+      my $create_re = qr/TRIGGER\s+`(staging_[A-Za-z0-9_]{3,})`(?=[\s\S]{0,120}?(?:\b(?:AFTER|BEFORE)\b|\bFOR\s+EACH\b))/i;
+      my %names;
+      while (/$create_re/g) {
+        $names{$1} = 1;
+      }
+      print "$_\n" for sort keys %names;
+    ' "$sql_file")
+  fi
+  set -e
+
+  if [ -z "$trigger_names" ]; then
+    log "INFO" "$log_step" "No trigger definitions found in SQL dump"
+    return 0
+  fi
+
+  while IFS= read -r trigger; do
+    [ -z "$trigger" ] && continue
+    log "INFO" "$log_step" "Dropping trigger if exists: $trigger"
+    set +e
+    local drop_out
+    drop_out=$(wp db query "DROP TRIGGER IF EXISTS \`$trigger\`;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+    local drop_status=$?
+    set -e
+    if [ $drop_status -ne 0 ]; then
+      log "ERROR" "$log_step" "Error dropping trigger $trigger: $drop_out"
+      return 1
+    fi
+  done <<< "$trigger_names"
+
+  return 0
+}
+
 rename_prefixed_keys_to_staging() {
   local wp_path="$1"
   local log_step="$2"
@@ -521,6 +715,71 @@ delete_temp_staging() {
   set -e
   log "ERROR" "delete_temp_staging" "$message"
   error "$message"
+}
+
+# Drop leftover staging triggers/tables before create import.
+# Uses production WP-CLI context: staging only has wp-config at this point, so
+# wp db tables against $STAGING_DIR can hang on an incomplete install.
+drop_staging_db_artifacts() {
+  local log_step="${1:-drop_staging_db_artifacts}"
+  local staging_table_like="staging_${DB_PREFIX}%"
+
+  log "INFO" "$log_step" "Dropping leftover staging triggers"
+  set +e
+  local triggers
+  triggers=$(wp db query "SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND (TRIGGER_NAME LIKE 'staging_%' OR EVENT_OBJECT_TABLE LIKE '${staging_table_like}');" --skip-column-names --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  local triggers_status=$?
+  set -e
+  if [ $triggers_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Error querying staging triggers: $triggers"
+    return 1
+  fi
+
+  if [ -n "$triggers" ]; then
+    while IFS= read -r trigger; do
+      [ -z "$trigger" ] && continue
+      log "INFO" "$log_step" "Dropping trigger: $trigger"
+      set +e
+      local drop_out
+      drop_out=$(wp db query "DROP TRIGGER IF EXISTS \`$trigger\`;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+      local drop_status=$?
+      set -e
+      if [ $drop_status -ne 0 ]; then
+        log "ERROR" "$log_step" "Error dropping trigger $trigger: $drop_out"
+        return 1
+      fi
+    done <<< "$triggers"
+  fi
+
+  log "INFO" "$log_step" "Dropping leftover staging tables"
+  set +e
+  local tables
+  tables=$(wp db query "SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type = 'BASE TABLE' AND table_name LIKE '${staging_table_like}';" --skip-column-names --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+  local tables_status=$?
+  set -e
+  if [ $tables_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Error querying staging tables: $tables"
+    return 1
+  fi
+
+  if [ -n "$tables" ]; then
+    while IFS= read -r table; do
+      [ -z "$table" ] && continue
+      log "INFO" "$log_step" "Dropping table: $table"
+      set +e
+      local drop_table_out
+      drop_table_out=$(wp db query "DROP TABLE IF EXISTS \`$table\`;" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1)
+      local drop_table_status=$?
+      set -e
+      if [ $drop_table_status -ne 0 ]; then
+        log "ERROR" "$log_step" "Error dropping table $table: $drop_table_out"
+        return 1
+      fi
+    done <<< "$tables"
+  fi
+
+  log "INFO" "$log_step" "Staging DB artifacts cleanup complete"
+  return 0
 }
 
 # --- Utility: Drop all views and tables robustly ---
@@ -915,7 +1174,6 @@ create() {
   sed -E \
     -e "s/\`${DB_PREFIX}([a-zA-Z0-9_]+)\`/\`staging_${DB_PREFIX}\\1\`/g" \
     -e "s/CONSTRAINT \`(prod_)?([^\`]+)\`/CONSTRAINT \`staging_\\2\`/g" \
-    -e "s/TRIGGER \`(prod_)?([^\`]+)\`/TRIGGER \`staging_\\2\`/g" \
     -e "s/\/\*\![0-9]+ DEFINER=[^*]*\*\///g" \
     "$STAGING_DIR/.export-sql" > "$tmpfile"
   PREFIX_STATUS=$?
@@ -930,6 +1188,11 @@ create() {
   if ! normalize_fk_names "$tmpfile" "create:update_prefix_sql" "staging_"; then
     log "ERROR" "create:update_prefix_sql" "Unable to normalize constraint names."
     delete_temp_staging 2 "Unable to normalize constraint names."
+  fi
+
+  if ! normalize_trigger_names "$tmpfile" "create:normalize_triggers" "staging_"; then
+    log "ERROR" "create:normalize_triggers" "Unable to normalize trigger names."
+    delete_temp_staging 2 "Unable to normalize trigger names."
   fi
   
   set +e
@@ -946,6 +1209,13 @@ create() {
   log "INFO" "create" "[STEP] Import database."
   local import_charset
   import_charset=$(resolve_db_charset "$STAGING_DIR")
+  log "INFO" "create" "[STEP] Drop leftover staging DB artifacts before import."
+  if ! drop_staging_db_artifacts "create:drop_staging_db_artifacts"; then
+    delete_temp_staging 2 "Unable to clean up leftover staging database objects."
+  fi
+  if ! drop_triggers_from_sql_dump "$STAGING_DIR/.export-sql" "create:drop_sql_triggers"; then
+    delete_temp_staging 2 "Unable to drop triggers referenced in SQL dump."
+  fi
   set +e
   DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   DISABLE_FK_STATUS=$?
@@ -1290,7 +1560,6 @@ clone() {
   sed -E \
     -e "s/\`${DB_PREFIX}([a-zA-Z0-9_]+)\`/\`staging_${DB_PREFIX}\\1\`/g" \
     -e "s/CONSTRAINT \`(prod_)?([^\`]+)\`/CONSTRAINT \`staging_\\2\`/g" \
-    -e "s/TRIGGER \`(prod_)?([^\`]+)\`/TRIGGER \`staging_\\2\`/g" \
     "$STAGING_DIR/.export-sql" > "$tmpfile"
 
   if [ $? -ne 0 ]; then
@@ -1304,10 +1573,19 @@ clone() {
     delete_temp_staging 2 "Unable to normalize constraint names."
   fi
 
+  if ! normalize_trigger_names "$tmpfile" "clone:normalize_triggers" "staging_"; then
+    log "ERROR" "clone:normalize_triggers" "Unable to normalize trigger names."
+    delete_temp_staging 2 "Unable to normalize trigger names."
+  fi
+
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
   if [ $? -ne 0 ]; then
     log "ERROR" "clone:sed_prefix" "Unable to overwrite SQL file with temp file."
     delete_temp_staging 2 "Unable to update database prefix."
+  fi
+
+  if ! drop_triggers_from_sql_dump "$STAGING_DIR/.export-sql" "clone:drop_sql_triggers"; then
+    delete_temp_staging 2 "Unable to drop triggers referenced in SQL dump."
   fi
 
 
@@ -1602,7 +1880,7 @@ rewrite_htaccess() {
 }
 
 # --- Main Entrypoint ---
-if [[ $(pwd) == *"staging"* ]]; then
+if [[ $(pwd) == *"/staging/"* ]]; then
   CURRENT_DIR=$STAGING_DIR
 else
   CURRENT_DIR=$PRODUCTION_DIR
