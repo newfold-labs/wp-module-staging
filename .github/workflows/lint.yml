@@ -13,6 +13,8 @@ on:
       - '!build/**/*.php'
   workflow_dispatch:
 
+# Disable permissions for all available scopes by default.
+# Any needed permissions should be configured at the job level.
 permissions: {}
 
 concurrency:
@@ -26,6 +28,7 @@ jobs:
     permissions:
       contents: read       # Required to clone the repository (checkout).
       pull-requests: read  # Required for technote-space/get-diff-action to call the GitHub API on pull_request events.
+    timeout-minutes: 30
     steps:
 
       - name: Checkout

@@ -22,6 +22,7 @@ jobs:
   auto-merge:
     name: Auto-merge Dependabot PRs
     uses: newfold-labs/workflows/.github/workflows/reusable-dependabot-auto-merge.yml@main
+    timeout-minutes: 30
     with:
       merge-method: squash
       update-types: patch,minor

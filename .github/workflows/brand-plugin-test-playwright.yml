@@ -6,8 +6,9 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Disable permissions for all available scopes by default.
+# Any needed permissions should be configured at the job level.
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
@@ -17,8 +18,8 @@ jobs:
   setup:
     name: Setup
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    permissions: {}
+    timeout-minutes: 5
     outputs:
       branch: ${{ steps.extract_branch.outputs.branch }}
     steps:
@@ -31,9 +32,10 @@ jobs:
   bluehost:
     name: Bluehost Build and Test Playwright
     needs: setup
-    permissions:
-      contents: read
     uses: newfold-labs/workflows/.github/workflows/module-plugin-test-playwright.yml@main
+    permissions:
+      contents: read # Required so the reusable workflow can clone this repository.
+    timeout-minutes: 90
     with:
       module-repo: ${{ github.repository }}
       module-branch: ${{ needs.setup.outputs.branch }}
