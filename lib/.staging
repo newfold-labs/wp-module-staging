@@ -323,7 +323,7 @@ normalize_trigger_names() {
       exists $raw_to_uniq{lc $raw}
         ? $1 . "`$raw_to_uniq{lc $raw}`"
         : $&
-    }ige;
+    }igex;
 
     print $_;
     print STDERR "NFD_TRIGGER_COUNT=$count\n";
@@ -365,6 +365,215 @@ normalize_trigger_names() {
   fi
 
   rm -f "$tmp_err"
+  return 0
+}
+
+# Rewrite the table identifiers inside trigger definitions so each environment's triggers fire on
+# that environment's tables. Production and staging share one schema and are separated only by
+# table prefix, but trigger names are unique per schema, so normalize_trigger_names has to rename
+# the trigger while the table it attaches to must still be prefixed. mysqldump frequently emits the
+# ON clause and body table references unquoted, which the backtick-only prefix rewrites in
+# create/clone/deploy do not match, leaving a staging_-named trigger bound to the production table.
+#
+# Only the region from the end of the trigger name to the end of its body is touched, so DEFINER
+# users, trigger names and the rest of the dump are left alone. Backtick-quoted identifiers and
+# string literals are tokenized out so a prefix appearing inside a literal is never rewritten.
+# Matches are emitted backtick-quoted, which is what the reverse rewrite on deploy expects.
+#
+# Args: $1 = SQL file path, $2 = log step label, $3 = production table prefix,
+#       $4 = target table prefix ("staging_" for staging, "" for production).
+# Returns 0 on success, 1 on failure.
+rewrite_trigger_table_refs() {
+  local sql_file="$1"
+  local log_step="$2"
+  local db_prefix="$3"
+  local target_prefix="${4:-}"
+  local tmp_err
+  local tmp_sql
+  local rewrite_count
+  local skipped_count
+  local errexit_state=0
+
+  if [ -z "$db_prefix" ]; then
+    log "ERROR" "$log_step" "Table prefix is empty; refusing to rewrite trigger table references."
+    return 1
+  fi
+
+  log "INFO" "$log_step" "Rewriting trigger table references to prefix '${target_prefix}${db_prefix}'"
+
+  tmp_err=$(mktemp)
+  tmp_sql=$(mktemp)
+
+  case "$-" in
+    *e*) errexit_state=1 ;;
+  esac
+
+  set +e
+  NFD_DB_PREFIX="$db_prefix" NFD_TABLE_PREFIX="$target_prefix" perl -0777 -ne '
+    BEGIN {
+      our $db_prefix = $ENV{NFD_DB_PREFIX} // "";
+      our $target = $ENV{NFD_TABLE_PREFIX} // "";
+      our $count = 0;
+      our $skipped = 0;
+    }
+
+    sub is_mysqldump_trigger_def {
+      my ($pos) = @_;
+      return 0 if $pos <= 0;
+      my $start = $pos > 600 ? $pos - 600 : 0;
+      my $before = substr($_, $start, $pos - $start);
+      return $before =~ /(?:\/\*!50003\s+CREATE|CREATE(?:\s+OR\s+REPLACE)?\s+TRIGGER)/i;
+    }
+
+    # Returns the environment-correct table name, or undef when the identifier is not one of
+    # our tables (a column, a keyword, or a table belonging to some other application).
+    sub target_table_name {
+      my ($name) = @_;
+      return undef unless $name =~ /\A(?:staging_)?\Q$db_prefix\E[A-Za-z0-9_]+\z/i;
+      my $bare = $name;
+      $bare =~ s/\Astaging_//i;
+      return $target . $bare;
+    }
+
+    sub rewrite_unquoted {
+      my ($chunk) = @_;
+      $chunk =~ s{(?<![`.\w])((?:staging_)?\Q$db_prefix\E[A-Za-z0-9_]+)(?![`\w])}{
+        my $t = target_table_name($1);
+        defined $t ? chr(96) . $t . chr(96) : $1;
+      }gex;
+      return $chunk;
+    }
+
+    sub rewrite_span {
+      my ($text) = @_;
+      my $out = "";
+      while (length $text) {
+        if ($text =~ /\A(`(?:[^`]|``)*`)/s) {
+          my $tok = $1;
+          my $t = target_table_name(substr($tok, 1, length($tok) - 2));
+          $out .= defined $t ? chr(96) . $t . chr(96) : $tok;
+          $text = substr($text, length($tok));
+        } elsif ($text =~ /\A(\x27(?:[^\x27\\]|\\.|\x27\x27)*\x27|\x22(?:[^\x22\\]|\\.|\x22\x22)*\x22)/s) {
+          $out .= $1;
+          $text = substr($text, length($1));
+        } else {
+          my $tok = $text =~ /\A([^`\x27\x22]+)/s ? $1 : substr($text, 0, 1);
+          $out .= rewrite_unquoted($tok);
+          $text = substr($text, length($tok));
+        }
+      }
+      return $out;
+    }
+
+    my @spans;
+    my $create_re = qr/TRIGGER\s+(?:`[^`]+`|[A-Za-z_][A-Za-z0-9_]{2,})(?=[\s\S]{0,120}?(?:\b(?:AFTER|BEFORE)\b|\bFOR\s+EACH\b))/i;
+    while (/$create_re/g) {
+      my $match_start = $-[0];
+      my $body_start = $+[0];
+      next unless is_mysqldump_trigger_def($match_start);
+
+      # The body must be delimited before it can be rewritten: without a known end we would be
+      # editing the rest of the dump, table data included. mysqldump wraps every trigger in
+      # DELIMITER ;; ... DELIMITER ;, so an undelimited body means an unrecognized layout.
+      my $rest = substr($_, $body_start);
+      my $len;
+      if ($rest =~ /\n\s*DELIMITER\s*;\s*(?:\n|\z)/i) {
+        $len = $+[0];
+      } elsif ($rest =~ /;;/) {
+        $len = $+[0];
+      } else {
+        $skipped++;
+        next;
+      }
+
+      push @spans, [ $body_start, $body_start + $len ];
+    }
+
+    for my $span (reverse @spans) {
+      my ($s, $e) = @$span;
+      my $text = substr($_, $s, $e - $s);
+      my $new = rewrite_span($text);
+      next if $new eq $text;
+      $count++;
+      substr($_, $s, $e - $s, $new);
+    }
+
+    print $_;
+    print STDERR "NFD_TRIGGER_TABLE_COUNT=$count\n";
+    print STDERR "NFD_TRIGGER_TABLE_SKIPPED=$skipped\n";
+  ' "$sql_file" >"$tmp_sql" 2>"$tmp_err"
+  local status=$?
+
+  if [ "$errexit_state" -eq 1 ]; then
+    set -e
+  fi
+
+  if [ $status -ne 0 ]; then
+    if [ -s "$tmp_err" ]; then
+      while IFS= read -r line; do
+        log "ERROR" "$log_step" "$line"
+      done < "$tmp_err"
+    fi
+    rm -f "$tmp_err" "$tmp_sql"
+    return 1
+  fi
+
+  rewrite_count=$(grep '^NFD_TRIGGER_TABLE_COUNT=' "$tmp_err" | tail -n1 | cut -d= -f2 | tr -d '[:space:]')
+  log "INFO" "$log_step" "Rewrote table references in ${rewrite_count:-0} trigger definition(s)"
+
+  skipped_count=$(grep '^NFD_TRIGGER_TABLE_SKIPPED=' "$tmp_err" | tail -n1 | cut -d= -f2 | tr -d '[:space:]')
+  if [ -n "$skipped_count" ] && [ "$skipped_count" != "0" ]; then
+    log "WARNING" "$log_step" "Skipped ${skipped_count} trigger definition(s) with an undelimited body; their table references were left as dumped."
+  fi
+
+  if ! mv "$tmp_sql" "$sql_file"; then
+    log "ERROR" "$log_step" "Unable to replace SQL file with rewritten trigger table references."
+    rm -f "$tmp_err" "$tmp_sql"
+    return 1
+  fi
+
+  rm -f "$tmp_err"
+  return 0
+}
+
+# Report staging-named triggers that ended up bound to production tables. Both environments live
+# in one schema, so a mismatch here means production writes fire staging's triggers as well as
+# their own. Advisory only: the triggers belong to plugin data, not to staging itself, so a
+# mismatch is logged for diagnosis rather than failing an otherwise complete run.
+# Args: $1 = WP path to query through, $2 = log step label.
+verify_trigger_table_bindings() {
+  local wp_path="$1"
+  local log_step="$2"
+  local mismatches
+  local status
+  local errexit_state=0
+
+  case "$-" in
+    *e*) errexit_state=1 ;;
+  esac
+
+  set +e
+  mismatches=$(wp db query "SELECT CONCAT(TRIGGER_NAME, ' -> ', EVENT_OBJECT_TABLE) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME LIKE 'staging_%' AND EVENT_OBJECT_TABLE NOT LIKE 'staging_%';" --skip-column-names --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  status=$?
+  if [ "$errexit_state" -eq 1 ]; then
+    set -e
+  fi
+
+  if [ $status -ne 0 ]; then
+    log "WARNING" "$log_step" "Unable to verify trigger table bindings: $mismatches"
+    return 0
+  fi
+
+  if [ -z "$mismatches" ]; then
+    log "INFO" "$log_step" "All staging triggers are bound to staging tables."
+    return 0
+  fi
+
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    log "WARNING" "$log_step" "Staging trigger bound to a non-staging table: $line"
+  done <<< "$mismatches"
+
   return 0
 }
 
@@ -1247,6 +1456,11 @@ create() {
     log "ERROR" "create:normalize_triggers" "Unable to normalize trigger names."
     delete_temp_staging 2 "Unable to normalize trigger names."
   fi
+
+  if ! rewrite_trigger_table_refs "$tmpfile" "create:trigger_tables" "$DB_PREFIX" "staging_"; then
+    log "ERROR" "create:trigger_tables" "Unable to rewrite trigger table references."
+    delete_temp_staging 2 "Unable to rewrite trigger table references."
+  fi
   
   set +e
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
@@ -1302,6 +1516,8 @@ create() {
     done <<< "$ENABLE_FK_OUTPUT"
     delete_temp_staging 3 "Unable to re-enable foreign key checks after import."
   fi
+
+  verify_trigger_table_bindings "$PRODUCTION_DIR" "create:verify_trigger_tables"
 
   # Rename before any WP-CLI command boots WordPress (otherwise default staging_wp_user_roles is created and blocks rename).
   log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
@@ -1634,6 +1850,11 @@ clone() {
     delete_temp_staging 2 "Unable to normalize trigger names."
   fi
 
+  if ! rewrite_trigger_table_refs "$tmpfile" "clone:trigger_tables" "$DB_PREFIX" "staging_"; then
+    log "ERROR" "clone:trigger_tables" "Unable to rewrite trigger table references."
+    delete_temp_staging 2 "Unable to rewrite trigger table references."
+  fi
+
   mv "$tmpfile" "$STAGING_DIR/.export-sql"
   if [ $? -ne 0 ]; then
     log "ERROR" "clone:sed_prefix" "Unable to overwrite SQL file with temp file."
@@ -1650,6 +1871,7 @@ clone() {
   local import_charset
   import_charset=$(resolve_db_charset "$STAGING_DIR")
   run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --skip-themes --skip-plugins --quiet
+  verify_trigger_table_bindings "$PRODUCTION_DIR" "clone:verify_trigger_tables"
   log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
   if ! rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"; then
     delete_temp_staging 3 "Unable to rename prefix-dependent keys in staging DB."
@@ -1810,6 +2032,10 @@ deploy_db() {
     log "INFO" "deploy_db" "Normalizing/uniquifying constraint names for production"
     if ! normalize_fk_names "$TMP_PREFIX_FILE" "deploy_db" "prod_"; then
       fail_and_exit "Unable to normalize constraint names."
+    fi
+
+    if ! rewrite_trigger_table_refs "$TMP_PREFIX_FILE" "deploy_db:trigger_tables" "$DB_PREFIX" ""; then
+      fail_and_exit "Unable to rewrite trigger table references."
     fi
     
     mv "$TMP_PREFIX_FILE" "$STAGING_DIR/.export-sql"
