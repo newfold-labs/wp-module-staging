@@ -23,6 +23,13 @@ class Staging {
 	 */
 	const PAGE_SLUG = 'nfd-staging';
 
+	/**
+	 * Seconds the staging auth token stays valid for.
+	 *
+	 * @var int
+	 */
+	const AUTH_TOKEN_TTL = 300;
+
 
 	/**
 	 * Constructor.
@@ -421,6 +428,47 @@ class Staging {
 	}
 
 	/**
+	 * Drop the cached copies of every option lib/.staging touches.
+	 *
+	 * The script runs WP-CLI with the object-cache drop-in skipped so a broken drop-in cannot kill
+	 * it, which means its option writes reach the database without evicting the copies a live
+	 * persistent cache is still serving. That is not merely stale data. update_option() here reads
+	 * the cached value, concludes the row still exists, issues an UPDATE that matches nothing and
+	 * returns false, so the write is dropped and the option can never be changed again until the
+	 * key is evicted.
+	 *
+	 * The script cannot always fix this itself: in the case that motivated all of this the drop-in
+	 * works for web requests but dies under WP-CLI, so the CLI has no route to the cache while this
+	 * request does.
+	 *
+	 * Known limit: this only reaches the install it runs in. The Newfold drop-in namespaces its
+	 * keys by table prefix, so a deploy, which is driven from the staging site, cannot evict
+	 * production's keys from here. lib/.staging makes a best effort pass over the production path
+	 * for that direction; on a site whose drop-in is broken under WP-CLI both are no-ops and
+	 * production's cached options stay stale until they are evicted by other means.
+	 *
+	 * @return void
+	 */
+	protected function resync_object_cache() {
+		if ( ! wp_using_ext_object_cache() ) {
+			return;
+		}
+
+		$keys = array(
+			'staging_auth_token',
+			'staging_config',
+			'staging_environment',
+			'nfd_coming_soon',
+			'alloptions',
+			'notoptions',
+		);
+
+		foreach ( $keys as $key ) {
+			wp_cache_delete( $key, 'options' );
+		}
+	}
+
+	/**
 	 * Execute a staging CLI command.
 	 *
 	 * @param string     $command CLI command to be run.
@@ -429,6 +477,18 @@ class Staging {
 	 * @return array|\WP_Error
 	 */
 	protected function runCommand( $command, $args = null ) {
+		// $command is rebuilt into the escaped argument string below, so keep the name to test against.
+		$command_name = $command;
+
+		/*
+		 * Before anything reads or writes an option below. A previous run may have left the cache
+		 * out of step with the database, and update_option() silently drops writes in that state,
+		 * including the staging_config write further down. compat_check is exempt because it writes
+		 * nothing and consuming plugins may call it often enough for the eviction cost to matter.
+		 */
+		if ( 'compat_check' !== $command_name ) {
+			$this->resync_object_cache();
+		}
 
 		$allowedCommands = array(
 			'clone'           => true,
@@ -470,7 +530,18 @@ class Staging {
 		}
 
 		$token = wp_generate_password( 32, false );
-		set_transient( 'staging_auth_token', $token, 300 );
+
+		/*
+		 * Handed to lib/.staging, which runs WP-CLI with the object-cache drop-in skipped so a
+		 * broken drop-in cannot corrupt the JSON this method parses back. That makes
+		 * wp_using_ext_object_cache() false in the script while it is true in this request, and
+		 * set_transient() follows that flag: the token would be written to the object cache here
+		 * and looked for in wp_options there. An option is database backed on both sides.
+		 *
+		 * The expiry is carried in the value because options have no TTL. auth_action() in the
+		 * script splits on the "." and deletes the option as soon as it reads it, which preserves
+		 * the single-use behaviour the transient gave us.
+		 */
 
 		$plugin_basename = explode( '/', container()->plugin()->basename );
 
@@ -543,18 +614,70 @@ class Staging {
 
 		do_action( 'newfold_staging_command', $command ); // bh_staging_command
 
-		$json = exec( "{$script} {$command}" ); // phpcs:ignore
+		/*
+		 * Written last, once every check above has passed. Anything that returns before this point
+		 * never reaches the delete below and never runs the script that would consume the token,
+		 * so persisting it earlier would strand a live credential in wp_options.
+		 */
+		update_option(
+			'staging_auth_token',
+			$token . '.' . ( time() + self::AUTH_TOKEN_TTL ),
+			false
+		);
 
-		// Check if we can properly decode the JSON
-		$response = json_decode( $json, true );
+		$output      = array();
+		$exit_status = 0;
+		exec( "{$script} {$command}", $output, $exit_status ); // phpcs:ignore
 
-		if ( ! $response ) {
+		// The script wrote options with the cache bypassed, so put the two back in sync.
+		if ( 'compat_check' !== $command_name ) {
+			$this->resync_object_cache();
+		}
+
+		/*
+		 * auth_action() consumes the token, but only on the paths that reach it. compat_check exits
+		 * before authenticating, and the script can die earlier than that. Unlike the transient this
+		 * replaced, an option does not expire on its own, so an uncollected token would sit in
+		 * wp_options in plain text and travel into every database export.
+		 */
+		delete_option( 'staging_auth_token' );
+
+		/*
+		 * Take the last line that actually parses as one of our responses rather than assuming the
+		 * script's own output is the last thing on stdout. A drop-in, a PHP notice or any other
+		 * stray write would otherwise be handed to json_decode() and turn a working run into the
+		 * generic failure below. Every response the script emits carries a "status" key.
+		 */
+		$response = null;
+		for ( $i = count( $output ) - 1; $i >= 0; $i-- ) {
+			$decoded = json_decode( trim( $output[ $i ] ), true );
+			if ( is_array( $decoded ) && isset( $decoded['status'] ) ) {
+				$response = $decoded;
+				break;
+			}
+		}
+
+		if ( null === $response ) {
 			return new \WP_Error( 'json_decode', __( 'Something gone wrong, please get in touch with our support.', 'wp-module-staging' ) );
 		}
 
-		// Check if response is an error response.
-		if ( isset( $response->status, $response->message ) && 'error' === $response->status ) {
-			return new \WP_Error( 'error_response', $response->message );
+		/*
+		 * Some commands print their success line and then keep working (deploy_db cleans up its
+		 * backup and runs the exit trap afterwards). If the script died during that tail we would
+		 * otherwise find the success line and report a run that did not finish as successful, so
+		 * the exit status has the final say.
+		 */
+		if ( 0 !== $exit_status && 'error' !== $response['status'] ) {
+			return new \WP_Error( 'error_response', __( 'The staging operation did not complete, please get in touch with our support.', 'wp-module-staging' ) );
+		}
+
+		/*
+		 * Array access, not object access: json_decode() above is associative, so the previous
+		 * $response->status test could never match and error messages from the script were
+		 * silently returned to the caller as if they were successful responses.
+		 */
+		if ( isset( $response['status'], $response['message'] ) && 'error' === $response['status'] ) {
+			return new \WP_Error( 'error_response', $response['message'] );
 		}
 
 		wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
