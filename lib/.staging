@@ -129,8 +129,12 @@ release_staging_lock() {
 }
 
 # --- Error Handling ---
+# The JSON goes out first: it is the only thing the PHP side can read, and logging is best effort
+# (the log directory may not be creatable). `|| true` keeps a failing log() from taking the script
+# down under set -e after the response has already been printed.
 error() {
   printf '{"status":"error","message":"%s"}\n' "$1"
+  log "ERROR" "${2:-error}" "$1" || true
   release_staging_lock
   exit 1
 }
@@ -459,7 +463,12 @@ auth_action() {
   if [ ! -d "$CURRENT_DIR" ]; then
     mkdir -p "$CURRENT_DIR" || error 'Unable to create directory.'
   fi
-  cd "$CURRENT_DIR" || error 'Unable to switch directory.'
+  cd "$CURRENT_DIR" || error 'Unable to switch directory.' 'auth_action:cd_failed'
+
+  # CURRENT_DIR decides which install the token is read from, and it is inferred from pwd, so record
+  # it: reading production's token from the staging path (or the reverse) looks identical to a
+  # missing token from the outside.
+  log "INFO" "auth_action" "Reading token from $CURRENT_DIR (pwd was $(pwd))"
 
   # Staging::runCommand() stores this as an option in the form "<token>.<expiry epoch>", not as a
   # transient. Transients follow wp_using_ext_object_cache(), which is true for the web request that
@@ -469,29 +478,46 @@ auth_action() {
   # `|| true` because wp exits non-zero when the option is absent, and `set -e` would otherwise
   # kill the script here with no JSON on stdout at all. An already consumed or missing token has
   # to fall through to the authentication error below.
-  STORED=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
-  STORED_TOKEN=${STORED%%.*}
-  STORED_EXPIRES=${STORED##*.}
+  STORED_RAW=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
 
   # Consume it up front so a single token can never be replayed, whatever the outcome below.
   wp option delete staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true
 
-  if [ -z "$STORED_TOKEN" ] || [ "$1" != "$STORED_TOKEN" ]; then
-    error 'Unable to authenticate the action.'
+  # WP-CLI shares stdout with PHP itself. A notice, deprecation or warning raised while WordPress
+  # boots (WP_DEBUG_DISPLAY on, a noisy mu-plugin, a BOM before wp-config.php's opening tag) is
+  # printed ahead of the option value, and the old ${STORED%%.*} split would then take that text as
+  # the token and fail every handshake. Keep only the line that has the shape runCommand() wrote:
+  # an alphanumeric token, a dot, then an epoch. `|| true` because grep exits 1 on no match.
+  STORED=$(printf '%s\n' "$STORED_RAW" | grep -E '^[A-Za-z0-9]+\.[0-9]+$' | tail -n1 || true)
+  STORED_TOKEN=${STORED%%.*}
+  STORED_EXPIRES=${STORED##*.}
+
+  if [ -z "$STORED_TOKEN" ]; then
+    # Distinguish "nothing was there" from "something was there but was not a token", because the
+    # two have completely different causes: a dropped update_option() versus polluted stdout.
+    if [ -z "$STORED_RAW" ]; then
+      error 'Unable to authenticate the action.' 'auth_action:token_missing'
+    fi
+    log "ERROR" "auth_action" "Unexpected output before the token: $(printf '%s' "$STORED_RAW" | head -n1)"
+    error 'Unable to authenticate the action.' 'auth_action:token_unparseable'
+  fi
+
+  if [ "$1" != "$STORED_TOKEN" ]; then
+    error 'Unable to authenticate the action.' 'auth_action:token_mismatch'
   fi
 
   # Digits only, and short enough that `[ -le ]` can actually compare it. Without the length
   # bound a value like 99999999999999999999999999 makes `[` fail with "integer expression
   # expected" and return 2, which `if` reads as false, and the token would be accepted.
   case "$STORED_EXPIRES" in
-    ''|*[!0-9]*) error 'Unable to authenticate the action.' ;;
+    ''|*[!0-9]*) error 'Unable to authenticate the action.' 'auth_action:expiry_not_numeric' ;;
   esac
   if [ "${#STORED_EXPIRES}" -gt 10 ]; then
-    error 'Unable to authenticate the action.'
+    error 'Unable to authenticate the action.' 'auth_action:expiry_out_of_range'
   fi
 
   if [ "$STORED_EXPIRES" -le "$(date +%s)" ]; then
-    error 'Unable to authenticate the action.'
+    error 'Unable to authenticate the action.' 'auth_action:token_expired'
   fi
 
   log "SUCCESS" "auth_action" "Authentication successful."
