@@ -15,6 +15,40 @@ fi
 
 # --- Parse parameters and set globals early (needed for logging path) ---
 export PATH=/usr/local/bin:$PATH
+
+# --- WP-CLI wrapper: skip the object-cache drop-in for the duration of staging operations ---
+#
+# WordPress loads wp-content/object-cache.php on every WP-CLI bootstrap, and it is NOT skipped by
+# --skip-plugins/--skip-themes. When that drop-in's backend is unreachable -- daemon down, rotated
+# credentials, or a foreign drop-in migrated in from another host -- it can print warnings or die
+# outright. Either way the JSON this script returns to the module is lost and create/clone/deploy
+# fail with a generic error even though staging itself is fine (RCA: INC1596374).
+#
+# Two mechanisms, because neither covers everything on its own:
+#   1. enable_loading_object_cache_dropin (WP 5.8+) is core's own switch for exactly this, and it
+#      works for ANY drop-in, not just Redis ones. WP_CLI::add_wp_hook registers it before WP boots.
+#   2. WP_REDIS_DISABLED covers the case where advanced-cache.php pulled the drop-in in before
+#      wp_start_object_cache() got to run the filter.
+#
+# The filter returns false only when the drop-in is not already in memory. Returning a flat false
+# is not safe: when advanced-cache.php has already required object-cache.php (Batcache does this),
+# core skips the branch that would call wp_using_ext_object_cache( true ), then requires
+# wp-includes/cache.php, which redeclares the 21 wp_cache_* functions the drop-in just defined and
+# fatals every command this script runs. Reporting the drop-in as loaded lets core take that branch
+# and leaves mechanism 2 to neutralize it.
+#
+# IMPORTANT: this makes wp_using_ext_object_cache() false inside these subprocesses while it stays
+# true for the site's web requests. Anything this script shares with PHP must therefore live
+# somewhere that does not move with the cache. Options are database backed and safe. Transients are
+# NOT: they follow the object cache, so a value written by PHP would be invisible here. That is why
+# auth_action() below reads an option rather than a transient.
+NFD_WP_EXEC="defined('WP_REDIS_DISABLED') || define('WP_REDIS_DISABLED', true);"
+NFD_WP_EXEC="${NFD_WP_EXEC} if ( class_exists('WP_CLI') && method_exists('WP_CLI', 'add_wp_hook') ) { WP_CLI::add_wp_hook('enable_loading_object_cache_dropin', function () { return function_exists('wp_cache_init'); }); }"
+
+wp() {
+  command wp --exec="$NFD_WP_EXEC" "$@"
+}
+
 PRODUCTION_DIR=$3
 STAGING_DIR=$4
 PRODUCTION_URL=$5
@@ -67,6 +101,28 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
 }
 
+# Prefer utf8mb4 for 4-byte characters; fall back to utf8 on older servers.
+resolve_db_charset() {
+  local wp_path="$1"
+
+  if [ -n "${DB_CHARSET:-}" ]; then
+    log "DEBUG" "charset" "Using DB_CHARSET=$DB_CHARSET (from environment) for $wp_path"
+    echo "$DB_CHARSET"
+    return
+  fi
+
+  local charset=utf8mb4
+  local charset_name
+  charset_name=$(wp db query "SHOW CHARACTER SET LIKE 'utf8mb4';" --skip-column-names --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null | awk 'NR==1 {print $1}')
+  if [ "$charset_name" != "utf8mb4" ]; then
+    charset=utf8
+    log "DEBUG" "charset" "utf8mb4 unavailable at $wp_path; using utf8"
+  else
+    log "DEBUG" "charset" "Using utf8mb4 at $wp_path"
+  fi
+  echo "$charset"
+}
+
 # --- Staging lock (WordPress transient) ---
 release_staging_lock() {
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
@@ -103,25 +159,138 @@ run_or_fail() {
   fi
 }
 
+# Normalize foreign-key constraint names in a SQL dump file.
+# MySQL limits identifiers to 64 characters and requires schema-wide FK name uniqueness.
+# Prefix rewrites during staging create/clone/deploy can produce names that exceed the
+# limit or collide after truncation; this step truncates long names and appends _1, _2,
+# ... suffixes for any collisions (case-insensitive, scoped to the file being processed).
+# An optional name prefix (e.g. staging_ or prod_) avoids collisions with FK names already
+# present in the target schema when production and staging tables share one database.
+# Only FOREIGN KEY constraints are rewritten; UNIQUE/PRIMARY/CHECK symbols are left alone.
+# Args: $1 = SQL file path, $2 = log step label, $3 = optional FK name prefix (default none).
+# Returns 0 on success, 1 on failure.
+normalize_fk_names() {
+  local sql_file="$1"
+  local log_step="$2"
+  local name_prefix="${3:-}"
+  local tmp_err
+  tmp_err=$(mktemp)
+
+  set +e
+  NFD_FK_PREFIX="$name_prefix" perl -i -pe '
+    BEGIN {
+      our %seen = ();
+      our $prefix = $ENV{NFD_FK_PREFIX} // "";
+      our $max_len = 64;
+    }
+    s/\bCONSTRAINT\s+(?:`([^`]+)`|([A-Za-z0-9_]+))(?=\s+FOREIGN\s+KEY)/do {
+      my $base = defined $1 ? $1 : $2;
+      if ($prefix ne "" && $base !~ m#^\Q$prefix\E#i) {
+        $base = $prefix . $base;
+      }
+      $base = substr($base, 0, $max_len) if length($base) > $max_len;
+
+      my $name = $base;
+      my $i = 1;
+      while (exists $seen{lc $name}) {
+        my $suffix = "_" . $i;
+        my $max = $max_len - length($suffix);
+        my $stem = $max > 0 ? substr($base, 0, $max) : "";
+        $name = $stem . $suffix;
+        $i++;
+      }
+      $seen{lc $name} = 1;
+      "CONSTRAINT `$name`";
+    }/gei
+  ' "$sql_file" 2>"$tmp_err"
+  local status=$?
+  set -e
+
+  if [ $status -ne 0 ]; then
+    if [ -s "$tmp_err" ]; then
+      while IFS= read -r line; do
+        log "ERROR" "$log_step" "$line"
+      done < "$tmp_err"
+    fi
+    rm -f "$tmp_err"
+    return 1
+  fi
+
+  rm -f "$tmp_err"
+  return 0
+}
 
 rename_prefixed_keys_to_staging() {
   local wp_path="$1"
   local log_step="$2"
+  local db_prefix_like
+  local query_output
+  local failed=0
+  local like_escape_suffix=" ESCAPE '\\\\'"
+  local staging_options_table="staging_${DB_PREFIX}options"
+  local staging_usermeta_table="staging_${DB_PREFIX}usermeta"
+  # Escape LIKE wildcards in DB_PREFIX so _ and % match literally in SQL LIKE patterns.
+  db_prefix_like=$(printf '%s' "$DB_PREFIX" | sed 's/[_%]/\\&/g')
   log "INFO" "$log_step" "Renaming prefix-dependent option names and meta keys to staging prefix"
   set +e
-  wp db query "UPDATE \`staging_${DB_PREFIX}options\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${DB_PREFIX}%';" \
-    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
+  # Remove auto-created staging-prefixed rows when the imported copy still uses production prefix names.
+  query_output=$(wp db query "DELETE o1 FROM \`${staging_options_table}\` o1 INNER JOIN \`${staging_options_table}\` o2 ON o2.option_name = REPLACE(o1.option_name, 'staging_', '') WHERE o1.option_name LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} AND o1.option_name != o2.option_name;" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+  local opt_del_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+  fi
+  query_output=$(wp db query "UPDATE \`${staging_options_table}\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${db_prefix_like}%'${like_escape_suffix};" \
+    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
   local opt_status=$?
-  wp db query "UPDATE \`staging_${DB_PREFIX}usermeta\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${DB_PREFIX}%';" \
-    --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
-  local meta_status=$?
+  if [ -n "$query_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+  fi
+  local meta_del_status=0
+  local meta_status=0
+  query_output=$(wp db query "SELECT 1 FROM \`${staging_usermeta_table}\` WHERE meta_key LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} LIMIT 1;" \
+    --path="$wp_path" --skip-themes --skip-plugins --skip-column-names --quiet 2>&1)
+  local usermeta_staging_check_status=$?
+  if [ $usermeta_staging_check_status -ne 0 ]; then
+    if [ -n "$query_output" ]; then
+      while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+    fi
+    meta_del_status=$usermeta_staging_check_status
+  elif echo "$query_output" | grep -q '1'; then
+    # Remove auto-created staging-prefixed rows when imported copy still uses production prefix names.
+    query_output=$(wp db query "DELETE m1 FROM \`${staging_usermeta_table}\` m1 INNER JOIN \`${staging_usermeta_table}\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = REPLACE(m1.meta_key, 'staging_', '') WHERE m1.meta_key LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} AND m1.meta_key != m2.meta_key;" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+    meta_del_status=$?
+    if [ -n "$query_output" ]; then
+      while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+    fi
+  fi
+  query_output=$(wp db query "SELECT 1 FROM \`${staging_usermeta_table}\` WHERE meta_key LIKE '${db_prefix_like}%'${like_escape_suffix} LIMIT 1;" \
+    --path="$wp_path" --skip-themes --skip-plugins --skip-column-names --quiet 2>&1)
+  local usermeta_rename_check_status=$?
+  if [ $usermeta_rename_check_status -ne 0 ]; then
+    if [ -n "$query_output" ]; then
+      while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+    fi
+    meta_status=$usermeta_rename_check_status
+  elif echo "$query_output" | grep -q '1'; then
+    query_output=$(wp db query "UPDATE \`${staging_usermeta_table}\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${db_prefix_like}%'${like_escape_suffix};" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
+    meta_status=$?
+    if [ -n "$query_output" ]; then
+      while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
+    fi
+  fi
   set -e
-  if [ $opt_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed option names (exit=$opt_status)"
+  if [ $opt_del_status -ne 0 ] || [ $opt_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed option names (del=$opt_del_status, rename=$opt_status)"
+    failed=1
   fi
-  if [ $meta_status -ne 0 ]; then
-    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (exit=$meta_status)"
+  if [ $meta_del_status -ne 0 ] || [ $meta_status -ne 0 ]; then
+    log "ERROR" "$log_step" "Failed to rename prefixed meta keys (del=$meta_del_status, rename=$meta_status)"
+    failed=1
   fi
+  return $failed
 }
 
 rename_prefixed_keys_to_production() {
@@ -159,9 +328,35 @@ rename_prefixed_keys_to_production() {
   fi
 }
 
+# --- Resync cached options on the live site ---
+#
+# Everything above ran with the object-cache drop-in skipped, so option writes landed in the
+# database without evicting the copies a live persistent cache is still serving. That is not just
+# stale reads: update_option() on the PHP side reads the cached value, decides the row still
+# exists, issues an UPDATE that matches nothing, and drops the write. The option then cannot be
+# changed at all until the key is evicted.
+#
+# Staging::runCommand() does this too, but only for the install it runs in. A deploy is driven from
+# the staging site, and the drop-in namespaces keys by table prefix, so this copy is what covers
+# production's keys on that path. It is also what covers support running the script by hand.
+#
+# Deliberately `command wp`, not the wrapper, so the drop-in IS loaded and the real backend gets
+# the delete. A broken drop-in makes it a no-op, and it must never fail the run.
+resync_cached_options() {
+  [ -n "${PRODUCTION_DIR:-}" ] || return 0
+  # One bootstrap, not one per key: this runs on every exit path, including compat_check.
+  command wp eval 'foreach ( array( "staging_auth_token", "staging_config", "staging_environment", "nfd_coming_soon", "alloptions", "notoptions" ) as $k ) { wp_cache_delete( $k, "options" ); }' \
+    --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet >/dev/null 2>&1 || true
+}
+
 # --- Cleanup on exit ---
+#
+# Runs under `set -e`, and its exit status becomes the script's, which Staging::runCommand() now
+# treats as authoritative. Every command in here must therefore end in `|| true` or be otherwise
+# incapable of returning non-zero, or a successful run gets reported to the user as a failure.
 cleanup() {
   release_staging_lock
+  resync_cached_options
 }
 trap cleanup EXIT
 
@@ -217,18 +412,88 @@ move_content_dirs() {
   log "INFO" "move_content_dirs" "END: Finished moving content dirs from $FROM to $TO"
 }
 
+# --- Utility: Sync wp-includes/php-ai-client from source to destination ---
+# WordPress 7.0+ bundles the PHP AI Client SDK here. A fresh `wp core download` on
+# staging can leave this directory out of sync with production when AI connectors
+# (OpenAI, Gemini, etc.) are installed, breaking site switching.
+sync_php_ai_client() {
+  local FROM="$1"; local TO="$2"; local ON_ERROR="$3"
+  local SRC="$FROM/wp-includes/php-ai-client"
+  local DEST="$TO/wp-includes/php-ai-client"
+
+  if [ ! -d "$SRC" ]; then
+    log "INFO" "sync_php_ai_client" "No php-ai-client at $SRC, skipping."
+    return 0
+  fi
+
+  log "INFO" "sync_php_ai_client" "START: Syncing php-ai-client from $SRC to $DEST"
+  log "INFO" "sync_php_ai_client" "Removing existing destination: $DEST"
+  rm -rf "$DEST" || { log "ERROR" "sync_php_ai_client" "Unable to remove $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove php-ai-client directory."; }
+
+  log "INFO" "sync_php_ai_client" "Creating destination parent: $(dirname "$DEST")"
+  mkdir -p "$(dirname "$DEST")" || { log "ERROR" "sync_php_ai_client" "Unable to create $(dirname "$DEST")"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create php-ai-client parent directory."; }
+
+  if [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+    log "INFO" "sync_php_ai_client" "Copying from $SRC/ to $DEST"
+    set +e
+    RSYNC_OUTPUT=$(rsync -r "$SRC/" "$DEST" 2>&1)
+    RSYNC_EXIT=$?
+    set -e
+    log "DEBUG" "sync_php_ai_client" "rsync exit code: $RSYNC_EXIT"
+    if [ -n "$RSYNC_OUTPUT" ]; then
+      while IFS= read -r line; do log "ERROR" "sync_php_ai_client" "RSYNC: $line"; done <<< "$RSYNC_OUTPUT"
+    fi
+    if [ $RSYNC_EXIT -ne 0 ]; then
+      [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to sync php-ai-client directory."
+    fi
+    log "INFO" "sync_php_ai_client" "Rsync completed successfully."
+  else
+    log "INFO" "sync_php_ai_client" "Source directory is empty, skipping rsync."
+  fi
+
+  log "INFO" "sync_php_ai_client" "END: Finished syncing php-ai-client from $FROM to $TO"
+}
+
 # --- Authentication ---
 auth_action() {
   if [ ! -d "$CURRENT_DIR" ]; then
     mkdir -p "$CURRENT_DIR" || error 'Unable to create directory.'
   fi
   cd "$CURRENT_DIR" || error 'Unable to switch directory.'
-  TOKEN=$(wp transient get staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet)
-  if [ "$1" != "$TOKEN" ] || [ -z "$TOKEN" ]; then
-    wp transient delete staging_auth_token --path=$CURRENT_DIR
+
+  # Staging::runCommand() stores this as an option in the form "<token>.<expiry epoch>", not as a
+  # transient. Transients follow wp_using_ext_object_cache(), which is true for the web request that
+  # writes the token and false here because the wrapper above skips the drop-in, so a transient
+  # written by PHP would never be found. Options are database backed in both directions. The expiry
+  # rides along in the value because options have no TTL of their own.
+  # `|| true` because wp exits non-zero when the option is absent, and `set -e` would otherwise
+  # kill the script here with no JSON on stdout at all. An already consumed or missing token has
+  # to fall through to the authentication error below.
+  STORED=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  STORED_TOKEN=${STORED%%.*}
+  STORED_EXPIRES=${STORED##*.}
+
+  # Consume it up front so a single token can never be replayed, whatever the outcome below.
+  wp option delete staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true
+
+  if [ -z "$STORED_TOKEN" ] || [ "$1" != "$STORED_TOKEN" ]; then
     error 'Unable to authenticate the action.'
   fi
-  wp transient delete staging_auth_token --path=$CURRENT_DIR --skip-themes --skip-plugins --quiet
+
+  # Digits only, and short enough that `[ -le ]` can actually compare it. Without the length
+  # bound a value like 99999999999999999999999999 makes `[` fail with "integer expression
+  # expected" and return 2, which `if` reads as false, and the token would be accepted.
+  case "$STORED_EXPIRES" in
+    ''|*[!0-9]*) error 'Unable to authenticate the action.' ;;
+  esac
+  if [ "${#STORED_EXPIRES}" -gt 10 ]; then
+    error 'Unable to authenticate the action.'
+  fi
+
+  if [ "$STORED_EXPIRES" -le "$(date +%s)" ]; then
+    error 'Unable to authenticate the action.'
+  fi
+
   log "SUCCESS" "auth_action" "Authentication successful."
 }
 
@@ -255,12 +520,18 @@ lock_check() {
 
 # --- Compatibility check ---
 compatibility_check() {
-  if ! command -v wp &>/dev/null; then
+  # type -P looks only at the filesystem. `command -v` matches the wp() wrapper defined above, so
+  # this test would always pass once that function exists. Note the check is mostly belt and
+  # braces either way: the wp calls that set DB_HOST and friends run earlier, so a box with no
+  # WP-CLI has already failed under set -e before reaching this point.
+  if ! type -P wp >/dev/null 2>&1; then
     echo "WP-CLI is not available."
     exit 1
   fi
   if [ "compat_check" == "$1" ]; then
-    echo {"status":"success"}
+    # Must be quoted. Unquoted, the shell strips the double quotes and emits {status:success},
+    # which is not valid JSON, so this response never survived json_decode() on the PHP side.
+    echo '{"status":"success"}'
     exit
   fi
 }
@@ -599,9 +870,11 @@ create() {
   fi
 
   # Export database
+  local export_charset
+  export_charset=$(resolve_db_charset "$PRODUCTION_DIR")
   log "INFO" "create" "[STEP] Export database."
   set +e
-  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
+  EXPORT_OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins --quiet --tables="$PRODUCTION_TABLES" 2>&1)
   EXPORT_STATUS=$?
   set -e
   log "DEBUG" "create:db_export" "wp db export exit code: $EXPORT_STATUS"
@@ -658,6 +931,7 @@ create() {
     if [ $CORE_STATUS -ne 0 ]; then
       delete_temp_staging 2 "Unable to install WordPress in staging directory."
     fi
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR" "delete_temp_staging 2 'Unable to sync php-ai-client.'"
   fi
 
   # Set core config
@@ -705,15 +979,10 @@ create() {
     delete_temp_staging 2 "Unable to update database prefix."
   fi
   
-  # Truncate constraint names that exceed MySQL's 64-character limit
-  log "INFO" "create:update_prefix_sql" "Truncating constraint names that exceed 64 characters"
-  set +e
-  perl -i -pe 's/CONSTRAINT `([^`]+)`/do { my $name = $1; length($name) > 64 ? "CONSTRAINT `" . substr($name, 0, 64) . "`" : "CONSTRAINT `$name`" }/ge' "$tmpfile"
-  TRUNCATE_STATUS=$?
-  set -e
-  if [ $TRUNCATE_STATUS -ne 0 ]; then
-    log "ERROR" "create:update_prefix_sql" "Unable to truncate constraint names."
-    delete_temp_staging 2 "Unable to truncate constraint names."
+  log "INFO" "create:update_prefix_sql" "Normalizing/uniquifying constraint names for staging"
+  if ! normalize_fk_names "$tmpfile" "create:update_prefix_sql" "staging_"; then
+    log "ERROR" "create:update_prefix_sql" "Unable to normalize constraint names."
+    delete_temp_staging 2 "Unable to normalize constraint names."
   fi
   
   set +e
@@ -728,11 +997,13 @@ create() {
 
   # Import database
   log "INFO" "create" "[STEP] Import database."
+  local import_charset
+  import_charset=$(resolve_db_charset "$STAGING_DIR")
   set +e
   DISABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=0;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
   DISABLE_FK_STATUS=$?
 
-  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet 2>&1)
+  IMPORT_OUTPUT=$(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --skip-themes --skip-plugins --quiet 2>&1)
   IMPORT_STATUS=$?
 
   ENABLE_FK_OUTPUT=$(wp db query "SET FOREIGN_KEY_CHECKS=1;" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
@@ -760,6 +1031,12 @@ create() {
       [ -n "$line" ] && log "ERROR" "create:enable_fk" "Output: $line"
     done <<< "$ENABLE_FK_OUTPUT"
     delete_temp_staging 3 "Unable to re-enable foreign key checks after import."
+  fi
+
+  # Rename before any WP-CLI command boots WordPress (otherwise default staging_wp_user_roles is created and blocks rename).
+  log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
+  if ! rename_prefixed_keys_to_staging "$STAGING_DIR" "create:rename_prefixed_keys"; then
+    delete_temp_staging 3 "Unable to rename prefix-dependent keys in staging DB."
   fi
 
   # Delete SQL export
@@ -819,9 +1096,6 @@ create() {
     delete_temp_staging 4 "Unable to update URLs on staging."
   fi
   log "DEBUG" "create:after_search_replace" "Completed search replace URLs"
-
-  log "INFO" "create" "[STEP] Rename prefix-dependent keys in staging DB"
-  rename_prefixed_keys_to_staging "$STAGING_DIR" "create:rename_prefixed_keys"
 
   log "DEBUG" "create:before_import_config" "Starting import config"
   # Import config
@@ -974,7 +1248,14 @@ sso_staging() {
 
   log "INFO" "sso_staging" "Requesting SSO link from wp newfold sso for user $SSO_USER_ID"
 
-  LINK=$(wp newfold sso --url-only --id="$SSO_USER_ID" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | head -n 1)
+  # Deliberately `command wp`, not the wrapper: SSO_CLI stores its token with set_transient(), which
+  # follows wp_using_ext_object_cache(). Skipping the drop-in would put the token in wp_options while
+  # the web request that redeems the link looks in the object cache, failing every SSO login and
+  # counting each one towards the module's lockout. The URL is matched out of the stream rather than
+  # taken by line position so drop-in noise cannot be mistaken for it, and an empty result falls
+  # through to the guard below. Nothing here reaches the script's own stdout, so the JSON contract
+  # with Staging::runCommand() is unaffected either way.
+  LINK=$(command wp newfold sso --url-only --id="$SSO_USER_ID" --path="$STAGING_DIR" 2> >(while read -r line; do log "ERROR" "sso_staging" "$line"; done) | grep -Eo 'https?://[^[:space:]]*admin-ajax\.php[^[:space:]]*' | tail -n 1)
 
   # Remove newline (\n), carriage return (\r)
   LINK="${LINK//$'\n'/}"
@@ -1005,7 +1286,14 @@ sso_production() {
     error 'No user provided.'
   fi
   wp eval 'file_exists( WPMU_PLUGIN_DIR . "/sso.php" ) ? unlink( WPMU_PLUGIN_DIR . "/sso.php" ) : null;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
-  LINK=$(wp newfold sso --url-only --id="$SSO_USER_ID" --path=$PRODUCTION_DIR)
+  # Deliberately `command wp`, not the wrapper: SSO_CLI stores its token with set_transient(), which
+  # follows wp_using_ext_object_cache(). Skipping the drop-in would put the token in wp_options while
+  # the web request that redeems the link looks in the object cache, failing every SSO login and
+  # counting each one towards the module's lockout. The URL is matched out of the stream rather than
+  # taken by line position so drop-in noise cannot be mistaken for it, and an empty result falls
+  # through to the guard below. Nothing here reaches the script's own stdout, so the JSON contract
+  # with Staging::runCommand() is unaffected either way.
+  LINK=$(command wp newfold sso --url-only --id="$SSO_USER_ID" --path="$PRODUCTION_DIR" 2> >(while read -r line; do log "ERROR" "sso_production" "$line"; done) | grep -Eo 'https?://[^[:space:]]*admin-ajax\.php[^[:space:]]*' | tail -n 1)
 
   # Remove newline (\n) e carriage return (\r) characters from the link
   LINK="${LINK//$'\n'/}"
@@ -1017,6 +1305,11 @@ sso_production() {
   # If still contains BOM (or tr failed), fallback to perl
   # (this removes the Unicode codepoint U+FEFF anywhere)
   LINK="$(printf '%s' "$LINK" | perl -CS -pe 's/\x{FEFF}//g')"
+
+  if [ -z "$LINK" ]; then
+    log "ERROR" "sso_production" "Failed to generate SSO link (empty response)"
+    error "Unable to create SSO link for production."
+  fi
 
   log "SUCCESS" "sso_production" "SSO to production successful for user $SSO_USER_ID."
   echo '{"status":"success","load_page":"'$LINK'&redirect=admin.php?page=nfd-staging"}'
@@ -1042,7 +1335,9 @@ clone() {
 
   # Drop views and tables
   drop_views_and_tables "$STAGING_DIR"
-  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins --quiet
+  local export_charset
+  export_charset=$(resolve_db_charset "$PRODUCTION_DIR")
+  run_or_fail "clone:db_export" "Unable to export database." wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins --quiet
 
   # Updating table prefix in SQL file
   log "INFO" "clone:sed_prefix" "Updating table prefixes in .export-sql"
@@ -1063,30 +1358,8 @@ clone() {
     delete_temp_staging 2 "Unable to update database prefix."
   fi
 
-  # Normalize FK constraint names for staging, keep max 64 chars and force uniqueness
-  # to avoid import failures like "Duplicate foreign key constraint name".
   log "INFO" "clone:normalize_constraint" "Normalizing/uniquifying constraint names for staging"
-  perl -i -pe '
-    BEGIN { our %seen = (); }
-    s/CONSTRAINT `([^`]+)`/do {
-      my $raw = $1;
-      my $base = "staging_$raw";
-      $base = substr($base, 0, 64) if length($base) > 64;
-
-      my $name = $base;
-      my $i = 1;
-      while (exists $seen{lc $name}) {
-        my $suffix = "_" . $i;
-        my $max = 64 - length($suffix);
-        my $stem = $max > 0 ? substr($base, 0, $max) : "";
-        $name = $stem . $suffix;
-        $i++;
-      }
-      $seen{lc $name} = 1;
-      "CONSTRAINT `$name`";
-    }/ge
-  ' "$tmpfile"
-  if [ $? -ne 0 ]; then
+  if ! normalize_fk_names "$tmpfile" "clone:normalize_constraint" "staging_"; then
     log "ERROR" "clone:normalize_constraint" "Unable to normalize constraint names."
     delete_temp_staging 2 "Unable to normalize constraint names."
   fi
@@ -1100,7 +1373,13 @@ clone() {
 
 
   cd "$STAGING_DIR" || delete_temp_staging 5 "Unable to move to staging directory."
-  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --skip-themes --skip-plugins --quiet
+  local import_charset
+  import_charset=$(resolve_db_charset "$STAGING_DIR")
+  run_or_fail "clone:db_import" "Unable to import database." wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --skip-themes --skip-plugins --quiet
+  log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
+  if ! rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"; then
+    delete_temp_staging 3 "Unable to rename prefix-dependent keys in staging DB."
+  fi
    if [ "0" != "$USER_ID" ]; then
      wp user meta update $USER_ID session_tokens "$SESSIONS" --format=json --skip-themes --skip-plugins --quiet
    fi
@@ -1113,10 +1392,9 @@ clone() {
   else
     WP_VER=$(wp core version)
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
+    sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR"
   fi
   run_or_fail "clone:search_replace" "Unable to update URLs on staging." wp search-replace "$PRODUCTION_URL" "$STAGING_URL" --skip-themes --skip-plugins --quiet
-  log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
-  rename_prefixed_keys_to_staging "$STAGING_DIR" "clone:rename_prefixed_keys"
   run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
@@ -1145,6 +1423,7 @@ deploy_files() {
   else
     WP_VER=$(wp core version)
     run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+    sync_php_ai_client "$STAGING_DIR" "$PRODUCTION_DIR"
   fi
 
   prepare_new_content_dirs "$STAGING_DIR" "$PRODUCTION_DIR" || {
@@ -1233,7 +1512,9 @@ deploy_db() {
 
     # 3. Export del database di staging
     log "INFO" "deploy_db" "Exporting staging database"
-    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --skip-themes --skip-plugins 2>&1)
+    local export_charset
+    export_charset=$(resolve_db_charset "$STAGING_DIR")
+    OUTPUT=$(wp db export "$STAGING_DIR/.export-sql" --add-drop-table --default-character-set="$export_charset" --skip-themes --skip-plugins 2>&1)
     RC=$?
     log "DEBUG" "deploy_db" "staging export exit code: $RC; output: $OUTPUT"
     if [ $RC -ne 0 ]; then
@@ -1252,11 +1533,9 @@ deploy_db() {
       fail_and_exit "Unable to update prefix in staging SQL. Output: $PREFIX_OUTPUT"
     fi
     
-    # Truncate constraint names that exceed MySQL's 64-character limit
-    log "INFO" "deploy_db" "Truncating constraint names that exceed 64 characters"
-    if ! perl -i -pe 's/CONSTRAINT `([^`]+)`/do { my $name = $1; length($name) > 64 ? "CONSTRAINT `" . substr($name, 0, 64) . "`" : "CONSTRAINT `$name`" }/ge' "$TMP_PREFIX_FILE" 2>&1; then
-      PREFIX_OUTPUT=$(cat "$TMP_PREFIX_FILE" 2>/dev/null)
-      fail_and_exit "Unable to truncate constraint names. Output: $PREFIX_OUTPUT"
+    log "INFO" "deploy_db" "Normalizing/uniquifying constraint names for production"
+    if ! normalize_fk_names "$TMP_PREFIX_FILE" "deploy_db" "prod_"; then
+      fail_and_exit "Unable to normalize constraint names."
     fi
     
     mv "$TMP_PREFIX_FILE" "$STAGING_DIR/.export-sql"
@@ -1276,7 +1555,9 @@ deploy_db() {
       done <<< "$DISABLE_FK_OUTPUT"
     fi
 
-    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
+    local import_charset
+    import_charset=$(resolve_db_charset "$PRODUCTION_DIR")
+    IMPORT_CMD=(wp db import "$STAGING_DIR/.export-sql" --default-character-set="$import_charset" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
     OUTPUT=$("${IMPORT_CMD[@]}" 2>&1) || RC=$? || true
     RC=${RC:-0}
     log "DEBUG" "deploy_db" "import exit code: $RC; raw output length: ${#OUTPUT}"
@@ -1383,7 +1664,7 @@ rewrite_htaccess() {
 }
 
 # --- Main Entrypoint ---
-if [[ $(pwd) == *"staging"* ]]; then
+if [[ $(pwd) == *"/staging/"* ]]; then
   CURRENT_DIR=$STAGING_DIR
 else
   CURRENT_DIR=$PRODUCTION_DIR
