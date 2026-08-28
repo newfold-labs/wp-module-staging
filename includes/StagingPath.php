@@ -306,7 +306,7 @@ class StagingPath {
 			}
 		}
 
-		$dir_mtime     = filemtime( $path_data['staging_dir'] );
+		$dir_mtime     = file_exists( $path_data['staging_dir'] ) ? filemtime( $path_data['staging_dir'] ) : false;
 		$creation_date = ! empty( $existing['creation_date'] )
 			? $existing['creation_date']
 			: gmdate( 'M j, Y', false !== $dir_mtime ? $dir_mtime : time() );
@@ -341,7 +341,7 @@ class StagingPath {
 		$staging_id  = $path_data['staging_id'];
 		$staging_url = untrailingslashit( $production_url ) . '/staging/' . $staging_id;
 
-		$dir_mtime     = filemtime( $staging_dir );
+		$dir_mtime     = file_exists( $staging_dir ) ? filemtime( $staging_dir ) : false;
 		$creation_date = ! empty( $existing['creation_date'] )
 			? $existing['creation_date']
 			: gmdate( 'M j, Y', false !== $dir_mtime ? $dir_mtime : time() );
