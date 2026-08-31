@@ -188,6 +188,11 @@ class StagingApi extends \WP_REST_Controller {
 	 * @return \WP_REST_Response
 	 */
 	public function getStagingDetails() {
+		$health = new StagingHealthCheck( $this->staging );
+		if ( $health->maybe_repair() ) {
+			$this->staging->getConfig( false );
+		}
+
 		return rest_ensure_response(
 			array(
 				'creationDate'           => $this->staging->getCreationDate(),
