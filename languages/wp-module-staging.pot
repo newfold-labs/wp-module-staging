@@ -36,7 +36,7 @@ msgstr ""
 msgid "Cloned to Staging"
 msgstr ""
 
-#: includes/Staging.php:338
+#: includes/Staging.php:363
 msgid "Cloning can only be done from the production environment."
 msgstr ""
 
@@ -70,6 +70,10 @@ msgstr ""
 
 #: build/staging/bundle.js:1
 msgid "Currently editing"
+msgstr ""
+
+#: includes/Staging.php:599
+msgid "Database deployed successfully."
 msgstr ""
 
 #: build/staging/bundle.js:1
@@ -116,7 +120,20 @@ msgstr ""
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr ""
 
-#: includes/Staging.php:708
+#: includes/Staging.php:603
+msgid "Deployment completed successfully."
+msgstr ""
+
+#: includes/Staging.php:557
+msgid "Deployment failed. Check the staging log for details."
+msgstr ""
+
+#: includes/Staging.php:629 includes/Staging.php:644 includes/Staging.php:669
+#: includes/Staging.php:727
+msgid "Deployment in progress. This may take several minutes."
+msgstr ""
+
+#: includes/Staging.php:1179
 msgid "Don't have capabilities to access this page"
 msgstr ""
 
@@ -124,11 +141,19 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: includes/StagingCLI.php:231
+#: includes/StagingCLI.php:239
 msgid "Error: "
 msgstr ""
 
+#: includes/Staging.php:600
+msgid "Files and Database deployed successfully."
+msgstr ""
+
 #: includes/Staging.php:598
+msgid "Files deployed successfully."
+msgstr ""
+
+#: includes/Staging.php:1113
 msgid "Filesystem credentials required."
 msgstr ""
 
@@ -145,7 +170,7 @@ msgid "Invalid action"
 msgstr ""
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:576
+#: includes/Staging.php:1091
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr ""
@@ -154,7 +179,7 @@ msgstr ""
 msgid "Invalid deploy type"
 msgstr ""
 
-#: includes/Staging.php:509
+#: includes/Staging.php:1024
 msgid "Invalid staging CLI command."
 msgstr ""
 
@@ -178,7 +203,7 @@ msgstr ""
 msgid "Log"
 msgstr ""
 
-#: includes/Staging.php:694 views/staging-log.php:11
+#: includes/Staging.php:1165 views/staging-log.php:11
 msgid "Log Staging"
 msgstr ""
 
@@ -218,7 +243,7 @@ msgstr ""
 msgid "Production URL:"
 msgstr ""
 
-#: includes/StagingCLI.php:280
+#: includes/StagingCLI.php:288
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr ""
 
@@ -230,7 +255,7 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: includes/Staging.php:661
+#: includes/Staging.php:800
 msgid "Something gone wrong, please get in touch with our support."
 msgstr ""
 
@@ -267,7 +292,11 @@ msgstr ""
 msgid "Staging URL:"
 msgstr ""
 
-#: includes/Staging.php:363
+#: includes/Staging.php:1280
+msgid "Staging configuration was automatically repaired."
+msgstr ""
+
+#: includes/Staging.php:388
 msgid "Staging environment already exists!"
 msgstr ""
 
@@ -287,7 +316,7 @@ msgstr ""
 msgid "Switch to Staging"
 msgstr ""
 
-#: includes/Staging.php:419
+#: includes/Staging.php:856
 msgid "Switch to an environment you are already in, you cannot."
 msgstr ""
 
@@ -303,7 +332,11 @@ msgstr ""
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr ""
 
-#: includes/Staging.php:671
+#: includes/Staging.php:795
+msgid "The deployment is still running. Please wait and check again shortly."
+msgstr ""
+
+#: includes/Staging.php:810
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr ""
 
@@ -327,16 +360,20 @@ msgstr ""
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr ""
 
-#: includes/Staging.php:585
+#: includes/Staging.php:1100
 msgid "Unable to execute script (disabled_function)."
 msgstr ""
 
-#: includes/Staging.php:609
+#: includes/Staging.php:1124
 msgid "Unable to execute script (permission error)."
 msgstr ""
 
-#: includes/Staging.php:602
+#: includes/Staging.php:1117
 msgid "Unable to initialize WP Filesystem."
+msgstr ""
+
+#: includes/Staging.php:1140
+msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr ""
 
 #: build/staging/bundle.js:1
@@ -347,6 +384,6 @@ msgstr ""
 msgid "You don't have a staging site yet."
 msgstr ""
 
-#: includes/Staging.php:397
+#: includes/Staging.php:834
 msgid "You must switch to the production environment before destroying staging."
 msgstr ""
