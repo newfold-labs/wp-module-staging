@@ -695,25 +695,29 @@ class Staging {
 	 * @return array
 	 */
 	protected function getDeployCommandStatus( $command ) {
-		$result       = $this->readDeployResult();
-		$since        = is_array( $result ) && ! empty( $result['started_at'] ) ? (int) $result['started_at'] : null;
-		$same_command = is_array( $result ) && isset( $result['command'] ) && $result['command'] === $command;
+		$result         = $this->readDeployResult();
+		$since          = is_array( $result ) && ! empty( $result['started_at'] ) ? (int) $result['started_at'] : null;
+		$same_command   = is_array( $result ) && isset( $result['command'] ) && $result['command'] === $command;
+		$stored_running = $same_command && isset( $result['status'] ) && 'running' === $result['status'];
 
-		if ( $same_command && is_array( $result ) ) {
-			if ( 'running' !== $result['status'] ) {
-				return $result;
-			}
-			$since = ! empty( $result['started_at'] ) ? (int) $result['started_at'] : $since;
-			if ( ! $this->isDeployInProgress() ) {
-				$result = array(
-					'status'     => 'error',
-					'command'    => $command,
-					'started_at' => $since,
-					'message'    => __( 'The deployment stopped before it completed. Please try again.', 'wp-module-staging' ),
-				);
-				$this->writeDeployResult( $result );
-				return $result;
-			}
+		if ( $same_command && ! $stored_running ) {
+			return $result;
+		}
+
+		/*
+		 * The log is consulted before the in-progress checks below, not after. executeStagingScript()
+		 * blocks this process in exec() for the whole deploy, so PHP-FPM can terminate the worker on
+		 * its request timeout while the shell runs on to completion: the result file is left saying
+		 * "running" and the handler that would have corrected it is gone. Reading the shell's own
+		 * terminal marker first is what stops a finished deploy from polling until DEPLOY_JOB_TTL and
+		 * then being reported as a failure that never happened.
+		 */
+		$log_status = $this->getDeployStatusFromLog( $command, $since );
+		if ( $log_status ) {
+			$this->writeDeployResult(
+				$since ? array_merge( $log_status, array( 'started_at' => $since ) ) : $log_status
+			);
+			return $log_status;
 		}
 
 		if ( $this->isDeployInProgress() ) {
@@ -724,12 +728,15 @@ class Staging {
 			);
 		}
 
-		$log_status = $this->getDeployStatusFromLog( $command, $since );
-		if ( $log_status ) {
-			if ( 'success' === $log_status['status'] ) {
-				$this->writeDeployResult( $log_status );
-			}
-			return $log_status;
+		if ( $stored_running ) {
+			$result = array(
+				'status'     => 'error',
+				'command'    => $command,
+				'started_at' => $since,
+				'message'    => __( 'The deployment stopped before it completed. Please try again.', 'wp-module-staging' ),
+			);
+			$this->writeDeployResult( $result );
+			return $result;
 		}
 
 		return array(
@@ -740,7 +747,13 @@ class Staging {
 	}
 
 	/**
-	 * Start deploy in a shutdown handler so the REST response can return immediately.
+	 * Start a deploy in a detached shell process and return immediately.
+	 *
+	 * Blocking exec() on shutdown left this worker waiting on the whole deploy, so PHP-FPM's
+	 * request timeout could kill it while the script was still running. The child inherits
+	 * NFD_STAGING_ENV and NFD_DEPLOY_* and records its own result. The flock cannot be handed
+	 * to that child, so it is released here; isDeployInProgress() then treats the running
+	 * result file as the in-progress signal until the script finishes.
 	 *
 	 * @param string   $script            Path to the staging shell script.
 	 * @param string   $command_name      CLI command name (e.g. deploy_db).
@@ -762,59 +775,26 @@ class Staging {
 			)
 		);
 
-		$instance = $this;
-		add_action(
-			'shutdown',
-			static function () use ( $instance, $script, $command_name, $shell_command, $auth_token_value, $deploy_lock, $started_at ) {
-				try {
-					if ( function_exists( 'fastcgi_finish_request' ) ) {
-						fastcgi_finish_request();
-					}
-					ignore_user_abort( true );
-					set_time_limit( 0 );
+		try {
+			putenv( 'NFD_DEPLOY_COMMAND=' . $command_name ); // phpcs:ignore
+			putenv( 'NFD_DEPLOY_STARTED_AT=' . $started_at ); // phpcs:ignore
 
-					$result = $instance->executeStagingScript( $script, $command_name, $shell_command, $auth_token_value );
-
-					if ( is_wp_error( $result ) ) {
-						$log_status = $instance->getDeployStatusFromLog( $command_name, $started_at );
-						if ( is_array( $log_status ) && 'success' === $log_status['status'] ) {
-							$instance->writeDeployResult(
-								array_merge(
-									$log_status,
-									array( 'started_at' => $started_at )
-								)
-							);
-							wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
-							return;
-						}
-
-						$instance->writeDeployResult(
-							array(
-								'status'     => 'error',
-								'command'    => $command_name,
-								'started_at' => $started_at,
-								'message'    => $result->get_error_message(),
-							)
-						);
-						return;
-					}
-
-					$instance->writeDeployResult(
-						array_merge(
-							(array) $result,
-							array(
-								'command'    => $command_name,
-								'started_at' => $started_at,
-							)
-						)
-					);
-					wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
-				} finally {
-					$instance->releaseDeployLock( $deploy_lock );
-				}
-			},
-			0
-		);
+			$spawned = $this->spawnDetachedStagingScript( $script, $shell_command, $auth_token_value );
+			if ( is_wp_error( $spawned ) ) {
+				$this->deleteAuthToken( $auth_token_value );
+				$this->writeDeployResult(
+					array(
+						'status'     => 'error',
+						'command'    => $command_name,
+						'started_at' => $started_at,
+						'message'    => $spawned->get_error_message(),
+					)
+				);
+				return $spawned;
+			}
+		} finally {
+			$this->releaseDeployLock( $deploy_lock );
+		}
 
 		return array(
 			'status'     => 'running',
@@ -822,6 +802,51 @@ class Staging {
 			'started_at' => $started_at,
 			'message'    => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
 		);
+	}
+
+	/**
+	 * Launch the staging script in the background so this request does not wait on it.
+	 *
+	 * stdin is taken from /dev/null so the worker is not kept alive as a parent of a
+	 * job that still has an open TTY. nohup (with a subshell fallback) survives SIGHUP
+	 * when this request ends. The token is left in place: auth_action() consumes it,
+	 * and deleting it here would race the child.
+	 *
+	 * @param string $script           Path to the staging shell script.
+	 * @param string $command          Escaped CLI argument string.
+	 * @param string $auth_token_value Exact option value written for this command.
+	 *
+	 * @return int|\WP_Error Spawned PID, or an error when the process did not start.
+	 */
+	protected function spawnDetachedStagingScript( $script, $command, $auth_token_value ) {
+		do_action( 'newfold_staging_command', $command ); // bh_staging_command
+
+		$this->logAuthTokenState( $auth_token_value );
+
+		$quoted_script = escapeshellarg( $script );
+		$launch        = "nohup {$quoted_script} {$command} >/dev/null 2>&1 </dev/null & echo \$!";
+
+		$output = array();
+		$status = 0;
+		exec( $launch, $output, $status ); // phpcs:ignore
+
+		$pid = isset( $output[0] ) ? (int) $output[0] : 0;
+		if ( $pid < 1 ) {
+			$launch = "( {$quoted_script} {$command} >/dev/null 2>&1 </dev/null & echo \$! )";
+			$output = array();
+			$status = 0;
+			exec( $launch, $output, $status ); // phpcs:ignore
+			$pid = isset( $output[0] ) ? (int) $output[0] : 0;
+		}
+
+		if ( $pid < 1 ) {
+			return new \WP_Error(
+				'error_response',
+				__( 'Unable to start the deployment process.', 'wp-module-staging' )
+			);
+		}
+
+		return $pid;
 	}
 
 	/**
@@ -1320,7 +1345,7 @@ class Staging {
 		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' ); // phpcs:ignore
 
 		// Read by lib/.staging to pick the install it authenticates against. Set before every exec,
-		// including the async deploy, which runs in this same process at shutdown.
+		// including a detached deploy, whose child inherits this process environment.
 		putenv( 'NFD_STAGING_ENV=' . $this->getScriptEnvironment( $config ) ); // phpcs:ignore
 
 		/*
@@ -1330,6 +1355,13 @@ class Staging {
 		 */
 		$deploy_lock = null;
 		if ( $this->isDeployCommand( $command_name ) ) {
+			if ( $this->isDeployInProgress() ) {
+				return array(
+					'status'  => 'running',
+					'command' => $command_name,
+					'message' => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+				);
+			}
 			$deploy_lock = $this->acquireDeployLock();
 			if ( is_wp_error( $deploy_lock ) ) {
 				return $deploy_lock;

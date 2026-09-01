@@ -179,6 +179,39 @@ class StagingDeployWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 	}
 
 	/**
+	 * A finished deploy is reported from the log even if nothing updated the result file.
+	 *
+	 * @return void
+	 */
+	public function test_completed_deploy_is_reported_when_result_file_was_never_updated() {
+		$this->set_up_temp_config();
+		$started_at = time() - 60;
+
+		$this->invokeProtected(
+			'writeDeployResult',
+			array(
+				array(
+					'status'     => 'running',
+					'command'    => 'deploy_files',
+					'started_at' => $started_at,
+				),
+			)
+		);
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			$this->temp_production_dir . '/nfd-private/nfd-staging.log',
+			gmdate( 'Y-m-d H:i:s' ) . " [SUCCESS] [deploy_files:end] Files deployed successfully.\n"
+		);
+
+		$status = $this->invokeProtected( 'getDeployCommandStatus', array( 'deploy_files' ) );
+
+		$this->assertSame( 'success', $status['status'] );
+
+		$stored = $this->invokeProtected( 'readDeployResult' );
+		$this->assertSame( 'success', $stored['status'] );
+		$this->assertSame( $started_at, $stored['started_at'] );
+	}
+
+	/**
 	 * A held file lock prevents another deploy process from acquiring it.
 	 *
 	 * @return void

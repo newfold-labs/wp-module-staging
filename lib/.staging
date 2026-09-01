@@ -128,6 +128,37 @@ release_staging_lock() {
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
 }
 
+# --- Async deploy result ---
+#
+# Staging::getDeployCommandStatus() polls nfd-staging-deploy-result.json for the outcome of a
+# deploy. The PHP request that started this script blocks in exec() for the whole run, so PHP-FPM
+# can terminate that worker on its request timeout while this script carries on to completion. The
+# caller therefore cannot be the only writer of the terminal status, or a finished deploy is left
+# reported as still running with nobody alive to correct it.
+#
+# NFD_DEPLOY_COMMAND and NFD_DEPLOY_STARTED_AT are exported only by Staging::startAsyncDeploy().
+# Both being unset for every other command, and for anyone running this script by hand, is what
+# keeps this from publishing a result over a job it does not own.
+write_deploy_result() {
+  local status="$1"
+  local message="$2"
+  local for_command="${3:-}"
+
+  [ -n "${NFD_DEPLOY_COMMAND:-}" ] && [ -n "${NFD_DEPLOY_STARTED_AT:-}" ] || return 0
+
+  # deploy_files_db reaches its own end through deploy_files and deploy_db, so those two successes
+  # must not be published as the run's result. Failures pass no command: a failure anywhere is the
+  # failure of the whole run.
+  [ -z "$for_command" ] || [ "$for_command" = "$NFD_DEPLOY_COMMAND" ] || return 0
+
+  local result_dir="$PRODUCTION_DIR/nfd-private"
+  mkdir -p "$result_dir" 2>/dev/null || return 0
+
+  printf '{"status":"%s","command":"%s","started_at":%s,"message":"%s"}' \
+    "$status" "$NFD_DEPLOY_COMMAND" "$NFD_DEPLOY_STARTED_AT" "$message" \
+    > "$result_dir/nfd-staging-deploy-result.json" 2>/dev/null || true
+}
+
 # --- Error Handling ---
 #
 # The JSON goes out first: it is the only thing the PHP side can read, and logging is best effort
@@ -140,6 +171,7 @@ error() {
   printf '{"status":"error","message":"%s"}\n' "$1"
   [ -n "${2:-}" ] && log "ERROR" "$2" "$1" || true
   log "ERROR" "operation_failed" "$1" || true
+  write_deploy_result "error" "$1" || true
   release_staging_lock
   exit 1
 }
@@ -1483,6 +1515,7 @@ deploy_files() {
   }
 
   log "SUCCESS" "deploy_files:end" "Files deployed successfully."
+  write_deploy_result "success" "Files deployed successfully." "deploy_files"
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
 
@@ -1683,6 +1716,7 @@ deploy_db() {
   trap cleanup EXIT
 
   log "SUCCESS" "deploy_db:end" "Database deployed successfully."
+  write_deploy_result "success" "Database deployed successfully." "deploy_db"
   echo '{"status":"success","message":"Database deployed successfully."}'
 
   # Clear backup
@@ -1698,6 +1732,7 @@ deploy_files_db() {
   log "INFO" "deploy_files_db" "Files deployed successfully! Now database deployment will initiate."
   deploy_db
   log "SUCCESS" "deploy_files_db:end" "Database deployed successfully."
+  write_deploy_result "success" "Files and Database deployed successfully." "deploy_files_db"
   echo '{"status":"success","message":"Files and Database deployed successfully."}'
 }
 
