@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-08-25T14:57:14+00:00\n"
+"PO-Revision-Date: 2026-09-01T08:34:51+00:00\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de_DE\n"
@@ -44,7 +44,7 @@ msgstr "In Staging-Umgebung klonen"
 msgid "Cloned to Staging"
 msgstr "In Staging-Umgebung geklont"
 
-#: includes/Staging.php:338
+#: includes/Staging.php:363
 msgid "Cloning can only be done from the production environment."
 msgstr "Klonen kann nur aus der Produktionsumgebung erfolgen."
 
@@ -79,6 +79,10 @@ msgstr "Erstellen einer Staging-Site sollte eine Minute dauern."
 #: build/staging/bundle.js:1
 msgid "Currently editing"
 msgstr "Aktuell bearbeiten"
+
+#: includes/Staging.php:599
+msgid "Database deployed successfully."
+msgstr "Datenbank erfolgreich bereitgestellt."
 
 #: build/staging/bundle.js:1
 msgid "Delete"
@@ -124,7 +128,19 @@ msgstr "Ausgestellt"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Überführung von Staging- in Produktionsumgebung, dies sollte ungefähr eine Minute dauern."
 
-#: includes/Staging.php:708
+#: includes/Staging.php:603
+msgid "Deployment completed successfully."
+msgstr "Einsatz erfolgreich abgeschlossen."
+
+#: includes/Staging.php:557
+msgid "Deployment failed. Check the staging log for details."
+msgstr "Deployment fehlgeschlagen. Schau dir das Staging Log für Details an."
+
+#: includes/Staging.php:629 includes/Staging.php:644 includes/Staging.php:669 includes/Staging.php:727
+msgid "Deployment in progress. This may take several minutes."
+msgstr "Einsatz im Gange. Das kann mehrere Minuten dauern."
+
+#: includes/Staging.php:1179
 msgid "Don't have capabilities to access this page"
 msgstr "Ich habe keine Möglichkeit, auf diese Seite zuzugreifen"
 
@@ -132,11 +148,19 @@ msgstr "Ich habe keine Möglichkeit, auf diese Seite zuzugreifen"
 msgid "Error"
 msgstr "Fehler"
 
-#: includes/StagingCLI.php:231
+#: includes/StagingCLI.php:239
 msgid "Error: "
 msgstr "Fehler: "
 
+#: includes/Staging.php:600
+msgid "Files and Database deployed successfully."
+msgstr "Dateien und Datenbank erfolgreich bereitgestellt."
+
 #: includes/Staging.php:598
+msgid "Files deployed successfully."
+msgstr "Dateien erfolgreich bereitgestellt."
+
+#: includes/Staging.php:1113
 msgid "Filesystem credentials required."
 msgstr "Dateisystem-Zugangsdaten erforderlich."
 
@@ -153,7 +177,7 @@ msgid "Invalid action"
 msgstr "Ungültige Aktion"
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:576
+#: includes/Staging.php:1091
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Ungültiges Zeichen (%s) im Befehl."
@@ -162,7 +186,7 @@ msgstr "Ungültiges Zeichen (%s) im Befehl."
 msgid "Invalid deploy type"
 msgstr "Ungültiger Bereitstellungstyp"
 
-#: includes/Staging.php:509
+#: includes/Staging.php:1024
 msgid "Invalid staging CLI command."
 msgstr "Ungültiger Staging CLI Befehl."
 
@@ -186,7 +210,7 @@ msgstr "Laden der Staging-Umgebung jetzt."
 msgid "Log"
 msgstr "Log"
 
-#: includes/Staging.php:694 views/staging-log.php:11
+#: includes/Staging.php:1165 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Log-Staging"
 
@@ -226,7 +250,7 @@ msgstr "Produktionsstandort"
 msgid "Production URL:"
 msgstr "Produktions-URL:"
 
-#: includes/StagingCLI.php:280
+#: includes/StagingCLI.php:288
 msgid "Provided $data wasn't valid array or JSON string."
 msgstr "Die übergebenen $data waren kein gültiges Array oder JSON-String."
 
@@ -238,7 +262,7 @@ msgstr "Zurücksetzen"
 msgid "Save"
 msgstr "Retten"
 
-#: includes/Staging.php:661
+#: includes/Staging.php:800
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Ist etwas schiefgelaufen, bitte nehmen Sie Kontakt mit unserem Support auf."
 
@@ -275,7 +299,11 @@ msgstr "Staging-Seite"
 msgid "Staging URL:"
 msgstr "Staging URL:"
 
-#: includes/Staging.php:363
+#: includes/Staging.php:1280
+msgid "Staging configuration was automatically repaired."
+msgstr "Die Staging-Konfiguration wurde automatisch repariert."
+
+#: includes/Staging.php:388
 msgid "Staging environment already exists!"
 msgstr "Staging-Umgebung existiert bereits!"
 
@@ -295,7 +323,7 @@ msgstr "Zur Produktion wechseln"
 msgid "Switch to Staging"
 msgstr "Zu Staging wechseln"
 
-#: includes/Staging.php:419
+#: includes/Staging.php:856
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Wechseln Sie zu einer Umgebung, in der Sie bereits sind, Sie können es nicht."
 
@@ -311,7 +339,11 @@ msgstr "Beim Wechsel auf die Produktionsumgebung sollte dies etwa eine Minute da
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Beim Wechsel auf die Staging-Umgebung sollte dies ungefähr eine Minute dauern."
 
-#: includes/Staging.php:671
+#: includes/Staging.php:795
+msgid "The deployment is still running. Please wait and check again shortly."
+msgstr "Die Bereitstellung läuft noch. Bitte warten Sie und prüfen Sie bald erneut."
+
+#: includes/Staging.php:810
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr "Die Staging wurde nicht abgeschlossen, bitte nehmen Sie Kontakt mit unserem Support auf."
 
@@ -335,17 +367,21 @@ msgstr "Dies wird alle Inhalte in der Staging-Umgebung überschreiben und zu ein
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "Staging-Site wird dauerhaft gelöscht. Sind Sie sicher, dass Sie fortfahren möchten? Sie können jederzeit eine andere Staging-Site neu erstellen, aber alle spezifischen Änderungen, die Sie an dieser Staging-Site vorgenommen haben, gehen verloren."
 
-#: includes/Staging.php:585
+#: includes/Staging.php:1100
 msgid "Unable to execute script (disabled_function)."
 msgstr "Skript kann nicht ausgeführt werden (disabled_function)."
 
-#: includes/Staging.php:609
+#: includes/Staging.php:1124
 msgid "Unable to execute script (permission error)."
 msgstr "Skript kann nicht ausgeführt werden (Berechtigungsfehler)."
 
-#: includes/Staging.php:602
+#: includes/Staging.php:1117
 msgid "Unable to initialize WP Filesystem."
 msgstr "WP-Dateisystem kann nicht initialisiert werden."
+
+#: includes/Staging.php:1140
+msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
+msgstr "Das Staging-Authentifizierungstoken kann nicht gespeichert werden. Ein persistenter Objektcache kann mit der Datenbank nicht synchron sein oder die Datenbank akzeptiert keine Schreibvorgänge."
 
 #: build/staging/bundle.js:1
 msgid "Working…"
@@ -355,6 +391,6 @@ msgstr "Arbeiten..."
 msgid "You don't have a staging site yet."
 msgstr "Sie haben noch keine Staging-Site."
 
-#: includes/Staging.php:397
+#: includes/Staging.php:834
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Sie müssen zur Produktionsumgebung wechseln, bevor Sie die Staging-Umgebung löschen."
