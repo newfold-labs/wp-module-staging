@@ -906,6 +906,84 @@ class Staging {
 	}
 
 	/**
+	 * Store the single-use auth token and prove it reached the database.
+	 *
+	 * update_option() cannot be trusted on its own here. When a persistent cache still holds a
+	 * value whose row lib/.staging has already deleted, update_option() reads that phantom from
+	 * cache, concludes the row exists, issues an UPDATE matching nothing and returns false having
+	 * written no row at all. The script then finds no token and the command fails as "Unable to
+	 * authenticate the action.", with nothing on either side recording that a write was dropped.
+	 *
+	 * The row is therefore read straight off the database, bypassing get_option() and whatever
+	 * cache sits in front of it. A failed first attempt is retried once after evicting the keys
+	 * that produce the phantom, so a cache in this state is repaired rather than merely reported.
+	 *
+	 * @param string $token Token to store.
+	 *
+	 * @return bool True when the token is readable from the database.
+	 */
+	protected function persist_auth_token( $token ) {
+		global $wpdb;
+
+		// Options have no TTL of their own, so the expiry rides along in the value.
+		$value = $token . '.' . ( time() + self::AUTH_TOKEN_TTL );
+
+		update_option( 'staging_auth_token', $value, false );
+
+		if ( $this->auth_token_row() === $value ) {
+			return true;
+		}
+
+		/*
+		 * The cache claimed a row that is not there, so stop asking it. Evict the keys that produce
+		 * the phantom and write the row directly, because update_option() would just consult the
+		 * same cache again and drop the write a second time. Evicting afterwards leaves get_option()
+		 * agreeing with what is now on disk.
+		 *
+		 * 'no' rather than 'off' for autoload: WordPress 6.6 renamed the values but still reads the
+		 * old ones, and the module supports installs from before the rename.
+		 */
+		$this->resync_object_cache();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'staging_auth_token' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->insert(
+			$wpdb->options,
+			array(
+				'option_name'  => 'staging_auth_token',
+				'option_value' => $value,
+				'autoload'     => 'no',
+			)
+		);
+
+		wp_cache_delete( 'staging_auth_token', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		return $this->auth_token_row() === $value;
+	}
+
+	/**
+	 * Read the stored auth token straight from the options table.
+	 *
+	 * get_option() is deliberately not used: the whole point of the caller is to find out what is
+	 * actually on disk, and get_option() answers from the cache that may be lying.
+	 *
+	 * @return string|null Stored value, or null when the row does not exist.
+	 */
+	private function auth_token_row() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'staging_auth_token'
+			)
+		);
+	}
+
+	/**
 	 * Execute a staging CLI command.
 	 *
 	 * @param string     $command CLI command to be run.
@@ -1054,11 +1132,14 @@ class Staging {
 		 * never reaches the delete below and never runs the script that would consume the token,
 		 * so persisting it earlier would strand a live credential in wp_options.
 		 */
-		update_option(
-			'staging_auth_token',
-			$token . '.' . ( time() + self::AUTH_TOKEN_TTL ),
-			false
-		);
+		if ( ! $this->persist_auth_token( $token ) ) {
+			delete_option( 'staging_auth_token' );
+
+			return new \WP_Error(
+				'auth_token_not_persisted',
+				__( 'Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes.', 'wp-module-staging' )
+			);
+		}
 
 		if ( $this->isDeployCommand( $command_name ) ) {
 			return $this->startAsyncDeploy( $script, $command_name, $shell_command );
