@@ -30,6 +30,13 @@ class Staging {
 	 */
 	const AUTH_TOKEN_TTL = 300;
 
+	/**
+	 * Seconds a running deploy result may block new work without a live lock.
+	 *
+	 * @var int
+	 */
+	const DEPLOY_JOB_TTL = 1800;
+
 
 	/**
 	 * Constructor.
@@ -456,17 +463,94 @@ class Staging {
 	}
 
 	/**
+	 * Path to the file used for the deploy process lock.
+	 *
+	 * @return string
+	 */
+	protected function getDeployLockPath() {
+		return trailingslashit( $this->getProductionDir() ) . 'nfd-private/nfd-staging-deploy.lock';
+	}
+
+	/**
+	 * Acquire the exclusive deploy lock.
+	 *
+	 * @return resource|false|\WP_Error Lock handle on success, false when another deploy owns it.
+	 */
+	protected function acquireDeployLock() {
+		$path = $this->getDeployLockPath();
+		$dir  = dirname( $path );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			return new \WP_Error(
+				'deploy_lock_unavailable',
+				__( 'Unable to create the deployment lock directory.', 'wp-module-staging' )
+			);
+		}
+
+		$handle = fopen( $path, 'c' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+		if ( false === $handle ) {
+			return new \WP_Error(
+				'deploy_lock_unavailable',
+				__( 'Unable to open the deployment lock file.', 'wp-module-staging' )
+			);
+		}
+
+		if ( ! flock( $handle, LOCK_EX | LOCK_NB ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_flock
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+			return false;
+		}
+
+		return $handle;
+	}
+
+	/**
+	 * Release an acquired deploy lock.
+	 *
+	 * @param resource $handle Lock handle.
+	 *
+	 * @return void
+	 */
+	protected function releaseDeployLock( $handle ) {
+		if ( is_resource( $handle ) ) {
+			flock( $handle, LOCK_UN ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_flock
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		}
+	}
+
+	/**
+	 * Whether another process currently owns the deploy lock.
+	 *
+	 * @return bool
+	 */
+	protected function isDeployLockHeld() {
+		$handle = $this->acquireDeployLock();
+		if ( is_wp_error( $handle ) ) {
+			return true;
+		}
+		if ( false === $handle ) {
+			return true;
+		}
+
+		$this->releaseDeployLock( $handle );
+		return false;
+	}
+
+	/**
 	 * Whether a deploy is already running.
 	 *
 	 * @return bool
 	 */
 	protected function isDeployInProgress() {
-		$result = $this->readDeployResult();
-		if ( is_array( $result ) && isset( $result['status'] ) && 'running' === $result['status'] ) {
+		if ( $this->isDeployLockHeld() ) {
 			return true;
 		}
 
-		return (bool) get_transient( 'nfd_staging_lock' );
+		$result = $this->readDeployResult();
+		if ( is_array( $result ) && isset( $result['status'] ) && 'running' === $result['status'] ) {
+			$started_at = isset( $result['started_at'] ) ? (int) $result['started_at'] : 0;
+			return $started_at > ( time() - self::DEPLOY_JOB_TTL );
+		}
+
+		return false;
 	}
 
 	/**
@@ -511,7 +595,7 @@ class Staging {
 	 */
 	protected function parseLogLineTimestamp( $line ) {
 		if ( preg_match( '/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $line, $matches ) ) {
-			$parsed = strtotime( $matches[1] );
+			$parsed = strtotime( $matches[1] . ' UTC' );
 			return $parsed ? $parsed : null;
 		}
 
@@ -549,8 +633,8 @@ class Staging {
 				continue;
 			}
 
-			// Only treat deploy_* step errors as failures (ignore rsync warnings on prepare_new_content_dirs).
-			if ( preg_match( '/\[ERROR\]\s+\[deploy_/', $line ) ) {
+			// The shell emits this marker only when an operation actually exits through error().
+			if ( false !== strpos( $line, '[ERROR] [operation_failed]' ) ) {
 				return array(
 					'status'  => 'error',
 					'command' => $command,
@@ -613,13 +697,23 @@ class Staging {
 	protected function getDeployCommandStatus( $command ) {
 		$result       = $this->readDeployResult();
 		$since        = is_array( $result ) && ! empty( $result['started_at'] ) ? (int) $result['started_at'] : null;
-		$same_command = is_array( $result ) && ( empty( $result['command'] ) || $result['command'] === $command );
+		$same_command = is_array( $result ) && isset( $result['command'] ) && $result['command'] === $command;
 
 		if ( $same_command && is_array( $result ) ) {
 			if ( 'running' !== $result['status'] ) {
 				return $result;
 			}
 			$since = ! empty( $result['started_at'] ) ? (int) $result['started_at'] : $since;
+			if ( ! $this->isDeployInProgress() ) {
+				$result = array(
+					'status'     => 'error',
+					'command'    => $command,
+					'started_at' => $since,
+					'message'    => __( 'The deployment stopped before it completed. Please try again.', 'wp-module-staging' ),
+				);
+				$this->writeDeployResult( $result );
+				return $result;
+			}
 		}
 
 		if ( $this->isDeployInProgress() ) {
@@ -648,17 +742,15 @@ class Staging {
 	/**
 	 * Start deploy in a shutdown handler so the REST response can return immediately.
 	 *
-	 * @param string $script         Path to the staging shell script.
-	 * @param string $command_name   CLI command name (e.g. deploy_db).
-	 * @param string $shell_command  Escaped CLI argument string for exec().
+	 * @param string   $script            Path to the staging shell script.
+	 * @param string   $command_name      CLI command name (e.g. deploy_db).
+	 * @param string   $shell_command     Escaped CLI argument string for exec().
+	 * @param string   $auth_token_value  Exact option value written for this command.
+	 * @param resource $deploy_lock       Acquired deploy lock handle.
 	 *
 	 * @return array|\WP_Error
 	 */
-	protected function startAsyncDeploy( $script, $command_name, $shell_command ) {
-		if ( $this->isDeployInProgress() ) {
-			return $this->getDeployCommandStatus( $command_name );
-		}
-
+	protected function startAsyncDeploy( $script, $command_name, $shell_command, $auth_token_value, $deploy_lock ) {
 		$started_at = time();
 
 		$this->writeDeployResult(
@@ -673,49 +765,53 @@ class Staging {
 		$instance = $this;
 		add_action(
 			'shutdown',
-			static function () use ( $instance, $script, $command_name, $shell_command, $started_at ) {
-				if ( function_exists( 'fastcgi_finish_request' ) ) {
-					fastcgi_finish_request();
-				}
-				ignore_user_abort( true );
-				set_time_limit( 0 );
+			static function () use ( $instance, $script, $command_name, $shell_command, $auth_token_value, $deploy_lock, $started_at ) {
+				try {
+					if ( function_exists( 'fastcgi_finish_request' ) ) {
+						fastcgi_finish_request();
+					}
+					ignore_user_abort( true );
+					set_time_limit( 0 );
 
-				$result = $instance->executeStagingScript( $script, $command_name, $shell_command );
+					$result = $instance->executeStagingScript( $script, $command_name, $shell_command, $auth_token_value );
 
-				if ( is_wp_error( $result ) ) {
-					$log_status = $instance->getDeployStatusFromLog( $command_name, $started_at );
-					if ( is_array( $log_status ) && 'success' === $log_status['status'] ) {
+					if ( is_wp_error( $result ) ) {
+						$log_status = $instance->getDeployStatusFromLog( $command_name, $started_at );
+						if ( is_array( $log_status ) && 'success' === $log_status['status'] ) {
+							$instance->writeDeployResult(
+								array_merge(
+									$log_status,
+									array( 'started_at' => $started_at )
+								)
+							);
+							wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
+							return;
+						}
+
 						$instance->writeDeployResult(
-							array_merge(
-								$log_status,
-								array( 'started_at' => $started_at )
+							array(
+								'status'     => 'error',
+								'command'    => $command_name,
+								'started_at' => $started_at,
+								'message'    => $result->get_error_message(),
 							)
 						);
-						wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
 						return;
 					}
 
 					$instance->writeDeployResult(
-						array(
-							'status'     => 'error',
-							'command'    => $command_name,
-							'started_at' => $started_at,
-							'message'    => $result->get_error_message(),
+						array_merge(
+							(array) $result,
+							array(
+								'command'    => $command_name,
+								'started_at' => $started_at,
+							)
 						)
 					);
-					return;
+					wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
+				} finally {
+					$instance->releaseDeployLock( $deploy_lock );
 				}
-
-				$instance->writeDeployResult(
-					array_merge(
-						(array) $result,
-						array(
-							'command'    => $command_name,
-							'started_at' => $started_at,
-						)
-					)
-				);
-				wp_delete_file( trailingslashit( $instance->getProductionDir() ) . 'nfd-private/nfd-staging.log' );
 			},
 			0
 		);
@@ -731,14 +827,17 @@ class Staging {
 	/**
 	 * Run the staging shell script and parse its JSON stdout.
 	 *
-	 * @param string $script       Path to the staging shell script.
-	 * @param string $command_name CLI command name (e.g. deploy_db), used to gate the compat_check exemptions below.
-	 * @param string $command      Escaped CLI argument string.
+	 * @param string $script            Path to the staging shell script.
+	 * @param string $command_name      CLI command name (e.g. deploy_db), used to gate the compat_check exemptions below.
+	 * @param string $command           Escaped CLI argument string.
+	 * @param string $auth_token_value  Exact option value written for this command.
 	 *
 	 * @return array|\WP_Error
 	 */
-	protected function executeStagingScript( $script, $command_name, $command ) {
+	protected function executeStagingScript( $script, $command_name, $command, $auth_token_value ) {
 		do_action( 'newfold_staging_command', $command ); // bh_staging_command
+
+		$this->logAuthTokenState( $auth_token_value );
 
 		$output      = array();
 		$exit_status = 0;
@@ -755,9 +854,180 @@ class Staging {
 		 * replaced, an option does not expire on its own, so an uncollected token would sit in
 		 * wp_options in plain text and travel into every database export.
 		 */
-		delete_option( 'staging_auth_token' );
+		$this->deleteAuthToken( $auth_token_value );
 
 		return $this->parseStagingScriptResponse( $output, $exit_status );
+	}
+
+	/**
+	 * Delete only the auth token written for the command that just finished.
+	 *
+	 * @param string $auth_token_value Exact stored option value.
+	 *
+	 * @return void
+	 */
+	protected function deleteAuthToken( $auth_token_value ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'staging_auth_token',
+				$auth_token_value
+			)
+		);
+
+		if ( $deleted ) {
+			wp_cache_delete( 'staging_auth_token', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
+	}
+
+	/**
+	 * Store the single-use auth token and prove it reached the database.
+	 *
+	 * update_option() cannot be trusted on its own here. When a persistent cache still holds a
+	 * value whose row lib/.staging has already deleted, update_option() reads that phantom from
+	 * cache, concludes the row exists, issues an UPDATE matching nothing and returns false having
+	 * written no row at all. The script then finds no token and the command fails as "Unable to
+	 * authenticate the action.", with nothing on either side recording that a write was dropped.
+	 *
+	 * The row is therefore read straight off the database, bypassing get_option() and whatever
+	 * cache sits in front of it. A failed first attempt is retried once after evicting the keys
+	 * that produce the phantom, so a cache in this state is repaired rather than merely reported.
+	 *
+	 * @param string $token Token to store.
+	 *
+	 * @return string|false Stored "<token>.<expiry>" value, or false when the write did not land.
+	 */
+	protected function persist_auth_token( $token ) {
+		global $wpdb;
+
+		// Options have no TTL of their own, so the expiry rides along in the value.
+		$value = $token . '.' . ( time() + self::AUTH_TOKEN_TTL );
+
+		update_option( 'staging_auth_token', $value, false );
+
+		if ( $this->auth_token_row() === $value ) {
+			return $value;
+		}
+
+		/*
+		 * The cache claimed a row that is not there, so stop asking it. Evict the keys that produce
+		 * the phantom and write the row directly, because update_option() would just consult the
+		 * same cache again and drop the write a second time. Evicting afterwards leaves get_option()
+		 * agreeing with what is now on disk.
+		 *
+		 * 'no' rather than 'off' for autoload: WordPress 6.6 renamed the values but still reads the
+		 * old ones, and the module supports installs from before the rename.
+		 */
+		$this->resync_object_cache();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'staging_auth_token' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->insert(
+			$wpdb->options,
+			array(
+				'option_name'  => 'staging_auth_token',
+				'option_value' => $value,
+				'autoload'     => 'no',
+			)
+		);
+
+		wp_cache_delete( 'staging_auth_token', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		return $this->auth_token_row() === $value ? $value : false;
+	}
+
+	/**
+	 * Which install this request is running in, for lib/.staging to read the token from.
+	 *
+	 * The script used to infer this from its own working directory, testing whether the path
+	 * contained "/staging/". That is wrong on hosts where the staging site's index.php is a symlink
+	 * into production's core: PHP resolves the symlink, so a request to /staging/<id>/index.php
+	 * starts in the production directory. The script then read production's staging_auth_token
+	 * while this request had written the token to the staging database, and every deploy driven
+	 * from the staging dashboard failed as "Unable to authenticate the action.".
+	 *
+	 * ABSPATH is authoritative because it names the install whose database update_option() just
+	 * wrote to, which is exactly what the script has to read back.
+	 *
+	 * @param array       $config  staging_config values.
+	 * @param string|null $abspath Install root to classify. Defaults to ABSPATH.
+	 *
+	 * @return string Either 'staging' or 'production'.
+	 */
+	protected function getScriptEnvironment( array $config, $abspath = null ) {
+		$abspath = StagingPath::normalize_trailing_slash( null === $abspath ? ABSPATH : $abspath );
+
+		if ( StagingPath::is_staging_abspath( $abspath ) ) {
+			return 'staging';
+		}
+
+		if ( ! empty( $config['staging_dir'] )
+			&& StagingPath::normalize_trailing_slash( $config['staging_dir'] ) === $abspath ) {
+			return 'staging';
+		}
+
+		return 'production';
+	}
+
+	/**
+	 * Record whether PHP can read the token row immediately before the script does.
+	 *
+	 * auth_action() reporting a missing token has several possible causes that look identical from
+	 * the shell: the row was never written, it was written to a different database or prefix than
+	 * the one WP-CLI resolves from --path, or something consumed it in between. Writing PHP's own
+	 * view into the same log, on the same clock, is what separates them. The stored value itself
+	 * is never written: the log is also shown on the Tools page.
+	 *
+	 * @param string $auth_token_value Exact option value written for this command.
+	 *
+	 * @return void
+	 */
+	protected function logAuthTokenState( $auth_token_value ) {
+		global $wpdb;
+
+		$log_file = trailingslashit( $this->getProductionDir() ) . 'nfd-private/nfd-staging.log';
+		$dir      = dirname( $log_file );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			return;
+		}
+
+		$row     = $this->auth_token_row();
+		$message = sprintf(
+			'%s [INFO] [auth_token] PHP wrote token into %s prefix=%s; row readable: %s',
+			gmdate( 'Y-m-d H:i:s' ),
+			defined( 'DB_NAME' ) ? DB_NAME : '<undefined>',
+			$wpdb->prefix,
+			null === $row ? 'no' : ( $row === $auth_token_value ? 'yes' : 'different value' )
+		);
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $log_file, $message . PHP_EOL, FILE_APPEND );
+	}
+
+	/**
+	 * Read the stored auth token straight from the options table.
+	 *
+	 * get_option() is deliberately not used: the whole point of the caller is to find out what is
+	 * actually on disk, and get_option() answers from the cache that may be lying.
+	 *
+	 * @return string|null Stored value, or null when the row does not exist.
+	 */
+	private function auth_token_row() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'staging_auth_token'
+			)
+		);
 	}
 
 	/**
@@ -906,84 +1176,6 @@ class Staging {
 	}
 
 	/**
-	 * Store the single-use auth token and prove it reached the database.
-	 *
-	 * update_option() cannot be trusted on its own here. When a persistent cache still holds a
-	 * value whose row lib/.staging has already deleted, update_option() reads that phantom from
-	 * cache, concludes the row exists, issues an UPDATE matching nothing and returns false having
-	 * written no row at all. The script then finds no token and the command fails as "Unable to
-	 * authenticate the action.", with nothing on either side recording that a write was dropped.
-	 *
-	 * The row is therefore read straight off the database, bypassing get_option() and whatever
-	 * cache sits in front of it. A failed first attempt is retried once after evicting the keys
-	 * that produce the phantom, so a cache in this state is repaired rather than merely reported.
-	 *
-	 * @param string $token Token to store.
-	 *
-	 * @return bool True when the token is readable from the database.
-	 */
-	protected function persist_auth_token( $token ) {
-		global $wpdb;
-
-		// Options have no TTL of their own, so the expiry rides along in the value.
-		$value = $token . '.' . ( time() + self::AUTH_TOKEN_TTL );
-
-		update_option( 'staging_auth_token', $value, false );
-
-		if ( $this->auth_token_row() === $value ) {
-			return true;
-		}
-
-		/*
-		 * The cache claimed a row that is not there, so stop asking it. Evict the keys that produce
-		 * the phantom and write the row directly, because update_option() would just consult the
-		 * same cache again and drop the write a second time. Evicting afterwards leaves get_option()
-		 * agreeing with what is now on disk.
-		 *
-		 * 'no' rather than 'off' for autoload: WordPress 6.6 renamed the values but still reads the
-		 * old ones, and the module supports installs from before the rename.
-		 */
-		$this->resync_object_cache();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'staging_auth_token' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->insert(
-			$wpdb->options,
-			array(
-				'option_name'  => 'staging_auth_token',
-				'option_value' => $value,
-				'autoload'     => 'no',
-			)
-		);
-
-		wp_cache_delete( 'staging_auth_token', 'options' );
-		wp_cache_delete( 'notoptions', 'options' );
-
-		return $this->auth_token_row() === $value;
-	}
-
-	/**
-	 * Read the stored auth token straight from the options table.
-	 *
-	 * get_option() is deliberately not used: the whole point of the caller is to find out what is
-	 * actually on disk, and get_option() answers from the cache that may be lying.
-	 *
-	 * @return string|null Stored value, or null when the row does not exist.
-	 */
-	private function auth_token_row() {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				'staging_auth_token'
-			)
-		);
-	}
-
-	/**
 	 * Execute a staging CLI command.
 	 *
 	 * @param string     $command CLI command to be run.
@@ -1127,13 +1319,41 @@ class Staging {
 
 		putenv( 'PATH=' . getenv( 'PATH' ) . PATH_SEPARATOR . '/usr/local/bin' ); // phpcs:ignore
 
+		// Read by lib/.staging to pick the install it authenticates against. Set before every exec,
+		// including the async deploy, which runs in this same process at shutdown.
+		putenv( 'NFD_STAGING_ENV=' . $this->getScriptEnvironment( $config ) ); // phpcs:ignore
+
 		/*
 		 * Written last, once every check above has passed. Anything that returns before this point
 		 * never reaches the delete below and never runs the script that would consume the token,
 		 * so persisting it earlier would strand a live credential in wp_options.
 		 */
-		if ( ! $this->persist_auth_token( $token ) ) {
+		$deploy_lock = null;
+		if ( $this->isDeployCommand( $command_name ) ) {
+			$deploy_lock = $this->acquireDeployLock();
+			if ( is_wp_error( $deploy_lock ) ) {
+				return $deploy_lock;
+			}
+			if ( false === $deploy_lock ) {
+				return array(
+					'status'  => 'running',
+					'command' => $command_name,
+					'message' => __( 'Deployment in progress. This may take several minutes.', 'wp-module-staging' ),
+				);
+			}
+		} elseif ( $this->isDeployLockHeld() ) {
+			return new \WP_Error(
+				'staging_locked',
+				__( 'A deployment is currently in progress. Please wait for it to finish.', 'wp-module-staging' )
+			);
+		}
+
+		$auth_token_value = $this->persist_auth_token( $token );
+		if ( ! $auth_token_value ) {
 			delete_option( 'staging_auth_token' );
+			if ( $deploy_lock ) {
+				$this->releaseDeployLock( $deploy_lock );
+			}
 
 			return new \WP_Error(
 				'auth_token_not_persisted',
@@ -1142,10 +1362,10 @@ class Staging {
 		}
 
 		if ( $this->isDeployCommand( $command_name ) ) {
-			return $this->startAsyncDeploy( $script, $command_name, $shell_command );
+			return $this->startAsyncDeploy( $script, $command_name, $shell_command, $auth_token_value, $deploy_lock );
 		}
 
-		$response = $this->executeStagingScript( $script, $command_name, $shell_command );
+		$response = $this->executeStagingScript( $script, $command_name, $shell_command, $auth_token_value );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

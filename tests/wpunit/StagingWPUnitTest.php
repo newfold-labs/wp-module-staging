@@ -167,6 +167,27 @@ class StagingWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 	}
 
 	/**
+	 * Cleanup must not delete a newer token written by another command.
+	 *
+	 * @return void
+	 */
+	public function test_command_deletes_only_its_own_auth_token() {
+		$replacement = 'replacement-token.' . ( time() + Staging::AUTH_TOKEN_TTL );
+		$this->queue_exec_response(
+			array( '{"status":"success"}' ),
+			0,
+			function () use ( $replacement ) {
+				update_option( 'staging_auth_token', $replacement, false );
+			}
+		);
+
+		$result = $this->run_command( 'compat_check' );
+
+		$this->assertSame( array( 'status' => 'success' ), $result );
+		$this->assertSame( $replacement, get_option( 'staging_auth_token' ) );
+	}
+
+	/**
 	 * Notices and trailing noise do not hide the last valid status response.
 	 *
 	 * @return void
