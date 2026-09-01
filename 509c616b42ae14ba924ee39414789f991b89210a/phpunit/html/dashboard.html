@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /home/runner/work/wp-module-staging/wp-module-staging</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="_css/bootstrap.min.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/nv.d3.min.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/style.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="index.html">/home/runner/work/wp-module-staging/wp-module-staging</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Constants.php.html#10">NewfoldLabs\WP\Module\Staging\Constants</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#7">NewfoldLabs\WP\Module\Staging\StagingCLI</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#15">NewfoldLabs\WP\Module\Staging\StagingFeature</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#10">NewfoldLabs\WP\Module\Staging\StagingMenu</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#8">NewfoldLabs\WP\Module\Staging\StagingHealthCheck</a></td><td class="text-right">44%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#10">NewfoldLabs\WP\Module\Staging\Staging</a></td><td class="text-right">46%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#11">NewfoldLabs\WP\Module\Staging\StagingPath</a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#11">NewfoldLabs\WP\Module\Staging\StagingApi</a></td><td class="text-right">79%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Staging.php.html#10">NewfoldLabs\WP\Module\Staging\Staging</a></td><td class="text-right">6333</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#7">NewfoldLabs\WP\Module\Staging\StagingCLI</a></td><td class="text-right">4160</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#8">NewfoldLabs\WP\Module\Staging\StagingHealthCheck</a></td><td class="text-right">668</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#11">NewfoldLabs\WP\Module\Staging\StagingPath</a></td><td class="text-right">439</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#10">NewfoldLabs\WP\Module\Staging\StagingMenu</a></td><td class="text-right">132</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#11">NewfoldLabs\WP\Module\Staging\StagingApi</a></td><td class="text-right">14</td></tr>
+       <tr><td><a href="includes/Constants.php.html#10">NewfoldLabs\WP\Module\Staging\Constants</a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#15">NewfoldLabs\WP\Module\Staging\StagingFeature</a></td><td class="text-right">6</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Constants.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\Constants::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#244"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::switchTo">switchTo</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#205"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::success">success</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#195"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::bold_heading">bold_heading</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#168"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::table">table</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#129"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::get_admin_user_id">get_admin_user_id</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#93"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::render">render</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#207"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#224"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::warning">warning</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#181"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::getDeployStatus">getDeployStatus</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#170"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::deployToProduction">deployToProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#159"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#131"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::createStaging">createStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1487"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_staging_repair_notice">render_staging_repair_notice</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1446"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::run_staging_health_check">run_staging_health_check</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1435"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::clean_log">clean_log</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#215"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::info">info</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#238"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::error">error</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1382"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::add_log_admin_page">add_log_admin_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#30"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_nfd_subnav">add_nfd_subnav</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#251"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::select_staging_directory">select_staging_directory</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#219"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::discover_staging_directories">discover_staging_directories</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#97"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::handle_staging_redirect">handle_staging_redirect</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#85"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::tools_staging">tools_staging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#68"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_management_page">add_management_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_staging_toolbar_items">add_staging_toolbar_items</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#14"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::init">init</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#254"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::colorize_log">colorize_log</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#307"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::update_environment">update_environment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#243"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::merge_config_with_expected">merge_config_with_expected</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#82"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_staging_site">repair_staging_site</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#33"><abbr title="NewfoldLabs\WP\Module\Staging\StagingFeature::initialize">initialize</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#300"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::confirm">confirm</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#282"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::log_to_json">log_to_json</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#273"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::new_line">new_line</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1397"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_log_admin_page">render_log_admin_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1466"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::should_run_health_check_on_this_request">should_run_health_check_on_this_request</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1119"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::switchTo">switchTo</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#279"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getCreationDate">getCreationDate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#366"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#356"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::stagingExists">stagingExists</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#343"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isProduction">isProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#317"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isEnvironment">isEnvironment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#306"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getStagingScreenshotUrl">getStagingScreenshotUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#297"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionScreenshotUrl">getProductionScreenshotUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#288"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getEnvironment">getEnvironment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#270"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getStagingUrl">getStagingUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#391"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::createStaging">createStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#261"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getStagingDir">getStagingDir</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#247"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionUrl">getProductionUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#186"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getInstance">getInstance</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#173"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::loadTextDomain">loadTextDomain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#131"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::register_staging_assets">register_staging_assets</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#122"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::initialize_staging_app">initialize_staging_app</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#111"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::confirm_jetpack_safe_mode">confirm_jetpack_safe_mode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#382"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::compatibilityCheck">compatibilityCheck</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#326"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isStaging">isStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#412"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::deployToProduction">deployToProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#680"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeploySuccessMessage">getDeploySuccessMessage</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1100"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#753"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::startAsyncDeploy">startAsyncDeploy</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#423"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployStatus">getDeployStatus</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#332"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_production_site">build_config_for_production_site</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#904"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::persist_auth_token">persist_auth_token</abbr></a></td><td class="text-right">27%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#697"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployCommandStatus">getDeployCommandStatus</abbr></a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_staging_site">build_config_for_staging_site</abbr></a></td><td class="text-right">51%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#479"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::acquireDeployLock">acquireDeployLock</abbr></a></td><td class="text-right">52%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#141"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_production_site">repair_production_site</abbr></a></td><td class="text-right">57%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#187"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_valid_staging_config">is_valid_staging_config</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#613"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployStatusFromLog">getDeployStatusFromLog</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_staging_abspath">is_staging_abspath</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::__construct">__construct</abbr></a></td><td class="text-right">67%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1186"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runCommand">runCommand</abbr></a></td><td class="text-right">68%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#542"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployInProgress">isDeployInProgress</abbr></a></td><td class="text-right">71%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#233"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionDir">getProductionDir</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#576"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::readDeployResult">readDeployResult</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#596"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseLogLineTimestamp">parseLogLineTimestamp</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1041"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseStagingScriptResponse">parseStagingScriptResponse</abbr></a></td><td class="text-right">77%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::fix_swapped_urls">fix_swapped_urls</abbr></a></td><td class="text-right">77%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#561"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::writeDeployResult">writeDeployResult</abbr></a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#335"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::log">log</abbr></a></td><td class="text-right">83%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#524"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployLockHeld">isDeployLockHeld</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#963"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getScriptEnvironment">getScriptEnvironment</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::config_has_swapped_urls">config_has_swapped_urls</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::maybe_repair">maybe_repair</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#190"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::getDeployTypeArgs">getDeployTypeArgs</abbr></a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#84"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::parse_staging_from_url">parse_staging_from_url</abbr></a></td><td class="text-right">89%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/StagingCLI.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::__invoke">__invoke</abbr></a></td><td class="text-right">506</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#243"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::merge_config_with_expected">merge_config_with_expected</abbr></a></td><td class="text-right">210</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#82"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_staging_site">repair_staging_site</abbr></a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1397"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_log_admin_page">render_log_admin_page</abbr></a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#300"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::confirm">confirm</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#93"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::render">render</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#141"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_production_site">repair_production_site</abbr></a></td><td class="text-right">55</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1186"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runCommand">runCommand</abbr></a></td><td class="text-right">46</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1466"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::should_run_health_check_on_this_request">should_run_health_check_on_this_request</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="includes/Staging.php.html#697"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployCommandStatus">getDeployCommandStatus</abbr></a></td><td class="text-right">34</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#251"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::select_staging_directory">select_staging_directory</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#219"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::discover_staging_directories">discover_staging_directories</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#254"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::colorize_log">colorize_log</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#129"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::get_admin_user_id">get_admin_user_id</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1446"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::run_staging_health_check">run_staging_health_check</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/Staging.php.html#753"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::startAsyncDeploy">startAsyncDeploy</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#332"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_production_site">build_config_for_production_site</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/Staging.php.html#131"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::register_staging_assets">register_staging_assets</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#97"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::handle_staging_redirect">handle_staging_redirect</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1119"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::switchTo">switchTo</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#326"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isStaging">isStaging</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#168"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::table">table</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#613"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployStatusFromLog">getDeployStatusFromLog</abbr></a></td><td class="text-right">15</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1041"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseStagingScriptResponse">parseStagingScriptResponse</abbr></a></td><td class="text-right">13</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_staging_site">build_config_for_staging_site</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Constants.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\Constants::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1487"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_staging_repair_notice">render_staging_repair_notice</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_staging_toolbar_items">add_staging_toolbar_items</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#282"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::log_to_json">log_to_json</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#238"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::error">error</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Staging.php.html#111"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::confirm_jetpack_safe_mode">confirm_jetpack_safe_mode</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#187"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_valid_staging_config">is_valid_staging_config</abbr></a></td><td class="text-right">10</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::fix_swapped_urls">fix_swapped_urls</abbr></a></td><td class="text-right">8</td></tr>
+       <tr><td><a href="includes/Staging.php.html#479"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::acquireDeployLock">acquireDeployLock</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#84"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::parse_staging_from_url">parse_staging_from_url</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Staging.php.html#542"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployInProgress">isDeployInProgress</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#904"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::persist_auth_token">persist_auth_token</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::config_has_swapped_urls">config_has_swapped_urls</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#343"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isProduction">isProduction</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1100"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#247"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionUrl">getProductionUrl</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#131"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::createStaging">createStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#680"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeploySuccessMessage">getDeploySuccessMessage</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#33"><abbr title="NewfoldLabs\WP\Module\Staging\StagingFeature::initialize">initialize</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#356"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::stagingExists">stagingExists</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#366"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1435"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::clean_log">clean_log</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#205"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::success">success</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#391"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::createStaging">createStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#963"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getScriptEnvironment">getScriptEnvironment</abbr></a></td><td class="text-right">5</td></tr>
+       <tr><td><a href="includes/Staging.php.html#576"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::readDeployResult">readDeployResult</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#335"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::log">log</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="includes/Staging.php.html#596"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseLogLineTimestamp">parseLogLineTimestamp</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::maybe_repair">maybe_repair</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Staging.php.html#524"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployLockHeld">isDeployLockHeld</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_staging_abspath">is_staging_abspath</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#233"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionDir">getProductionDir</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#561"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::writeDeployResult">writeDeployResult</abbr></a></td><td class="text-right">2</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 9.2.32</a> using <a href="https://secure.php.net/" target="_top">PHP 7.4.33</a> at Tue Sep 1 8:39:12 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="_js/jquery.min.js?v=9.2.32" type="text/javascript"></script>
+  <script src="_js/d3.min.js?v=9.2.32" type="text/javascript"></script>
+  <script src="_js/nv.d3.min.js?v=9.2.32" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([4,0,0,0,0,2,1,0,1,0,0,0], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([64,0,0,1,0,0,4,5,6,8,4,19], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[0,3,"<a href=\"includes\/Constants.php.html#10\">NewfoldLabs\\WP\\Module\\Staging\\Constants<\/a>"],[46.65523156089194,201,"<a href=\"includes\/Staging.php.html#10\">NewfoldLabs\\WP\\Module\\Staging\\Staging<\/a>"],[79.16666666666666,13,"<a href=\"includes\/StagingApi.php.html#11\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi<\/a>"],[0,64,"<a href=\"includes\/StagingCLI.php.html#7\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI<\/a>"],[0,2,"<a href=\"includes\/StagingFeature.php.html#15\">NewfoldLabs\\WP\\Module\\Staging\\StagingFeature<\/a>"],[44.70588235294118,60,"<a href=\"includes\/StagingHealthCheck.php.html#8\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck<\/a>"],[0,11,"<a href=\"includes\/StagingMenu.php.html#10\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu<\/a>"],[50.349650349650354,56,"<a href=\"includes\/StagingPath.php.html#11\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[0,3,"<a href=\"includes\/Constants.php.html#16\">NewfoldLabs\\WP\\Module\\Staging\\Constants::__construct<\/a>"],[67.5,1,"<a href=\"includes\/Staging.php.html#46\">NewfoldLabs\\WP\\Module\\Staging\\Staging::__construct<\/a>"],[0,3,"<a href=\"includes\/Staging.php.html#111\">NewfoldLabs\\WP\\Module\\Staging\\Staging::confirm_jetpack_safe_mode<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#122\">NewfoldLabs\\WP\\Module\\Staging\\Staging::initialize_staging_app<\/a>"],[0,5,"<a href=\"includes\/Staging.php.html#131\">NewfoldLabs\\WP\\Module\\Staging\\Staging::register_staging_assets<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#173\">NewfoldLabs\\WP\\Module\\Staging\\Staging::loadTextDomain<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#186\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getInstance<\/a>"],[100,3,"<a href=\"includes\/Staging.php.html#197\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getConfig<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#222\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getConfigValue<\/a>"],[75,2,"<a href=\"includes\/Staging.php.html#233\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionDir<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#247\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#261\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingDir<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#270\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#279\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getCreationDate<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#288\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getEnvironment<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#297\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionScreenshotUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#306\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingScreenshotUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#317\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isEnvironment<\/a>"],[0,4,"<a href=\"includes\/Staging.php.html#326\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isStaging<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#343\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isProduction<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#356\">NewfoldLabs\\WP\\Module\\Staging\\Staging::stagingExists<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#366\">NewfoldLabs\\WP\\Module\\Staging\\Staging::cloneProductionToStaging<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#382\">NewfoldLabs\\WP\\Module\\Staging\\Staging::compatibilityCheck<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#391\">NewfoldLabs\\WP\\Module\\Staging\\Staging::createStaging<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#412\">NewfoldLabs\\WP\\Module\\Staging\\Staging::deployToProduction<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#423\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployStatus<\/a>"],[100,4,"<a href=\"includes\/Staging.php.html#434\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployCommandForType<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#452\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployCommand<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#461\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployResultPath<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#470\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployLockPath<\/a>"],[52.94117647058824,5,"<a href=\"includes\/Staging.php.html#479\">NewfoldLabs\\WP\\Module\\Staging\\Staging::acquireDeployLock<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#512\">NewfoldLabs\\WP\\Module\\Staging\\Staging::releaseDeployLock<\/a>"],[85.71428571428571,3,"<a href=\"includes\/Staging.php.html#524\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployLockHeld<\/a>"],[71.42857142857143,6,"<a href=\"includes\/Staging.php.html#542\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployInProgress<\/a>"],[80,2,"<a href=\"includes\/Staging.php.html#561\">NewfoldLabs\\WP\\Module\\Staging\\Staging::writeDeployResult<\/a>"],[75,4,"<a href=\"includes\/Staging.php.html#576\">NewfoldLabs\\WP\\Module\\Staging\\Staging::readDeployResult<\/a>"],[75,3,"<a href=\"includes\/Staging.php.html#596\">NewfoldLabs\\WP\\Module\\Staging\\Staging::parseLogLineTimestamp<\/a>"],[66.66666666666666,11,"<a href=\"includes\/Staging.php.html#613\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployStatusFromLog<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#663\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeploySuccessLogStep<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#680\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeploySuccessMessage<\/a>"],[50,13,"<a href=\"includes\/Staging.php.html#697\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployCommandStatus<\/a>"],[0,5,"<a href=\"includes\/Staging.php.html#753\">NewfoldLabs\\WP\\Module\\Staging\\Staging::startAsyncDeploy<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#837\">NewfoldLabs\\WP\\Module\\Staging\\Staging::executeStagingScript<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#869\">NewfoldLabs\\WP\\Module\\Staging\\Staging::deleteAuthToken<\/a>"],[27.77777777777778,3,"<a href=\"includes\/Staging.php.html#904\">NewfoldLabs\\WP\\Module\\Staging\\Staging::persist_auth_token<\/a>"],[85.71428571428571,5,"<a href=\"includes\/Staging.php.html#963\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getScriptEnvironment<\/a>"],[92.85714285714286,6,"<a href=\"includes\/Staging.php.html#991\">NewfoldLabs\\WP\\Module\\Staging\\Staging::logAuthTokenState<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#1021\">NewfoldLabs\\WP\\Module\\Staging\\Staging::auth_token_row<\/a>"],[77.27272727272727,12,"<a href=\"includes\/Staging.php.html#1041\">NewfoldLabs\\WP\\Module\\Staging\\Staging::parseStagingScriptResponse<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#1100\">NewfoldLabs\\WP\\Module\\Staging\\Staging::destroyStaging<\/a>"],[0,4,"<a href=\"includes\/Staging.php.html#1119\">NewfoldLabs\\WP\\Module\\Staging\\Staging::switchTo<\/a>"],[100,3,"<a href=\"includes\/Staging.php.html#1159\">NewfoldLabs\\WP\\Module\\Staging\\Staging::resync_object_cache<\/a>"],[68.57142857142857,26,"<a href=\"includes\/Staging.php.html#1186\">NewfoldLabs\\WP\\Module\\Staging\\Staging::runCommand<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#1382\">NewfoldLabs\\WP\\Module\\Staging\\Staging::add_log_admin_page<\/a>"],[0,10,"<a href=\"includes\/Staging.php.html#1397\">NewfoldLabs\\WP\\Module\\Staging\\Staging::render_log_admin_page<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#1435\">NewfoldLabs\\WP\\Module\\Staging\\Staging::clean_log<\/a>"],[0,5,"<a href=\"includes\/Staging.php.html#1446\">NewfoldLabs\\WP\\Module\\Staging\\Staging::run_staging_health_check<\/a>"],[0,6,"<a href=\"includes\/Staging.php.html#1466\">NewfoldLabs\\WP\\Module\\Staging\\Staging::should_run_health_check_on_this_request<\/a>"],[0,3,"<a href=\"includes\/Staging.php.html#1487\">NewfoldLabs\\WP\\Module\\Staging\\Staging::render_staging_repair_notice<\/a>"],[100,1,"<a href=\"includes\/StagingApi.php.html#32\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::__construct<\/a>"],[98.57142857142858,1,"<a href=\"includes\/StagingApi.php.html#40\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::register_routes<\/a>"],[100,1,"<a href=\"includes\/StagingApi.php.html#122\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::checkPermission<\/a>"],[0,2,"<a href=\"includes\/StagingApi.php.html#131\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::createStaging<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#159\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::cloneProductionToStaging<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#170\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::deployToProduction<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#181\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getDeployStatus<\/a>"],[88.88888888888889,1,"<a href=\"includes\/StagingApi.php.html#190\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getDeployTypeArgs<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#207\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::destroyStaging<\/a>"],[93.75,2,"<a href=\"includes\/StagingApi.php.html#216\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getStagingDetails<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#244\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::switchTo<\/a>"],[0,22,"<a href=\"includes\/StagingCLI.php.html#16\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::__invoke<\/a>"],[0,8,"<a href=\"includes\/StagingCLI.php.html#93\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::render<\/a>"],[0,5,"<a href=\"includes\/StagingCLI.php.html#129\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::get_admin_user_id<\/a>"],[0,4,"<a href=\"includes\/StagingCLI.php.html#168\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::table<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#195\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::bold_heading<\/a>"],[0,2,"<a href=\"includes\/StagingCLI.php.html#205\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::success<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#215\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::info<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#224\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::warning<\/a>"],[0,3,"<a href=\"includes\/StagingCLI.php.html#238\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::error<\/a>"],[0,5,"<a href=\"includes\/StagingCLI.php.html#254\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::colorize_log<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#273\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::new_line<\/a>"],[0,3,"<a href=\"includes\/StagingCLI.php.html#282\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::log_to_json<\/a>"],[0,8,"<a href=\"includes\/StagingCLI.php.html#300\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::confirm<\/a>"],[0,2,"<a href=\"includes\/StagingFeature.php.html#33\">NewfoldLabs\\WP\\Module\\Staging\\StagingFeature::initialize<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#43\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::__construct<\/a>"],[85.71428571428571,3,"<a href=\"includes\/StagingHealthCheck.php.html#52\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::maybe_repair<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#73\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::get_notice_transient_key<\/a>"],[0,13,"<a href=\"includes\/StagingHealthCheck.php.html#82\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::repair_staging_site<\/a>"],[57.35294117647059,21,"<a href=\"includes\/StagingHealthCheck.php.html#141\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::repair_production_site<\/a>"],[0,14,"<a href=\"includes\/StagingHealthCheck.php.html#243\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::merge_config_with_expected<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#284\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::save_config<\/a>"],[0,1,"<a href=\"includes\/StagingHealthCheck.php.html#307\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::update_environment<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#323\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::schedule_admin_notice<\/a>"],[83.33333333333334,4,"<a href=\"includes\/StagingHealthCheck.php.html#335\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::log<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#14\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::init<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#30\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_nfd_subnav<\/a>"],[0,3,"<a href=\"includes\/StagingMenu.php.html#46\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_staging_toolbar_items<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#68\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_management_page<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#85\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::tools_staging<\/a>"],[0,4,"<a href=\"includes\/StagingMenu.php.html#97\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::handle_staging_redirect<\/a>"],[66.66666666666666,2,"<a href=\"includes\/StagingPath.php.html#46\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::is_staging_abspath<\/a>"],[90.9090909090909,2,"<a href=\"includes\/StagingPath.php.html#60\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::parse_staging_from_abspath<\/a>"],[89.47368421052632,7,"<a href=\"includes\/StagingPath.php.html#84\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::parse_staging_from_url<\/a>"],[100,1,"<a href=\"includes\/StagingPath.php.html#120\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::normalize_trailing_slash<\/a>"],[85.71428571428571,6,"<a href=\"includes\/StagingPath.php.html#130\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::config_has_swapped_urls<\/a>"],[77.77777777777779,8,"<a href=\"includes\/StagingPath.php.html#150\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::fix_swapped_urls<\/a>"],[66.66666666666666,8,"<a href=\"includes\/StagingPath.php.html#187\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::is_valid_staging_config<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#219\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::discover_staging_directories<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#251\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::select_staging_directory<\/a>"],[51.85185185185185,7,"<a href=\"includes\/StagingPath.php.html#285\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::build_config_for_staging_site<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#332\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::build_config_for_production_site<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>
