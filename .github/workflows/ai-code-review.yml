@@ -32,7 +32,6 @@ jobs:
       github.actor != 'dependabot[bot]'
     name: Review PR diff
     uses: newfold-labs/workflows/.github/workflows/reusable-code-review.yml@main
-    timeout-minutes: 30
     with:
       prompts_ref: main
     permissions:

@@ -35,7 +35,6 @@ jobs:
     permissions:
       contents: write      # Required by reusable codecoverage to push coverage badge and GitHub Pages output.
       pull-requests: write # Required by reusable codecoverage to comment or update pull requests.
-    timeout-minutes: 90
     with:
       php-versions: '["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]'
       coverage-php-version: '7.4'
