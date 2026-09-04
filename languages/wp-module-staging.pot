@@ -12,6 +12,10 @@ msgstr ""
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wp-module-staging\n"
 
+#: includes/Staging.php:1379
+msgid "A deployment is currently in progress. Please wait for it to finish."
+msgstr ""
+
 #: build/staging/bundle.js:1
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
 msgstr ""
@@ -36,7 +40,7 @@ msgstr ""
 msgid "Cloned to Staging"
 msgstr ""
 
-#: includes/Staging.php:363
+#: includes/Staging.php:370
 msgid "Cloning can only be done from the production environment."
 msgstr ""
 
@@ -72,7 +76,7 @@ msgstr ""
 msgid "Currently editing"
 msgstr ""
 
-#: includes/Staging.php:599
+#: includes/Staging.php:683
 msgid "Database deployed successfully."
 msgstr ""
 
@@ -120,20 +124,20 @@ msgstr ""
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr ""
 
-#: includes/Staging.php:603
+#: includes/Staging.php:687
 msgid "Deployment completed successfully."
 msgstr ""
 
-#: includes/Staging.php:557
+#: includes/Staging.php:641
 msgid "Deployment failed. Check the staging log for details."
 msgstr ""
 
-#: includes/Staging.php:629 includes/Staging.php:644 includes/Staging.php:669
-#: includes/Staging.php:727
+#: includes/Staging.php:727 includes/Staging.php:745 includes/Staging.php:774
+#: includes/Staging.php:803 includes/Staging.php:1362 includes/Staging.php:1373
 msgid "Deployment in progress. This may take several minutes."
 msgstr ""
 
-#: includes/Staging.php:1179
+#: includes/Staging.php:1431
 msgid "Don't have capabilities to access this page"
 msgstr ""
 
@@ -145,15 +149,15 @@ msgstr ""
 msgid "Error: "
 msgstr ""
 
-#: includes/Staging.php:600
+#: includes/Staging.php:684
 msgid "Files and Database deployed successfully."
 msgstr ""
 
-#: includes/Staging.php:598
+#: includes/Staging.php:682
 msgid "Files deployed successfully."
 msgstr ""
 
-#: includes/Staging.php:1113
+#: includes/Staging.php:1330
 msgid "Filesystem credentials required."
 msgstr ""
 
@@ -170,7 +174,7 @@ msgid "Invalid action"
 msgstr ""
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:1091
+#: includes/Staging.php:1308
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr ""
@@ -179,7 +183,7 @@ msgstr ""
 msgid "Invalid deploy type"
 msgstr ""
 
-#: includes/Staging.php:1024
+#: includes/Staging.php:1241
 msgid "Invalid staging CLI command."
 msgstr ""
 
@@ -203,7 +207,7 @@ msgstr ""
 msgid "Log"
 msgstr ""
 
-#: includes/Staging.php:1165 views/staging-log.php:11
+#: includes/Staging.php:1417 views/staging-log.php:11
 msgid "Log Staging"
 msgstr ""
 
@@ -255,7 +259,7 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: includes/Staging.php:800
+#: includes/Staging.php:1095
 msgid "Something gone wrong, please get in touch with our support."
 msgstr ""
 
@@ -292,11 +296,11 @@ msgstr ""
 msgid "Staging URL:"
 msgstr ""
 
-#: includes/Staging.php:1280
+#: includes/Staging.php:1532
 msgid "Staging configuration was automatically repaired."
 msgstr ""
 
-#: includes/Staging.php:388
+#: includes/Staging.php:395
 msgid "Staging environment already exists!"
 msgstr ""
 
@@ -316,7 +320,7 @@ msgstr ""
 msgid "Switch to Staging"
 msgstr ""
 
-#: includes/Staging.php:856
+#: includes/Staging.php:1151
 msgid "Switch to an environment you are already in, you cannot."
 msgstr ""
 
@@ -332,11 +336,15 @@ msgstr ""
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr ""
 
-#: includes/Staging.php:795
+#: includes/Staging.php:1090
 msgid "The deployment is still running. Please wait and check again shortly."
 msgstr ""
 
-#: includes/Staging.php:810
+#: includes/Staging.php:736
+msgid "The deployment stopped before it completed. Please try again."
+msgstr ""
+
+#: includes/Staging.php:1105
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr ""
 
@@ -360,19 +368,31 @@ msgstr ""
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr ""
 
-#: includes/Staging.php:1100
+#: includes/Staging.php:485
+msgid "Unable to create the deployment lock directory."
+msgstr ""
+
+#: includes/Staging.php:1317
 msgid "Unable to execute script (disabled_function)."
 msgstr ""
 
-#: includes/Staging.php:1124
+#: includes/Staging.php:1341
 msgid "Unable to execute script (permission error)."
 msgstr ""
 
-#: includes/Staging.php:1117
+#: includes/Staging.php:1334
 msgid "Unable to initialize WP Filesystem."
 msgstr ""
 
-#: includes/Staging.php:1140
+#: includes/Staging.php:493
+msgid "Unable to open the deployment lock file."
+msgstr ""
+
+#: includes/Staging.php:845
+msgid "Unable to start the deployment process."
+msgstr ""
+
+#: includes/Staging.php:1392
 msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr ""
 
@@ -384,6 +404,6 @@ msgstr ""
 msgid "You don't have a staging site yet."
 msgstr ""
 
-#: includes/Staging.php:834
+#: includes/Staging.php:1129
 msgid "You must switch to the production environment before destroying staging."
 msgstr ""
