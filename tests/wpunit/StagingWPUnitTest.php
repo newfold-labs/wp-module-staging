@@ -167,6 +167,27 @@ class StagingWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 	}
 
 	/**
+	 * Cleanup must not delete a newer token written by another command.
+	 *
+	 * @return void
+	 */
+	public function test_command_deletes_only_its_own_auth_token() {
+		$replacement = 'replacement-token.' . ( time() + Staging::AUTH_TOKEN_TTL );
+		$this->queue_exec_response(
+			array( '{"status":"success"}' ),
+			0,
+			function () use ( $replacement ) {
+				update_option( 'staging_auth_token', $replacement, false );
+			}
+		);
+
+		$result = $this->run_command( 'compat_check' );
+
+		$this->assertSame( array( 'status' => 'success' ), $result );
+		$this->assertSame( $replacement, get_option( 'staging_auth_token' ) );
+	}
+
+	/**
 	 * Notices and trailing noise do not hide the last valid status response.
 	 *
 	 * @return void
@@ -290,6 +311,119 @@ class StagingWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 
 		$this->assertSame( array( 'status' => 'success' ), $result );
 		$this->assertSame( 'keep-me', wp_cache_get( 'staging_environment', 'options' ) );
+	}
+
+	/**
+	 * A deploy is launched in the background and the token is left for the child to consume.
+	 *
+	 * @return void
+	 */
+	public function test_async_deploy_is_detached_and_leaves_the_token() {
+		$production_dir = get_temp_dir() . 'staging-detach-test-' . wp_rand();
+		wp_mkdir_p( $production_dir . '/nfd-private' );
+		update_option(
+			'staging_config',
+			array(
+				'production_dir' => $production_dir,
+				'staging_dir'    => $production_dir . '/staging',
+				'production_url' => 'https://test.local',
+				'staging_url'    => 'https://test.local/staging',
+			)
+		);
+		$this->staging->getConfig( false );
+
+		$this->queue_exec_response( array( '4242' ) );
+
+		$result = $this->run_command( 'deploy_files' );
+
+		$this->assertSame( 'running', $result['status'] );
+		$this->assertNotFalse( get_option( 'staging_auth_token' ) );
+		$this->assertCount( 1, self::$executed_commands );
+		$this->assertStringContainsString( 'nohup ', self::$executed_commands[0] );
+		$this->assertStringContainsString( 'echo $!', self::$executed_commands[0] );
+		$this->assertStringNotContainsString( 'shutdown', self::$executed_commands[0] );
+		$this->assertFalse( $this->invoke_is_deploy_lock_held() );
+
+		$this->recursive_rmdir( $production_dir );
+	}
+
+	/**
+	 * A running result file blocks a second deploy without launching another process.
+	 *
+	 * @return void
+	 */
+	public function test_in_progress_deploy_does_not_start_a_second_process() {
+		$production_dir = get_temp_dir() . 'staging-detach-test-' . wp_rand();
+		wp_mkdir_p( $production_dir . '/nfd-private' );
+		update_option(
+			'staging_config',
+			array(
+				'production_dir' => $production_dir,
+				'staging_dir'    => $production_dir . '/staging',
+				'production_url' => 'https://test.local',
+				'staging_url'    => 'https://test.local/staging',
+			)
+		);
+		$this->staging->getConfig( false );
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			$production_dir . '/nfd-private/nfd-staging-deploy-result.json',
+			wp_json_encode(
+				array(
+					'status'     => 'running',
+					'command'    => 'deploy_files',
+					'started_at' => time(),
+				)
+			)
+		);
+
+		$result = $this->run_command( 'deploy_files' );
+
+		$this->assertSame( 'running', $result['status'] );
+		$this->assertSame( array(), self::$executed_commands );
+		$this->assertFalse( get_option( 'staging_auth_token' ) );
+
+		$this->recursive_rmdir( $production_dir );
+	}
+
+	/**
+	 * Invoke Staging::isDeployLockHeld().
+	 *
+	 * @return bool
+	 */
+	private function invoke_is_deploy_lock_held() {
+		$method = new \ReflectionMethod( Staging::class, 'isDeployLockHeld' );
+		$method->setAccessible( true );
+
+		return $method->invoke( $this->staging );
+	}
+
+	/**
+	 * Recursively remove a directory created for a test.
+	 *
+	 * @param string $dir Directory path.
+	 *
+	 * @return void
+	 */
+	private function recursive_rmdir( $dir ) {
+		if ( ! is_dir( $dir ) ) {
+			return;
+		}
+		$items = scandir( $dir );
+		if ( false === $items ) {
+			return;
+		}
+		foreach ( $items as $item ) {
+			if ( '.' === $item || '..' === $item ) {
+				continue;
+			}
+			$path = $dir . '/' . $item;
+			if ( is_dir( $path ) ) {
+				$this->recursive_rmdir( $path );
+			} else {
+				wp_delete_file( $path );
+			}
+		}
+		rmdir( $dir ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 	}
 
 	/**

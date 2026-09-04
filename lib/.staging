@@ -98,7 +98,7 @@ log() {
   fi
 
   # 4. Write in log (never stdout)
-  echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
+  echo "$(date -u '+%Y-%m-%d %H:%M:%S') [$level] [$step] $msg" >> "$LOG_FILE"
 }
 
 # Prefer utf8mb4 for 4-byte characters; fall back to utf8 on older servers.
@@ -128,13 +128,50 @@ release_staging_lock() {
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
 }
 
+# --- Async deploy result ---
+#
+# Staging::getDeployCommandStatus() polls nfd-staging-deploy-result.json for the outcome of a
+# deploy. The PHP request that started this script blocks in exec() for the whole run, so PHP-FPM
+# can terminate that worker on its request timeout while this script carries on to completion. The
+# caller therefore cannot be the only writer of the terminal status, or a finished deploy is left
+# reported as still running with nobody alive to correct it.
+#
+# NFD_DEPLOY_COMMAND and NFD_DEPLOY_STARTED_AT are exported only by Staging::startAsyncDeploy().
+# Both being unset for every other command, and for anyone running this script by hand, is what
+# keeps this from publishing a result over a job it does not own.
+write_deploy_result() {
+  local status="$1"
+  local message="$2"
+  local for_command="${3:-}"
+
+  [ -n "${NFD_DEPLOY_COMMAND:-}" ] && [ -n "${NFD_DEPLOY_STARTED_AT:-}" ] || return 0
+
+  # deploy_files_db reaches its own end through deploy_files and deploy_db, so those two successes
+  # must not be published as the run's result. Failures pass no command: a failure anywhere is the
+  # failure of the whole run.
+  [ -z "$for_command" ] || [ "$for_command" = "$NFD_DEPLOY_COMMAND" ] || return 0
+
+  local result_dir="$PRODUCTION_DIR/nfd-private"
+  mkdir -p "$result_dir" 2>/dev/null || return 0
+
+  printf '{"status":"%s","command":"%s","started_at":%s,"message":"%s"}' \
+    "$status" "$NFD_DEPLOY_COMMAND" "$NFD_DEPLOY_STARTED_AT" "$message" \
+    > "$result_dir/nfd-staging-deploy-result.json" 2>/dev/null || true
+}
+
 # --- Error Handling ---
+#
 # The JSON goes out first: it is the only thing the PHP side can read, and logging is best effort
 # (the log directory may not be creatable). `|| true` keeps a failing log() from taking the script
 # down under set -e after the response has already been printed.
+#
+# Optional $2 is a diagnostic step (e.g. auth_action:token_missing). operation_failed is the marker
+# PHP uses to distinguish a real failure from stderr that was logged as [ERROR].
 error() {
   printf '{"status":"error","message":"%s"}\n' "$1"
-  log "ERROR" "${2:-error}" "$1" || true
+  [ -n "${2:-}" ] && log "ERROR" "$2" "$1" || true
+  log "ERROR" "operation_failed" "$1" || true
+  write_deploy_result "error" "$1" || true
   release_staging_lock
   exit 1
 }
@@ -465,20 +502,28 @@ auth_action() {
   fi
   cd "$CURRENT_DIR" || error 'Unable to switch directory.' 'auth_action:cd_failed'
 
-  # CURRENT_DIR decides which install the token is read from, and it is inferred from pwd, so record
-  # it: reading production's token from the staging path (or the reverse) looks identical to a
-  # missing token from the outside.
-  log "INFO" "auth_action" "Reading token from $CURRENT_DIR (pwd was $(pwd))"
+  # CURRENT_DIR decides which install the token is read from, so record it along with the signal it
+  # came from: reading production's token from the staging path (or the reverse) looks identical to
+  # a missing token from the outside.
+  log "INFO" "auth_action" "Reading token from $CURRENT_DIR (NFD_STAGING_ENV=${NFD_STAGING_ENV:-<unset>}, pwd was $(pwd))"
 
   # Staging::runCommand() stores this as an option in the form "<token>.<expiry epoch>", not as a
   # transient. Transients follow wp_using_ext_object_cache(), which is true for the web request that
   # writes the token and false here because the wrapper above skips the drop-in, so a transient
   # written by PHP would never be found. Options are database backed in both directions. The expiry
   # rides along in the value because options have no TTL of their own.
-  # `|| true` because wp exits non-zero when the option is absent, and `set -e` would otherwise
-  # kill the script here with no JSON on stdout at all. An already consumed or missing token has
-  # to fall through to the authentication error below.
-  STORED_RAW=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  # stderr is captured rather than discarded: "wp exited non-zero" covers both "the option is not
+  # there" and "WP-CLI could not boot at all" (wrong PHP binary, memory limit, fatal in a drop-in),
+  # and those two need completely different fixes. `set +e` because `set -e` would otherwise kill
+  # the script here with no JSON on stdout at all.
+  local AUTH_ERR_FILE
+  AUTH_ERR_FILE=$(mktemp)
+  set +e
+  STORED_RAW=$(wp option get staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>"$AUTH_ERR_FILE")
+  AUTH_GET_STATUS=$?
+  set -e
+  AUTH_GET_STDERR=$(head -n1 "$AUTH_ERR_FILE" 2>/dev/null || true)
+  rm -f "$AUTH_ERR_FILE"
 
   # Consume it up front so a single token can never be replayed, whatever the outcome below.
   wp option delete staging_auth_token --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true
@@ -496,9 +541,15 @@ auth_action() {
     # Distinguish "nothing was there" from "something was there but was not a token", because the
     # two have completely different causes: a dropped update_option() versus polluted stdout.
     if [ -z "$STORED_RAW" ]; then
+      # Which database WP-CLI just looked in. PHP logs the same pair before exec, so a mismatch
+      # here is the answer on its own: the token was written somewhere this read cannot see.
+      # Do not log stderr: WP-CLI can echo option values there when a notice fires during boot.
+      log "ERROR" "auth_action" "wp option get exited $AUTH_GET_STATUS; stderr present: $([ -n "$AUTH_GET_STDERR" ] && echo yes || echo no)"
+      log "ERROR" "auth_action" "WP-CLI database: $(wp eval 'global $wpdb; echo DB_NAME . " prefix=" . $wpdb->prefix;' --path="$CURRENT_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || echo '<wp eval failed>')"
       error 'Unable to authenticate the action.' 'auth_action:token_missing'
     fi
-    log "ERROR" "auth_action" "Unexpected output before the token: $(printf '%s' "$STORED_RAW" | head -n1)"
+    # Length only: STORED_RAW is the option value (or a notice glued to it) and must not hit the log.
+    log "ERROR" "auth_action" "Unexpected output before the token (${#STORED_RAW} chars)"
     error 'Unable to authenticate the action.' 'auth_action:token_unparseable'
   fi
 
@@ -527,10 +578,11 @@ auth_action() {
 lock_check() {
   local LOCK_DATA=$(wp transient get nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
   local CURRENT_TIME=$(date +%s)
+  local LOCK_TTL=1800
 
   if [ -n "$LOCK_DATA" ]; then
     local LOCK_TIMESTAMP=$(echo "$LOCK_DATA" | awk -F':' '{print $2}')
-    if [ -z "$LOCK_TIMESTAMP" ] || [ "$((CURRENT_TIME - LOCK_TIMESTAMP))" -gt 120 ]; then
+    if [ -z "$LOCK_TIMESTAMP" ] || [ "$((CURRENT_TIME - LOCK_TIMESTAMP))" -gt "$LOCK_TTL" ]; then
 
       wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
       log "INFO" "lock_check" "Expired lock removed."
@@ -540,7 +592,7 @@ lock_check() {
     fi
   fi
 
-  wp transient set nfd_staging_lock "active:$CURRENT_TIME" 120 --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  wp transient set nfd_staging_lock "active:$CURRENT_TIME" "$LOCK_TTL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
   log "INFO" "lock_check" "Lock set successfully."
 }
 
@@ -1463,6 +1515,7 @@ deploy_files() {
   }
 
   log "SUCCESS" "deploy_files:end" "Files deployed successfully."
+  write_deploy_result "success" "Files deployed successfully." "deploy_files"
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
 
@@ -1663,6 +1716,7 @@ deploy_db() {
   trap cleanup EXIT
 
   log "SUCCESS" "deploy_db:end" "Database deployed successfully."
+  write_deploy_result "success" "Database deployed successfully." "deploy_db"
   echo '{"status":"success","message":"Database deployed successfully."}'
 
   # Clear backup
@@ -1678,6 +1732,7 @@ deploy_files_db() {
   log "INFO" "deploy_files_db" "Files deployed successfully! Now database deployment will initiate."
   deploy_db
   log "SUCCESS" "deploy_files_db:end" "Database deployed successfully."
+  write_deploy_result "success" "Files and Database deployed successfully." "deploy_files_db"
   echo '{"status":"success","message":"Files and Database deployed successfully."}'
 }
 
@@ -1690,17 +1745,34 @@ rewrite_htaccess() {
 }
 
 # --- Main Entrypoint ---
-if [[ $(pwd) == *"/staging/"* ]]; then
-  CURRENT_DIR=$STAGING_DIR
-else
-  CURRENT_DIR=$PRODUCTION_DIR
-fi
+#
+# Staging::runCommand() exports NFD_STAGING_ENV so this does not have to be guessed. pwd is not a
+# reliable signal: where the staging site's index.php is a symlink into production's core, PHP
+# resolves the symlink and a request to /staging/<id>/index.php runs with the production directory
+# as its working directory. The old test below then picked PRODUCTION_DIR while PHP had written the
+# token to the staging database, and auth_action() reported a missing token.
+#
+# Only the two keywords are honoured, so the variable can never redirect the read at an arbitrary
+# path. The pwd test remains as the fallback for support running this script by hand.
+case "${NFD_STAGING_ENV:-}" in
+  staging)
+    CURRENT_DIR=$STAGING_DIR
+    ;;
+  production)
+    CURRENT_DIR=$PRODUCTION_DIR
+    ;;
+  *)
+    if [[ $(pwd) == *"/staging/"* ]]; then
+      CURRENT_DIR=$STAGING_DIR
+    else
+      CURRENT_DIR=$PRODUCTION_DIR
+    fi
+    ;;
+esac
 
 compatibility_check "$1"
 auth_action $2
 lock_check
-
-wp transient set nfd_staging_lock "true" 1800 --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet
 
 case "$1" in
   create) create "$@";;

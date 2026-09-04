@@ -134,18 +134,7 @@ class StagingDeployWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 	 * @return void
 	 */
 	public function test_get_deploy_command_status_matches_stored_command_name() {
-		$this->temp_production_dir = get_temp_dir() . 'staging-deploy-test-' . wp_rand();
-		wp_mkdir_p( $this->temp_production_dir . '/nfd-private' );
-
-		update_option(
-			'staging_config',
-			array(
-				'production_dir' => $this->temp_production_dir,
-				'staging_dir'    => $this->temp_production_dir . '/staging',
-				'production_url' => 'https://test.local',
-				'staging_url'    => 'https://test.local/staging',
-			)
-		);
+		$this->set_up_temp_config();
 
 		$this->invokeProtected(
 			'writeDeployResult',
@@ -163,6 +152,168 @@ class StagingDeployWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 
 		$this->assertSame( 'success', $status['status'] );
 		$this->assertSame( 'deploy_files', $status['command'] );
+	}
+
+	/**
+	 * An orphaned running result expires instead of blocking deploy forever.
+	 *
+	 * @return void
+	 */
+	public function test_stale_running_deploy_becomes_error() {
+		$this->set_up_temp_config();
+		$this->invokeProtected(
+			'writeDeployResult',
+			array(
+				array(
+					'status'     => 'running',
+					'command'    => 'deploy_db',
+					'started_at' => time() - Staging::DEPLOY_JOB_TTL - 1,
+				),
+			)
+		);
+
+		$status = $this->invokeProtected( 'getDeployCommandStatus', array( 'deploy_db' ) );
+
+		$this->assertSame( 'error', $status['status'] );
+		$this->assertStringContainsString( 'stopped', $status['message'] );
+	}
+
+	/**
+	 * A finished deploy is reported from the log even if nothing updated the result file.
+	 *
+	 * @return void
+	 */
+	public function test_completed_deploy_is_reported_when_result_file_was_never_updated() {
+		$this->set_up_temp_config();
+		$started_at = time() - 60;
+
+		$this->invokeProtected(
+			'writeDeployResult',
+			array(
+				array(
+					'status'     => 'running',
+					'command'    => 'deploy_files',
+					'started_at' => $started_at,
+				),
+			)
+		);
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			$this->temp_production_dir . '/nfd-private/nfd-staging.log',
+			gmdate( 'Y-m-d H:i:s' ) . " [SUCCESS] [deploy_files:end] Files deployed successfully.\n"
+		);
+
+		$status = $this->invokeProtected( 'getDeployCommandStatus', array( 'deploy_files' ) );
+
+		$this->assertSame( 'success', $status['status'] );
+
+		$stored = $this->invokeProtected( 'readDeployResult' );
+		$this->assertSame( 'success', $stored['status'] );
+		$this->assertSame( $started_at, $stored['started_at'] );
+	}
+
+	/**
+	 * A held file lock prevents another deploy process from acquiring it.
+	 *
+	 * @return void
+	 */
+	public function test_deploy_lock_is_exclusive() {
+		$this->set_up_temp_config();
+
+		$first_lock = $this->invokeProtected( 'acquireDeployLock' );
+		$this->assertIsResource( $first_lock );
+		$this->assertFalse( $this->invokeProtected( 'acquireDeployLock' ) );
+		$this->assertTrue( $this->invokeProtected( 'isDeployLockHeld' ) );
+
+		$this->invokeProtected( 'releaseDeployLock', array( $first_lock ) );
+		$this->assertFalse( $this->invokeProtected( 'isDeployLockHeld' ) );
+	}
+
+	/**
+	 * Log timestamps are interpreted as UTC regardless of PHP's local timezone.
+	 *
+	 * @return void
+	 */
+	public function test_log_timestamp_is_parsed_as_utc() {
+		$original_timezone = date_default_timezone_get();
+		date_default_timezone_set( 'America/Los_Angeles' ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set
+
+		try {
+			$parsed = $this->invokeProtected( 'parseLogLineTimestamp', array( '2026-08-31 12:00:00 [INFO] [test] Message' ) );
+			$this->assertSame( gmmktime( 12, 0, 0, 8, 31, 2026 ), $parsed );
+		} finally {
+			date_default_timezone_set( $original_timezone ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set
+		}
+	}
+
+	/**
+	 * Stderr logged by a successful command is not itself a deploy failure.
+	 *
+	 * @return void
+	 */
+	public function test_log_fallback_requires_operation_failed_marker() {
+		$this->set_up_temp_config();
+		$log_path = $this->temp_production_dir . '/nfd-private/nfd-staging.log';
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			$log_path,
+			gmdate( 'Y-m-d H:i:s' ) . " [ERROR] [deploy_files:core_download] Benign stderr\n"
+		);
+
+		$this->assertNull( $this->invokeProtected( 'getDeployStatusFromLog', array( 'deploy_files', time() - 5 ) ) );
+
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			$log_path,
+			gmdate( 'Y-m-d H:i:s' ) . " [ERROR] [operation_failed] Unable to move WordPress files.\n",
+			FILE_APPEND
+		);
+		$status = $this->invokeProtected( 'getDeployStatusFromLog', array( 'deploy_files', time() - 5 ) );
+
+		$this->assertSame( 'error', $status['status'] );
+	}
+
+	/**
+	 * A staging ABSPATH selects the staging install even when pwd says otherwise.
+	 *
+	 * @return void
+	 */
+	public function test_script_environment_follows_abspath_not_working_directory() {
+		$config = array(
+			'production_dir' => '/home/site/public_html/',
+			'staging_dir'    => '/home/site/public_html/staging/8710',
+		);
+
+		$this->assertSame(
+			'staging',
+			$this->invokeProtected( 'getScriptEnvironment', array( $config, '/home/site/public_html/staging/8710/' ) )
+		);
+		$this->assertSame(
+			'staging',
+			$this->invokeProtected( 'getScriptEnvironment', array( $config, '/home/site/public_html/staging/8710' ) )
+		);
+		$this->assertSame(
+			'production',
+			$this->invokeProtected( 'getScriptEnvironment', array( $config, '/home/site/public_html/' ) )
+		);
+	}
+
+	/**
+	 * Configure a disposable production path for result, lock, and log tests.
+	 *
+	 * @return void
+	 */
+	private function set_up_temp_config() {
+		$this->temp_production_dir = get_temp_dir() . 'staging-deploy-test-' . wp_rand();
+		wp_mkdir_p( $this->temp_production_dir . '/nfd-private' );
+
+		update_option(
+			'staging_config',
+			array(
+				'production_dir' => $this->temp_production_dir,
+				'staging_dir'    => $this->temp_production_dir . '/staging',
+				'production_url' => 'https://test.local',
+				'staging_url'    => 'https://test.local/staging',
+			)
+		);
+		$this->staging->getConfig( false );
 	}
 
 	/**
