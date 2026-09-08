@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-09-01T08:34:51+00:00\n"
+"PO-Revision-Date: 2026-09-04T12:51:12+00:00\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Language: fr_FR\n"
@@ -19,6 +19,10 @@ msgstr ""
 "X-Crowdin-Project-ID: 764889\n"
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
+
+#: includes/Staging.php:1379
+msgid "A deployment is currently in progress. Please wait for it to finish."
+msgstr "Un déploiement est en cours. Veuillez attendre qu’il se termine."
 
 #: build/staging/bundle.js:1
 msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
@@ -44,7 +48,7 @@ msgstr "Cloner vers la pré-production"
 msgid "Cloned to Staging"
 msgstr "Cloné en pré-production"
 
-#: includes/Staging.php:363
+#: includes/Staging.php:370
 msgid "Cloning can only be done from the production environment."
 msgstr "Le clonage ne peut se faire qu'à partir de l'environnement de production."
 
@@ -80,7 +84,7 @@ msgstr "Créer un site de pré-production, cela devrait prendre environ une minu
 msgid "Currently editing"
 msgstr "En cours d'édition"
 
-#: includes/Staging.php:599
+#: includes/Staging.php:683
 msgid "Database deployed successfully."
 msgstr "La base de données a été déployée avec succès."
 
@@ -128,19 +132,19 @@ msgstr "Déployé"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Déploiement de la pré-production vers la production, cela devrait prendre environ une minute."
 
-#: includes/Staging.php:603
+#: includes/Staging.php:687
 msgid "Deployment completed successfully."
 msgstr "Déploiement terminé avec succès."
 
-#: includes/Staging.php:557
+#: includes/Staging.php:641
 msgid "Deployment failed. Check the staging log for details."
 msgstr "Déploiement échoué. Consultez le journal de staging pour plus de détails."
 
-#: includes/Staging.php:629 includes/Staging.php:644 includes/Staging.php:669 includes/Staging.php:727
+#: includes/Staging.php:727 includes/Staging.php:745 includes/Staging.php:774 includes/Staging.php:803 includes/Staging.php:1362 includes/Staging.php:1373
 msgid "Deployment in progress. This may take several minutes."
 msgstr "Déploiement en cours. Cela peut prendre plusieurs minutes."
 
-#: includes/Staging.php:1179
+#: includes/Staging.php:1431
 msgid "Don't have capabilities to access this page"
 msgstr "Je n’ai pas la possibilité d’accéder à cette page"
 
@@ -152,15 +156,15 @@ msgstr "Erreur"
 msgid "Error: "
 msgstr "Erreur : "
 
-#: includes/Staging.php:600
+#: includes/Staging.php:684
 msgid "Files and Database deployed successfully."
 msgstr "Fichiers et base de données déployés avec succès."
 
-#: includes/Staging.php:598
+#: includes/Staging.php:682
 msgid "Files deployed successfully."
 msgstr "Les fichiers ont été déployés avec succès."
 
-#: includes/Staging.php:1113
+#: includes/Staging.php:1330
 msgid "Filesystem credentials required."
 msgstr "Identifiants du système de fichiers requis."
 
@@ -177,7 +181,7 @@ msgid "Invalid action"
 msgstr "Action invalide"
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:1091
+#: includes/Staging.php:1308
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Caractère invalide (%s) dans la commande."
@@ -186,7 +190,7 @@ msgstr "Caractère invalide (%s) dans la commande."
 msgid "Invalid deploy type"
 msgstr "Type de déploiement invalide"
 
-#: includes/Staging.php:1024
+#: includes/Staging.php:1241
 msgid "Invalid staging CLI command."
 msgstr "Commande CLI de pré-production invalide."
 
@@ -210,7 +214,7 @@ msgstr "Chargement de l'environnement de pré-production maintenant."
 msgid "Log"
 msgstr "Rapport"
 
-#: includes/Staging.php:1165 views/staging-log.php:11
+#: includes/Staging.php:1417 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Phase de journal"
 
@@ -262,7 +266,7 @@ msgstr "Réinitialisation"
 msgid "Save"
 msgstr "Sauvegarder"
 
-#: includes/Staging.php:800
+#: includes/Staging.php:1095
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Quelque chose a mal tourné, n’hésitez pas à contacter notre support."
 
@@ -299,11 +303,11 @@ msgstr "Site de pré-production"
 msgid "Staging URL:"
 msgstr "URL de mise en scène :"
 
-#: includes/Staging.php:1280
+#: includes/Staging.php:1532
 msgid "Staging configuration was automatically repaired."
 msgstr "La configuration des étapes a été automatiquement réparée."
 
-#: includes/Staging.php:388
+#: includes/Staging.php:395
 msgid "Staging environment already exists!"
 msgstr "L'environnement de pré-production existe déjà !"
 
@@ -323,7 +327,7 @@ msgstr "Passer à la production"
 msgid "Switch to Staging"
 msgstr "Passer à la pré-production"
 
-#: includes/Staging.php:856
+#: includes/Staging.php:1151
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Passez à un environnement dans lequel vous êtes déjà, vous ne pouvez pas."
 
@@ -339,11 +343,15 @@ msgstr "Passage à l'environnement de production, cela devrait prendre environ u
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Passage à l'environnement de pré-production, cela devrait prendre environ une minute."
 
-#: includes/Staging.php:795
+#: includes/Staging.php:1090
 msgid "The deployment is still running. Please wait and check again shortly."
 msgstr "Le déploiement est toujours en cours. Veuillez patienter et vérifier à nouveau sous peu."
 
-#: includes/Staging.php:810
+#: includes/Staging.php:736
+msgid "The deployment stopped before it completed. Please try again."
+msgstr "Le déploiement s’est arrêté avant de s’achever. Veuillez réessayer."
+
+#: includes/Staging.php:1105
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr "L’opération de mise en scène n’a pas été terminée, veuillez contacter notre support."
 
@@ -367,19 +375,31 @@ msgstr "Ceci va écraser tout ce qui est en cours de pré-production et le mettr
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "Ceci supprimera définitivement le site de pré-production. Êtes-vous sûr de vouloir continuer ? Vous pouvez recréer un autre site de pré-production à tout moment, mais toutes les modifications spécifiques que vous avez apportées à ce site de pré-production seront perdues."
 
-#: includes/Staging.php:1100
+#: includes/Staging.php:485
+msgid "Unable to create the deployment lock directory."
+msgstr "Impossible de créer le répertoire de verrouillage de déploiement."
+
+#: includes/Staging.php:1317
 msgid "Unable to execute script (disabled_function)."
 msgstr "Impossible d'exécuter le script (désactivé_function)."
 
-#: includes/Staging.php:1124
+#: includes/Staging.php:1341
 msgid "Unable to execute script (permission error)."
 msgstr "Impossible d'exécuter le script (erreur de permission)."
 
-#: includes/Staging.php:1117
+#: includes/Staging.php:1334
 msgid "Unable to initialize WP Filesystem."
 msgstr "Impossible d’initialiser le système de fichiers WP."
 
-#: includes/Staging.php:1140
+#: includes/Staging.php:493
+msgid "Unable to open the deployment lock file."
+msgstr "Impossible d’ouvrir le fichier de verrouillage de déploiement."
+
+#: includes/Staging.php:845
+msgid "Unable to start the deployment process."
+msgstr "Impossible de lancer le processus de déploiement."
+
+#: includes/Staging.php:1392
 msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr "Impossible de stocker le jeton d’authentification de staging. Un cache d’objets persistant peut être désynchronisé avec la base de données, ou la base de données n’accepte pas les écritures."
 
@@ -391,6 +411,6 @@ msgstr "Travaillant..."
 msgid "You don't have a staging site yet."
 msgstr "Vous n'avez pas encore de site de pré-production."
 
-#: includes/Staging.php:834
+#: includes/Staging.php:1129
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Vous devez passer à l'environnement de production avant de supprimer l'environnement de pré-production."
