@@ -970,14 +970,18 @@ _nfd_msql() {
 
 # --- Utility: comma-separated backticked list of NON-generated columns for a table ---
 # Generated (virtual/stored) columns cannot be written by INSERT, so they are excluded; MySQL
-# recomputes them on the destination. Echoes e.g. "`ID`,`post_title`"; empty on failure.
+# recomputes them on the destination. The test is GENERATION_EXPRESSION, not EXTRA: on MySQL 8 an
+# ordinary column with an expression default (e.g. DEFAULT (UUID())) reports EXTRA='DEFAULT_GENERATED',
+# so an "EXTRA LIKE '%GENERATED%'" test would wrongly drop it and lose its data. GENERATION_EXPRESSION
+# is non-empty only for true generated columns on both MySQL and MariaDB.
+# Echoes e.g. "`ID`,`post_title`"; empty on failure.
 _nfd_table_columns() {
   local table="$1"
   local out="" col
   while IFS= read -r col; do
     [ -z "$col" ] && continue
     if [ -z "$out" ]; then out="\`$col\`"; else out="$out,\`$col\`"; fi
-  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND (EXTRA IS NULL OR EXTRA NOT LIKE '%GENERATED%') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
+  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
   printf '%s' "$out"
 }
 
