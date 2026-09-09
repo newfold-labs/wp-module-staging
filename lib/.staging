@@ -1142,7 +1142,7 @@ copy_triggers() {
     return 1
   fi
 
-  if ! grep -qi 'CREATE.*TRIGGER' "$tfile"; then
+  if ! grep -qi 'TRIGGER' "$tfile"; then
     log "INFO" "$log_step" "No triggers to copy."
     rm -f "$tfile"
     return 0
