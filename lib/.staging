@@ -2088,6 +2088,14 @@ deploy_files() {
 # Helper: restore from backup and log
 _restore_db_from_backup() {
   local BACKUP="$1"
+  # A rollback can be reached before the backup exists (an early failure) or after it was found
+  # unusable and removed. Piping an empty path into wp db import would report a confusing gzip
+  # error and read as an attempted-and-failed restore; say plainly that there is nothing to
+  # restore from instead.
+  if [ -z "$BACKUP" ] || [ ! -s "$BACKUP" ]; then
+    log "ERROR" "deploy_db:restore" "No usable backup to restore from. Manual intervention needed."
+    return
+  fi
   log "INFO" "deploy_db:restore" "Restoring original production database from backup $BACKUP"
   set +e
   if gzip -d < "$BACKUP" | wp db import - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1; then
