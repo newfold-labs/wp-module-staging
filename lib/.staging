@@ -837,6 +837,42 @@ rewrite_trigger_dump() {
   ' "$sql_file"
 }
 
+# --- Utility: report trigger references the rewrite could not redirect ---
+#
+# rewrite_trigger_dump is a set of regexes over SQL text, and regexes cannot cover every way a
+# table can be named: a modifier between the keyword and the table (UPDATE LOW_PRIORITY t), a
+# comment in that position, or a CALL into a stored procedure -- procedures are never dumped or
+# rewritten, so whatever the procedure writes is untouched by any rewrite here.
+#
+# Importing such a trigger silently breaks the isolation the whole flow depends on: a trigger on
+# staging that still names a production table writes into production, and after deploy_db the
+# production trigger writes into staging. Refusing to import is the safe failure, so this reports
+# anything still pointing at the source environment and the caller aborts.
+#
+# Args: $1 rewritten trigger dump, $2 source prefix. Echoes the offending tokens, empty if clean.
+_nfd_trigger_dump_residuals() {
+  local sql_file="$1"
+  local from_prefix="$2"
+  NFD_FROM="$from_prefix" perl -0777 -ne '
+    my $from = quotemeta $ENV{NFD_FROM};
+    my $s = $_;
+    # Blank quoted literals and ordinary comments first, so trigger TEXT that merely mentions a
+    # table name cannot raise a false alarm. Versioned comments are deliberately left alone:
+    # mysqldump wraps the entire trigger body in one, so blanking those blanks what we are checking.
+    $s =~ s/\x27(?:[^\x27\\]|\\.)*\x27/\x27\x27/g;
+    $s =~ s/"(?:[^"\\]|\\.)*"/""/g;
+    $s =~ s{/\*(?!!).*?\*/}{ }gs;
+    $s =~ s{--[^\n]*}{ }g;
+    my %bad;
+    # A source-prefixed table still sitting after a table-referencing keyword.
+    while ($s =~ /\b(?:INTO|UPDATE|FROM|JOIN|TABLE)\b[^;\n]{0,60}?(?<![A-Za-z0-9_.])($from\w+)/gi) { $bad{$1} = 1 }
+    # A source-prefixed table still carrying a database qualifier (NEW./OLD. are row aliases).
+    while ($s =~ /(?<![A-Za-z0-9_])(?!(?:NEW|OLD)\s*\.)[A-Za-z0-9_]+\s*\.\s*`?($from\w+)/gi) { $bad{$1} = 1 }
+    $bad{"CALL"} = 1 if $s =~ /\bCALL\b/i;
+    print join(" ", sort keys %bad);
+  ' "$sql_file"
+}
+
 # --- Utility: locate a mysqldump-compatible binary ---
 # `wp db export` cannot be used for schema/trigger-only dumps: WP-CLI mangles valueless mysqldump
 # flags (--no-data, --triggers, --no-create-info are dropped or passed with an empty value), so the
@@ -1227,6 +1263,17 @@ copy_triggers() {
 
   if ! rewrite_trigger_dump "$tfile" "$from_prefix" "$to_prefix" "$name_prefix"; then
     log "ERROR" "$log_step" "Unable to rewrite trigger prefixes."
+    rm -f "$tfile"
+    return 1
+  fi
+
+  # Verify the rewrite actually redirected everything before importing. A trigger that still names
+  # the source environment would write across the staging/production boundary once installed, and
+  # nothing downstream would notice, so this fails the operation instead.
+  local residual
+  residual=$(_nfd_trigger_dump_residuals "$tfile" "$from_prefix")
+  if [ -n "$residual" ]; then
+    log "ERROR" "$log_step" "Refusing to import triggers: [${residual}] still reference the source environment after rewriting. Installing them would let a trigger on one environment write to the other. Review these triggers by hand."
     rm -f "$tfile"
     return 1
   fi
