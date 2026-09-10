@@ -36,6 +36,32 @@ All optional; the defaults suit typical sites.
 accepted range (including `0` for the chunk size, which is not a way to disable chunking) is
 ignored, the default is used instead, and the reason is written to the staging log.
 
+## Trigger isolation
+
+Staging and production tables live in one database, so a trigger copied from one environment must
+be rewritten to point at the other. If it is not, a trigger on staging writes into production (and
+after `deploy_db`, a trigger on production writes into staging).
+
+The rewrite handles the trigger name, its target table, and table references in the body, quoted or
+bare, with or without a database qualifier. It cannot handle every case: a modifier or comment
+between the keyword and the table, or a `CALL` into a stored procedure (procedures are not copied,
+so nothing about what they write can be redirected).
+
+The rewritten dump is therefore checked before it is imported, and the copy **fails** if anything
+still refers to the source environment, naming the offending tables in the log. Table names inside
+string literals and comments are ignored, so ordinary trigger text does not trip it.
+
+If a site hits this, the trigger has to be looked at by hand: the operation is refused rather than
+allowed to install something that writes across the boundary. Sites with no triggers, which is
+most of them, are unaffected.
+
+## Where deploy_db writes its backup
+
+`deploy_db` dumps production before it changes anything. That archive is the whole database, so it
+is written under `nfd-private/` (which carries a deny-all `.htaccess`) with a random name and `0600`
+permissions, never into the document root. It is removed once the deploy succeeds, and the deploy
+aborts before touching production if the archive is missing, truncated, or does not decompress.
+
 ## Consistency
 
 The copy is **not a point-in-time snapshot**. The schema is dumped with `--skip-lock-tables` and the
