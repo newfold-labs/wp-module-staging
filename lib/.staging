@@ -1109,7 +1109,15 @@ _copy_run() {
     lower_op=">="
     last="$minpk"
     while true; do
-      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>/dev/null)
+      # An empty result here legitimately means "fewer than $chunk rows remain", which ends the
+      # loop with a final open-ended range. An ERROR must not take that same branch: doing so
+      # turned a failed boundary lookup into one unbounded INSERT covering the rest of the table,
+      # silently discarding the chunking this function exists to provide.
+      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>&1)
+      if [ $? -ne 0 ] || printf '%s' "$bound" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+        log "ERROR" "$log_step" "Unable to resolve the next key boundary for $table: $bound"
+        return 1
+      fi
       if [ -z "$bound" ] || [ "$bound" = "NULL" ]; then
         out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last};" 2>&1)
         if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
