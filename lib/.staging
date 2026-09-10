@@ -1042,8 +1042,28 @@ _copy_run() {
   local src_prefix="$1"
   local dst_prefix="$2"
   local log_step="$3"
+  # Both tunables are operator-supplied and are interpolated straight into SQL / passed to sleep,
+  # so validate them here. A non-numeric or non-positive chunk produced "LIMIT 1 OFFSET -1", which
+  # the boundary lookup then reports as a syntax error and the whole copy aborts; falling back to
+  # the default keeps a typo in an env var from failing an otherwise healthy staging build.
   local chunk="${NFD_STAGING_COPY_CHUNK:-50000}"
+  case "$chunk" in
+    ''|*[!0-9]*)
+      log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_CHUNK='${NFD_STAGING_COPY_CHUNK}'; falling back to 50000."
+      chunk=50000
+      ;;
+  esac
+  if [ "$chunk" -lt 1 ]; then
+    log "ERROR" "$log_step" "NFD_STAGING_COPY_CHUNK must be 1 or greater; falling back to 50000."
+    chunk=50000
+  fi
   local pace="${NFD_STAGING_COPY_PACE:-0}"
+  case "$pace" in
+    ''|.|*[!0-9.]*|*.*.*)
+      log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_PACE='${NFD_STAGING_COPY_PACE}'; falling back to 0."
+      pace=0
+      ;;
+  esac
   local like_prefix
   like_prefix=$(printf '%s' "$src_prefix" | sed 's/[_%]/\\&/g')
   # Prepended to every INSERT: FK/unique checks off (parent/child order is irrelevant) and a
