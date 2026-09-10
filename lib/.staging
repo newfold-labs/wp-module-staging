@@ -2105,8 +2105,7 @@ deploy_db() {
   set +e
 
   TIMESTAMP=$(date +%s)
-  BACKUP_FILE="$PRODUCTION_DIR/.db_backup_before_deploy_$TIMESTAMP.sql"
-  COMPRESSED_BACKUP="$BACKUP_FILE.gz"
+  COMPRESSED_BACKUP=""
   RESTORED=0
 
   # Trap for automatic rollback in case of unexpected exit
@@ -2137,11 +2136,37 @@ deploy_db() {
   }
 
   # 1. Backup database production site
-  log "INFO" "deploy_db" "Backing up production database to $COMPRESSED_BACKUP"
-  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Failed to backup production database."
+  #
+  # This archive is a complete dump of the production database. PRODUCTION_DIR is the document
+  # root, so it used to be downloadable at /.db_backup_before_deploy_<epoch>.sql.gz -- a name that
+  # is guessable to the second, and the file is only removed on the success path, so a failed
+  # deploy left it there. Write it under nfd-private instead, which log() gives a deny-all
+  # .htaccess, and let mktemp add entropy and 0600 permissions. The log call below runs first so
+  # the directory and its .htaccess exist before anything is written into it.
+  log "INFO" "deploy_db" "Backing up production database"
+  COMPRESSED_BACKUP=$(mktemp "$PRODUCTION_DIR/nfd-private/db_backup_before_deploy_${TIMESTAMP}_XXXXXXXX.sql.gz" 2>/dev/null)
+  if [ -z "$COMPRESSED_BACKUP" ]; then
+    RESTORED=1
+    fail_and_exit "Unable to create the production backup file; aborting before any change to production."
   fi
+  set -o pipefail
+  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
+  BACKUP_STATUS=$?
+  set +o pipefail
+  # Only gzip's exit status was checked before, and gzip succeeds on empty input: a failed export
+  # produced a well-formed empty archive, and production was dropped a few lines below with
+  # nothing to roll back to. Check the whole pipeline, that the archive is intact, and that it
+  # actually decompresses to something -- an export that exits 0 but writes nothing still yields a
+  # valid 20-byte archive. head -c bounds the decompression so this stays cheap on a large dump.
+  # Nothing has been dropped at this point, so RESTORED is set first to skip a pointless restore.
+  BACKUP_HEAD_BYTES=$(gzip -dc "$COMPRESSED_BACKUP" 2>/dev/null | head -c 512 | wc -c)
+  if [ $BACKUP_STATUS -ne 0 ] || [ ! -s "$COMPRESSED_BACKUP" ] || ! gzip -t "$COMPRESSED_BACKUP" 2>/dev/null \
+     || [ "${BACKUP_HEAD_BYTES:-0}" -lt 1 ]; then
+    rm -f "$COMPRESSED_BACKUP"
+    RESTORED=1
+    fail_and_exit "Production backup failed or is unreadable; aborting before any change to production."
+  fi
+  log "INFO" "deploy_db" "Production backup written ($(wc -c < "$COMPRESSED_BACKUP") bytes)."
 
   # 2. Drop views/tables (best effort)
   log "INFO" "deploy_db" "Dropping existing views and tables in production (best-effort)"
