@@ -822,6 +822,12 @@ rewrite_trigger_dump() {
     # Trigger name (quoted or bare), immediately before BEFORE/AFTER: strip any existing
     # prod_/staging_ and prepend the target prefix so it is unique in the shared schema.
     s{(\bTRIGGER\s+)`?(?:prod_|staging_)?([A-Za-z0-9_]+)`?(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    # Database-qualified references (db.tbl, `db`.`tbl`, db . tbl). The rules below anchor on the
+    # prefix appearing directly after a keyword or a backtick, so a qualifier hid the table from
+    # both of them and the reference survived verbatim -- a staging trigger then wrote into the
+    # PRODUCTION table. Staging and production share one database, so the qualifier is redundant
+    # and is dropped. NEW./OLD. are excluded: those are row aliases, not schema names.
+    s{(?<![A-Za-z0-9_.])(?!(?:NEW|OLD)\s*\.)`?[A-Za-z0-9_]+`?\s*\.\s*`?$from([A-Za-z0-9_]+)`?}{"`".$to.$1."`"}gie;
     # The trigger target table after the event (quoted or bare).
     s{(\b(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)`?$from([A-Za-z0-9_]+)`?}{$1."`".$to.$2."`"}gie;
     # Backticked source-table references anywhere in the body.
