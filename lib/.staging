@@ -1022,6 +1022,19 @@ _nfd_msql() {
   "${_NFD_MYSQL_BIN:-mysql}" --defaults-extra-file="$_NFD_COPY_DFILE" -D "$DB_NAME" -N -e "$1"
 }
 
+# --- Utility: is an identifier safe to interpolate into the statements below? ---
+# Table and column names come from information_schema rather than from the operator, but MySQL
+# allows almost anything inside backticks, including a backtick itself (written as ``) and a quote.
+# Such a name cannot be interpolated safely here: it breaks out of the quoting and the statement
+# either fails or means something else. WordPress and its plugins only ever create word-character
+# names, so refuse anything else rather than guess at it.
+_nfd_safe_ident() {
+  case "$1" in
+    ''|*[!A-Za-z0-9_]*) return 1 ;;
+  esac
+  return 0
+}
+
 # --- Utility: comma-separated backticked list of NON-generated columns for a table ---
 # Generated (virtual/stored) columns cannot be written by INSERT, so they are excluded; MySQL
 # recomputes them on the destination. The test is GENERATION_EXPRESSION, not EXTRA: on MySQL 8 an
@@ -1032,8 +1045,12 @@ _nfd_msql() {
 _nfd_table_columns() {
   local table="$1"
   local out="" col
+  _nfd_safe_ident "$table" || { printf ''; return; }
   while IFS= read -r col; do
     [ -z "$col" ] && continue
+    # Dropping an unsupported column from the list would silently lose that column's data, so
+    # resolve nothing at all and let the caller fail on the empty result.
+    _nfd_safe_ident "$col" || { printf ''; return; }
     if [ -z "$out" ]; then out="\`$col\`"; else out="$out,\`$col\`"; fi
   done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
   printf '%s' "$out"
@@ -1046,11 +1063,15 @@ _nfd_table_columns() {
 _nfd_table_pk() {
   local table="$1"
   local pkinfo pkcount pkcol pktype
+  _nfd_safe_ident "$table" || { printf ''; return; }
   pkinfo=$(_nfd_msql "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND COLUMN_KEY='PRI';" 2>/dev/null)
   pkcount=$(printf '%s\n' "$pkinfo" | grep -c .)
   [ "$pkcount" -eq 1 ] || { printf ''; return; }
   pkcol=$(printf '%s' "$pkinfo" | awk '{print $1}')
   pktype=$(printf '%s' "$pkinfo" | awk '{print $2}')
+  # An unsupported key name means no chunking rather than broken SQL; the caller then copies the
+  # table in one statement, which is correct, just unchunked.
+  _nfd_safe_ident "$pkcol" || { printf ''; return; }
   case "$pktype" in
     tinyint|smallint|mediumint|int|integer|bigint) printf '%s' "$pkcol" ;;
     *) printf '' ;;
@@ -1149,6 +1170,10 @@ _copy_run() {
   local table bare dst cols pk minpk last lower_op bound out
   while IFS= read -r table; do
     [ -z "$table" ] && continue
+    if ! _nfd_safe_ident "$table"; then
+      log "ERROR" "$log_step" "Refusing to copy $table: the table name contains characters that cannot be quoted safely."
+      return 1
+    fi
     bare="${table#"$src_prefix"}"
     dst="${dst_prefix}${bare}"
 
