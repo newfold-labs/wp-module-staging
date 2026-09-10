@@ -2117,6 +2117,7 @@ deploy_db() {
       _restore_db_from_backup "$COMPRESSED_BACKUP"
       RESTORED=1
     fi
+    rm -f "$STAGING_DIR/.export-sql"
     error 'Unable to import database'
   }
   trap _on_exit EXIT
@@ -2131,6 +2132,7 @@ deploy_db() {
     else
       log "DEBUG" "deploy_db" "Rollback already performed, skipping."
     fi
+    rm -f "$STAGING_DIR/.export-sql"
     error "$msg"
   }
 
@@ -2270,9 +2272,11 @@ deploy_db() {
   write_deploy_result "success" "Database deployed successfully." "deploy_db"
   echo '{"status":"success","message":"Database deployed successfully."}'
 
-  # Clear backup
+  # Clear backup and the schema dump. Both sit under a web-served directory, so neither should
+  # outlive the deploy: create and clone already delete the dump, deploy_db never did.
   rm -f "$COMPRESSED_BACKUP"
-  log "INFO" "deploy_db" "Cleaned up backup file."
+  rm -f "$STAGING_DIR/.export-sql"
+  log "INFO" "deploy_db" "Cleaned up backup file and schema dump."
 
   # Restore normal behaviour
   set -e
