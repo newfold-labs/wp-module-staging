@@ -1061,7 +1061,7 @@ _copy_run() {
     return 1
   fi
 
-  local table bare dst cols pk last bound out
+  local table bare dst cols pk minpk last lower_op bound out
   while IFS= read -r table; do
     [ -z "$table" ] && continue
     bare="${table#"$src_prefix"}"
@@ -1086,29 +1086,37 @@ _copy_run() {
       continue
     fi
 
-    last=$(_nfd_msql "SELECT MIN(\`${pk}\`)-1 FROM \`${table}\`;" 2>/dev/null)
-    if [ -z "$last" ] || [ "$last" = "NULL" ]; then
+    minpk=$(_nfd_msql "SELECT MIN(\`${pk}\`) FROM \`${table}\`;" 2>/dev/null)
+    if [ -z "$minpk" ] || [ "$minpk" = "NULL" ]; then
       log "INFO" "$log_step" "Skipping empty table $table"
       continue
     fi
 
     log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${pk}\`, size ${chunk})"
+    # The first range INCLUDES the lowest key, so the cursor never has to name "one below the
+    # minimum". Seeding it with MIN(pk)-1 instead underflows on an UNSIGNED key whose lowest value
+    # is 0 -- MySQL raises ERROR 1690 (BIGINT UNSIGNED value is out of range) -- and the copy then
+    # read that failure as an empty table and skipped it. lower_op flips to > after the first
+    # chunk, so every row is still copied exactly once.
+    lower_op=">="
+    last="$minpk"
     while true; do
-      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` > ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>/dev/null)
+      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>/dev/null)
       if [ -z "$bound" ] || [ "$bound" = "NULL" ]; then
-        out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` > ${last};" 2>&1)
+        out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last};" 2>&1)
         if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
-          log "ERROR" "$log_step" "Failed copying $table -> $dst (final range > ${last}): $out"
+          log "ERROR" "$log_step" "Failed copying $table -> $dst (final range ${lower_op} ${last}): $out"
           return 1
         fi
         break
       fi
-      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` > ${last} AND \`${pk}\` <= ${bound};" 2>&1)
+      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} AND \`${pk}\` <= ${bound};" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Failed copying $table -> $dst (range ${last}..${bound}): $out"
         return 1
       fi
       last="$bound"
+      lower_op=">"
       [ "$pace" != "0" ] && sleep "$pace"
     done
     log "INFO" "$log_step" "Copied $table -> $dst"
