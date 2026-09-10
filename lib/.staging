@@ -850,7 +850,7 @@ _nfd_dump_bin() {
 # Keeps the password out of the process list (no -p on the command line). Parses DB_HOST forms
 # host, host:port and host:/path/to/socket. Echoes the file path; the caller must rm it.
 _nfd_mysql_defaults_file() {
-  local f host port socket
+  local f host port socket esc_user esc_pass
   f=$(mktemp) || return 1
   chmod 600 "$f"
   host="$DB_HOST"; port=""; socket=""
@@ -858,10 +858,17 @@ _nfd_mysql_defaults_file() {
     *:/*) host="${DB_HOST%%:*}"; socket="${DB_HOST#*:}" ;;
     *:*)  host="${DB_HOST%%:*}"; port="${DB_HOST##*:}" ;;
   esac
+  # An option file is not shell. In an UNQUOTED value MySQL ends the value at a '#' (it starts a
+  # comment), strips surrounding whitespace, and expands backslash escapes (\s, \t, \n, \\), so a
+  # wp-config password containing any of those was written correctly but read back mangled and
+  # authentication failed. A double-quoted value is taken literally, with only backslash and
+  # double-quote needing to be escaped. Credentials still never appear in the process list.
+  esc_user=$(printf '%s' "$DB_USER" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+  esc_pass=$(printf '%s' "$DB_PASS" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
   {
     printf '[client]\n'
-    printf 'user=%s\n' "$DB_USER"
-    printf 'password=%s\n' "$DB_PASS"
+    printf 'user="%s"\n' "$esc_user"
+    printf 'password="%s"\n' "$esc_pass"
     [ -n "$host" ]   && printf 'host=%s\n' "$host"
     [ -n "$port" ]   && printf 'port=%s\n' "$port"
     [ -n "$socket" ] && printf 'socket=%s\n' "$socket"
