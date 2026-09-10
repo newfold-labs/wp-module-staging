@@ -1054,14 +1054,25 @@ _copy_run() {
   # the boundary lookup then reports as a syntax error and the whole copy aborts; falling back to
   # the default keeps a typo in an env var from failing an otherwise healthy staging build.
   local chunk="${NFD_STAGING_COPY_CHUNK:-50000}"
+  local chunk_ok=1
   case "$chunk" in
-    ''|*[!0-9]*)
-      log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_CHUNK='${NFD_STAGING_COPY_CHUNK}'; falling back to 50000."
-      chunk=50000
-      ;;
+    ''|*[!0-9]*) chunk_ok=0 ;;
   esac
-  if [ "$chunk" -lt 1 ]; then
-    log "ERROR" "$log_step" "NFD_STAGING_COPY_CHUNK must be 1 or greater; falling back to 50000."
+  # A string of digits is not automatically a decimal number to $(( )): a leading zero makes it
+  # octal, so "08" and "09" are arithmetic errors (which the boundary lookup then reports as a
+  # failure and aborts the copy) and "0100000" would silently mean 32768. Bound the length first so
+  # the conversion itself cannot overflow, then force base 10.
+  if [ "$chunk_ok" -eq 1 ] && [ "${#chunk}" -gt 9 ]; then
+    chunk_ok=0
+  fi
+  if [ "$chunk_ok" -eq 1 ]; then
+    chunk=$((10#$chunk))
+    if [ "$chunk" -lt 1 ]; then
+      chunk_ok=0
+    fi
+  fi
+  if [ "$chunk_ok" -eq 0 ]; then
+    log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_CHUNK='${NFD_STAGING_COPY_CHUNK}'; falling back to 50000."
     chunk=50000
   fi
   local pace="${NFD_STAGING_COPY_PACE:-0}"
