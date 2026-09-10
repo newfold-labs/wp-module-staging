@@ -1257,6 +1257,16 @@ search_replace_paced() {
   local log_step="$4"
   local tbl_prefix="$5"
   local rate="${NFD_STAGING_SR_RATE_MB:-25}"
+  # This reaches awk as a divisor. A non-numeric value is not caught by awk's own "r <= 0" guard --
+  # awk compares a non-numeric string to 0 as a STRING, so the guard is false and the division goes
+  # fatal -- and sleep is then handed awk's error text once per table. Validate it the same way the
+  # copy tunables are validated.
+  case "$rate" in
+    ''|.|*[!0-9.]*|*.*.*)
+      log "ERROR" "$log_step" "Invalid NFD_STAGING_SR_RATE_MB='${NFD_STAGING_SR_RATE_MB}'; falling back to 25."
+      rate=25
+      ;;
+  esac
   local like_prefix
   like_prefix=$(printf '%s' "$tbl_prefix" | sed 's/[_%]/\\&/g')
 
