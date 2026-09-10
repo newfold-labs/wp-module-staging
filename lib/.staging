@@ -1086,7 +1086,15 @@ _copy_run() {
       continue
     fi
 
-    minpk=$(_nfd_msql "SELECT MIN(\`${pk}\`) FROM \`${table}\`;" 2>/dev/null)
+    # Capture stderr rather than discarding it: an empty result must mean "no rows", never "the
+    # lookup failed". Reading a failure as an empty table skipped the table silently and still
+    # returned success -- on deploy_db that left a production table empty after the pre-deploy
+    # backup had already been removed. A genuinely empty table returns NULL, not an error.
+    minpk=$(_nfd_msql "SELECT MIN(\`${pk}\`) FROM \`${table}\`;" 2>&1)
+    if [ $? -ne 0 ] || printf '%s' "$minpk" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+      log "ERROR" "$log_step" "Unable to read the key range of $table: $minpk"
+      return 1
+    fi
     if [ -z "$minpk" ] || [ "$minpk" = "NULL" ]; then
       log "INFO" "$log_step" "Skipping empty table $table"
       continue
