@@ -663,10 +663,36 @@ drop_views_and_tables() {
   # --------------------
   # VIEWS
   # --------------------
+  # Scope the view list to this install's table prefix, the way the table list below already is.
+  # Production and staging share one database, so an unscoped query returns BOTH environments'
+  # views and the loop drops them all: calling this for staging destroyed production's views. It
+  # also broke clone outright once the dump became schema-only, because the table list captured at
+  # startup still named those views and mysqldump then exited with "Couldn't find table".
+  # If the prefix cannot be resolved, drop nothing rather than fall back to dropping everything.
+  local VIEW_PREFIX VIEW_LIKE
+  # || true is required: this function runs under set -e, and a plain assignment from a failing
+  # command substitution exits the shell before the guard below can run. That turned a staging
+  # install whose tables are already gone (a half-finished previous clone, the exact case this
+  # cleanup exists for) from "carry on" into "die here".
+  VIEW_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path="$WP_PATH" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  # mu-plugins are NOT skipped by --skip-plugins and can print to stdout, so take the last
+  # non-empty line and require it to look like a table prefix. A prefix with a stray newline
+  # produced a LIKE that matched nothing and dropped no views while reporting success.
+  VIEW_PREFIX=$(printf '%s' "$VIEW_PREFIX" | tr -d '\r' | awk 'NF{v=$0} END{print v}')
+  case "$VIEW_PREFIX" in
+    ''|*[!A-Za-z0-9_]*) VIEW_PREFIX='' ;;
+  esac
   TMP_VIEWS_LOG=$(mktemp)
-  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ..."
-  wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE();" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
-  VIEWS_STATUS=$?
+  if [ -z "$VIEW_PREFIX" ]; then
+    log "ERROR" "drop_views_and_tables" "Unable to resolve the table prefix for $WP_PATH; skipping view drop."
+    : > "$TMP_VIEWS_LOG"
+    VIEWS_STATUS=0
+  else
+    VIEW_LIKE=$(printf '%s' "$VIEW_PREFIX" | sed 's/[_%]/\\&/g')
+    log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ... LIKE '${VIEW_LIKE}%'"
+    wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE() AND table_name LIKE '${VIEW_LIKE}%' ESCAPE '\\\\';" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
+    VIEWS_STATUS=$?
+  fi
   log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $VIEWS_STATUS"
   VIEWS=$(cat "$TMP_VIEWS_LOG")
   log "INFO" "drop_views_and_tables" "AFTER QUERY, VIEWS_RAW: $VIEWS"
@@ -769,6 +795,12 @@ drop_views_and_tables() {
 # clauses (which reference a MySQL account that may not exist or lack privilege on shared hosting,
 # and would otherwise fail the import of views/triggers).
 #
+# The table pattern matches any backticked identifier starting with the prefix, not just word
+# characters. MySQL allows hyphens, dots, spaces and non-ASCII in a table name, and missing one is
+# destructive now that the dump is schema-only: the unrewritten `DROP TABLE IF EXISTS` / `CREATE
+# TABLE` pair targets the SOURCE table, so importing it drops the production table and recreates it
+# empty. The old full dump refilled it from its own INSERTs, which hid this.
+#
 # Args: $1 file, $2 from_prefix, $3 to_prefix, $4 constraint/trigger name prefix (staging_/prod_),
 #       $5 strip_definer (1 to strip, default 0).
 # Returns 0 on success, 1 on failure.
@@ -778,24 +810,59 @@ rewrite_dump_prefixes() {
   local to_prefix="$3"
   local name_prefix="$4"
   local strip_definer="${5:-0}"
-  local tmp
-  tmp=$(mktemp) || return 1
+  local tables_csv="${6:-}"
 
-  local -a expr=(
-    -e "s/\`${from_prefix}([a-zA-Z0-9_]+)\`/\`${to_prefix}\\1\`/g"
-    -e "s/CONSTRAINT \`(prod_|staging_)?([^\`]+)\`/CONSTRAINT \`${name_prefix}\\2\`/g"
-    -e "s/TRIGGER \`(prod_|staging_)?([^\`]+)\`/TRIGGER \`${name_prefix}\\2\`/g"
-  )
-  if [ "$strip_definer" = "1" ]; then
-    expr+=(-e "s/\\/\\*\\![0-9]+ DEFINER=[^*]*\\*\\///g")
-  fi
+  # The table list is required. Without it the only way to find table names in the dump is to match
+  # the prefix anywhere, and that is not safe: see below.
+  [ -n "$tables_csv" ] || return 1
 
-  if sed -E "${expr[@]}" "$sql_file" > "$tmp"; then
-    mv "$tmp" "$sql_file"
-    return 0
+  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" \
+  NFD_TABLES="$tables_csv" NFD_STRIP="$strip_definer" perl -0777 -i -pe '
+    my $from = $ENV{NFD_FROM};
+    my $to   = $ENV{NFD_TO};
+    my $np   = $ENV{NFD_NP};
+    my %tbl  = map { $_ => 1 } grep { length } split /,/, $ENV{NFD_TABLES};
+    # Rewrite a backticked identifier only when it is one of the tables actually being dumped.
+    # Matching the prefix anywhere renames COLUMN and INDEX names that happen to start with the
+    # table prefix too (wp_user_id and similar are a normal naming convention for plugin tables),
+    # which leaves the staging schema with columns the site does not know about and makes the row
+    # copy fail with "Unknown column".
+    s{`([^`]*)`}{
+      my $id = $1;
+      ($tbl{$id} && index($id, $from) == 0)
+        ? q{`} . $to . substr($id, length $from) . q{`}
+        : q{`} . $id . q{`};
+    }ge;
+    s{CONSTRAINT\s+`(?:prod_|staging_)?([^`]+)`}{"CONSTRAINT `".$np.$1."`"}gie;
+    s{TRIGGER\s+`(?:prod_|staging_)?([^`]+)`}{"TRIGGER `".$np.$1."`"}gie;
+    if ($ENV{NFD_STRIP} eq "1") {
+      s{/\*!\d+\s+DEFINER=[^*]*\*/}{}g;
+    }
+  ' "$sql_file" || return 1
+
+  # Safety net for the whole class of bug this function can cause. Assert POSITIVELY that every
+  # DROP/CREATE now names a destination table. Testing the other way round -- "nothing still names
+  # a SOURCE table" -- looks equivalent but is not: when the prefix handed in does not match what
+  # is actually in the dump (deploy_db takes the table list from the staging install but builds the
+  # prefix from production's, and nothing checks they agree), the rewrite matches nothing, the
+  # surviving statements name neither prefix, and the negative test passes. The import then drops
+  # and recreates the live source tables empty.
+  local bt stray line n
+  bt='`'
+  stray=''
+  while IFS= read -r line; do
+    n=${line#*${bt}}
+    n=${n%${bt}*}
+    [ -n "$n" ] || continue
+    case "$n" in
+      "${to_prefix}"*) ;;
+      *) stray="$n"; break ;;
+    esac
+  done < <(grep -E "^(DROP TABLE IF EXISTS|CREATE TABLE) ${bt}" "$sql_file" || true)
+  if [ -n "$stray" ]; then
+    return 1
   fi
-  rm -f "$tmp"
-  return 1
+  return 0
 }
 
 # --- Rewrite prefixes in a TRIGGER-only dump (in place) ---
@@ -813,7 +880,7 @@ rewrite_trigger_dump() {
   local from_prefix="$2"
   local to_prefix="$3"
   local name_prefix="$4"
-  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" perl -0777 -i -pe '
+  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" NFD_DB="${DB_NAME:-}" perl -0777 -i -pe '
     my $from = quotemeta $ENV{NFD_FROM};
     my $to   = $ENV{NFD_TO};
     my $np   = $ENV{NFD_NP};
@@ -821,13 +888,95 @@ rewrite_trigger_dump() {
     s{/\*!\d+\s+DEFINER=[^*]*\*/}{}g;
     # Trigger name (quoted or bare), immediately before BEFORE/AFTER: strip any existing
     # prod_/staging_ and prepend the target prefix so it is unique in the shared schema.
-    s{(\bTRIGGER\s+)`?(?:prod_|staging_)?([A-Za-z0-9_]+)`?(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    # Backticked form first, accepting any characters: a trigger named `wp_my-trg` was left
+    # unprefixed by a word-character pattern and then collided with the source trigger in the
+    # shared schema (ERROR 1359). The bare form stays word-characters, which is all an unquoted
+    # identifier can hold.
+    s{(\bTRIGGER\s+)`(?:prod_|staging_)?([^`]+)`(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    s{(\bTRIGGER\s+)(?:prod_|staging_)?([A-Za-z0-9_]+)(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    # References qualified with THIS database (db.tbl, `db`.`tbl`, db . tbl). The rules below
+    # anchor on the prefix appearing directly after a keyword or a backtick, so a qualifier hid the
+    # table from both and the reference survived verbatim: a staging trigger then wrote into the
+    # PRODUCTION table. Staging and production share one database, so the qualifier is redundant
+    # and is dropped.
+    #
+    # Only the real database name is matched. Accepting any qualifier would rewrite alias.column
+    # and table.column too -- `SELECT s.wp_flag FROM wp_src s` became SELECT `staging_wp_flag`,
+    # which imports cleanly and then fails at runtime with "Unknown column". A qualifier naming a
+    # DIFFERENT database is left alone: it points outside the shared database, so it is not part of
+    # the staging/production boundary.
+    if (length $ENV{NFD_DB}) {
+      my $db = quotemeta $ENV{NFD_DB};
+      s{(?<![A-Za-z0-9_])`?$db`?\s*\.\s*`?$from([A-Za-z0-9_]+)`?}{"`".$to.$1."`"}gie;
+    }
     # The trigger target table after the event (quoted or bare).
-    s{(\b(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)`?$from([A-Za-z0-9_]+)`?}{$1."`".$to.$2."`"}gie;
+    # Backticked first so a name with a hyphen or space is taken whole; the bare alternative can
+    # only ever be word characters. Using the narrow pattern for both produced malformed SQL
+    # (ON `staging_wp_my`-table`) that the residual check then reported as clean.
+    s{(\b(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)`$from([^`]+)`}{$1."`".$to.$2."`"}gie;
+    s{(\b(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)$from([A-Za-z0-9_]+)}{$1."`".$to.$2."`"}gie;
     # Backticked source-table references anywhere in the body.
-    s{`$from([A-Za-z0-9_]+)`}{"`".$to.$1."`"}ge;
+    s{`$from([^`]+)`}{"`".$to.$1."`"}ge;
     # Bare source-table references in the body after a table-referencing keyword.
-    s{\b(INTO|UPDATE|FROM|JOIN|TABLE)(\s+)`?$from([A-Za-z0-9_]+)`?}{$1.$2."`".$to.$3."`"}gie;
+    # Only INSERT/REPLACE INTO names a table. A bare INTO also matches SELECT ... INTO <var>,
+    # which rewrote a declared local variable into a table identifier and made the trigger fail
+    # to import with "Undeclared variable".
+    # The modifier list must match the one the residual check uses, or a body the check flags is
+    # one the rewrite could have fixed: INSERT IGNORE INTO went unrewritten and the copy then
+    # refused the trigger outright instead of redirecting it.
+    s{\b((?:INSERT|REPLACE)(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|DELAYED|IGNORE))*\s+INTO|UPDATE(?:\s+(?:LOW_PRIORITY|IGNORE))*|FROM|JOIN|TABLE)(\s+)`?$from([A-Za-z0-9_]+)`?}{$1.$2."`".$to.$3."`"}gie;
+  ' "$sql_file"
+}
+
+# --- Utility: report trigger references the rewrite could not redirect ---
+#
+# rewrite_trigger_dump is a set of regexes over SQL text, and regexes cannot cover every way a
+# table can be named: a modifier between the keyword and the table (UPDATE LOW_PRIORITY t), a
+# comment in that position, or a CALL into a stored procedure -- procedures are never dumped or
+# rewritten, so whatever the procedure writes is untouched by any rewrite here.
+#
+# Importing such a trigger silently breaks the isolation the whole flow depends on: a trigger on
+# staging that still names a production table writes into production, and after deploy_db the
+# production trigger writes into staging. Refusing to import is the safe failure, so this reports
+# anything still pointing at the source environment and the caller aborts.
+#
+# Args: $1 rewritten trigger dump, $2 source prefix. Echoes the offending tokens, empty if clean.
+_nfd_trigger_dump_residuals() {
+  local sql_file="$1"
+  local from_prefix="$2"
+  local src_tables="${3:-}"
+  NFD_FROM="$from_prefix" NFD_DB="${DB_NAME:-}" NFD_SRC_TABLES="$src_tables" perl -0777 -ne '
+    my $from = quotemeta $ENV{NFD_FROM};
+    my $s = $_;
+    # Blank quoted literals and ordinary comments first, so trigger TEXT that merely mentions a
+    # table name cannot raise a false alarm. Versioned comments are deliberately left alone:
+    # mysqldump wraps the entire trigger body in one, so blanking those blanks what we are checking.
+    $s =~ s/\x27(?:[^\x27\\]|\\.)*\x27/\x27\x27/g;
+    $s =~ s/"(?:[^"\\]|\\.)*"/""/g;
+    $s =~ s{/\*(?!!).*?\*/}{ }gs;
+    $s =~ s{--[^\n]*}{ }g;
+    my %bad;
+    # A source-prefixed table still sitting after a table-referencing keyword.
+    # A source-prefixed table still sitting in a TABLE position: directly after a table-referencing
+    # keyword, with only optional modifiers and whitespace in between. Scanning a fixed window
+    # after the keyword instead was wrong both ways: it flagged the column list of an already
+    # correct statement (INSERT INTO `staging_wp_x` (wp_user_id, ...) reported wp_user_id and
+    # failed the whole copy), and it missed a modifier split across a newline because the window
+    # excluded newlines. \s spans newlines, and blanked comments have become spaces by now.
+    # Any SOURCE TABLE NAME still present after rewriting is a reference that was not redirected.
+    # Testing membership of the authoritative table list is exact, so it needs no guesses about
+    # SQL shape: it catches the forms the keyword heuristics missed (STRAIGHT_JOIN, which \bJOIN
+    # cannot match; comma-joined tables; multi-table DELETE) without flagging aliases, columns or
+    # modifiers, which is what the heuristics kept getting wrong in both directions.
+    if (length $ENV{NFD_SRC_TABLES}) {
+      my %src = map { $_ => 1 } grep { length } split /,/, $ENV{NFD_SRC_TABLES};
+      for my $t (keys %src) {
+        my $q = quotemeta $t;
+        $bad{$t} = 1 if $s =~ /`$q`/ || $s =~ /(?<![A-Za-z0-9_])$q(?![A-Za-z0-9_])/;
+      }
+    }
+    $bad{"CALL"} = 1 if $s =~ /\bCALL\s+[`A-Za-z0-9_]/i;
+    print join(" ", sort keys %bad);
   ' "$sql_file"
 }
 
@@ -850,18 +999,37 @@ _nfd_dump_bin() {
 # Keeps the password out of the process list (no -p on the command line). Parses DB_HOST forms
 # host, host:port and host:/path/to/socket. Echoes the file path; the caller must rm it.
 _nfd_mysql_defaults_file() {
-  local f host port socket
+  local f host port socket esc_user esc_pass
   f=$(mktemp) || return 1
   chmod 600 "$f"
-  host="$DB_HOST"; port=""; socket=""
-  case "$DB_HOST" in
-    *:/*) host="${DB_HOST%%:*}"; socket="${DB_HOST#*:}" ;;
-    *:*)  host="${DB_HOST%%:*}"; port="${DB_HOST##*:}" ;;
+  # A "p:" prefix on DB_HOST asks for a persistent connection. WordPress core does not honour it
+  # (parse_db_host() reads the p as the host), but db.php drop-ins such as HyperDB and LudicrousDB
+  # do, and those are what put it in wp-config in the first place. Strip it: a colon is not legal
+  # in a hostname, so this can never discard part of a real one, and left in place "p:localhost"
+  # parses as host "p" with the real host taken for a port and every dump and copy fails.
+  local raw="$DB_HOST"
+  case "$raw" in p:*) raw="${raw#p:}" ;; esac
+  host="$raw"; port=""; socket=""
+  case "$raw" in
+    *:/*) host="${raw%%:*}"; socket="${raw#*:}" ;;
+    *:*)  host="${raw%%:*}"; port="${raw##*:}" ;;
   esac
+  # An option file is not shell. In an UNQUOTED value MySQL ends the value at a '#' (it starts a
+  # comment), strips surrounding whitespace, and expands backslash escapes (\s, \t, \n, \\), so a
+  # wp-config password containing any of those was written correctly but read back mangled and
+  # authentication failed. A double-quoted value is taken literally, with only backslash and
+  # double-quote needing to be escaped. Credentials still never appear in the process list.
+  # Escape with parameter expansion rather than sed: sed operates on the locale's character set and
+  # aborts with "illegal byte sequence" on a password byte that is not valid in it, which would
+  # yield an empty password and a silent auth failure. Expansion is byte-safe and needs no
+  # subprocess. Backslash must be doubled BEFORE the quote is escaped, or the escaping backslash
+  # would itself be doubled.
+  esc_user=${DB_USER//\\/\\\\}; esc_user=${esc_user//\"/\\\"}
+  esc_pass=${DB_PASS//\\/\\\\}; esc_pass=${esc_pass//\"/\\\"}
   {
     printf '[client]\n'
-    printf 'user=%s\n' "$DB_USER"
-    printf 'password=%s\n' "$DB_PASS"
+    printf 'user="%s"\n' "$esc_user"
+    printf 'password="%s"\n' "$esc_pass"
     [ -n "$host" ]   && printf 'host=%s\n' "$host"
     [ -n "$port" ]   && printf 'port=%s\n' "$port"
     [ -n "$socket" ] && printf 'socket=%s\n' "$socket"
@@ -968,6 +1136,25 @@ _nfd_msql() {
   "${_NFD_MYSQL_BIN:-mysql}" --defaults-extra-file="$_NFD_COPY_DFILE" -D "$DB_NAME" -N -e "$1"
 }
 
+# --- Utility: escape an identifier for use between backticks ---
+# Table and column names come from information_schema, and MySQL identifiers may legally contain
+# hyphens, dots, spaces and non-ASCII characters. All of those quote correctly between backticks
+# and must keep copying. The only character that needs handling is a backtick itself, which MySQL
+# escapes by doubling; left alone it closes the quoting and the statement means something else.
+_nfd_sql_ident() {
+  local s=${1//\`/\`\`}
+  printf '%s' "$s"
+}
+
+# --- Utility: escape a value for use inside a single-quoted SQL string ---
+# The information_schema lookups compare the table name as a string rather than using it as an
+# identifier, so those need string escaping, not backtick escaping.
+_nfd_sql_str() {
+  local s=${1//\\/\\\\}
+  s=${s//\'/\\\'}
+  printf '%s' "$s"
+}
+
 # --- Utility: comma-separated backticked list of NON-generated columns for a table ---
 # Generated (virtual/stored) columns cannot be written by INSERT, so they are excluded; MySQL
 # recomputes them on the destination. The test is GENERATION_EXPRESSION, not EXTRA: on MySQL 8 an
@@ -977,11 +1164,13 @@ _nfd_msql() {
 # Echoes e.g. "`ID`,`post_title`"; empty on failure.
 _nfd_table_columns() {
   local table="$1"
-  local out="" col
+  local out="" col esc
+  esc=$(_nfd_sql_str "$table")
   while IFS= read -r col; do
     [ -z "$col" ] && continue
+    col=${col//\`/\`\`}
     if [ -z "$out" ]; then out="\`$col\`"; else out="$out,\`$col\`"; fi
-  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
+  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${esc}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
   printf '%s' "$out"
 }
 
@@ -991,12 +1180,14 @@ _nfd_table_columns() {
 # the caller copies the table in one statement (such tables are small: term_relationships, etc.).
 _nfd_table_pk() {
   local table="$1"
-  local pkinfo pkcount pkcol pktype
-  pkinfo=$(_nfd_msql "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND COLUMN_KEY='PRI';" 2>/dev/null)
+  local pkinfo pkcount pkcol pktype esc
+  esc=$(_nfd_sql_str "$table")
+  pkinfo=$(_nfd_msql "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${esc}' AND COLUMN_KEY='PRI';" 2>/dev/null)
   pkcount=$(printf '%s\n' "$pkinfo" | grep -c .)
   [ "$pkcount" -eq 1 ] || { printf ''; return; }
-  pkcol=$(printf '%s' "$pkinfo" | awk '{print $1}')
-  pktype=$(printf '%s' "$pkinfo" | awk '{print $2}')
+  # Split on the tab the client emits rather than on whitespace: a column name may contain spaces.
+  pkcol=$(printf '%s' "$pkinfo" | awk -F'\t' '{print $1}')
+  pktype=$(printf '%s' "$pkinfo" | awk -F'\t' '{print $2}')
   case "$pktype" in
     tinyint|smallint|mediumint|int|integer|bigint) printf '%s' "$pkcol" ;;
     *) printf '' ;;
@@ -1026,12 +1217,23 @@ copy_table_data_server_side() {
   local src_prefix="$2"
   local dst_prefix="$3"
   local log_step="$4"
+  local tables_csv="${5:-}"
+
+  # Copy exactly the tables the schema was built from. Re-deriving the list here with a LIKE meant
+  # table identity was decided three different ways (SHOW TABLES for the dump, information_schema
+  # for the copy, the dump list for the rewrite) and they do not agree: information_schema LIKE is
+  # case-insensitive on MariaDB while SHOW TABLES is not, so a table named WP_Caps was enumerated
+  # for copying with no staging schema behind it and the copy failed with ERROR 1146.
+  if [ -z "$tables_csv" ]; then
+    log "ERROR" "$log_step" "No tables given to copy; refusing to guess the table list."
+    return 1
+  fi
 
   _NFD_COPY_DFILE=$(_nfd_mysql_defaults_file) || { log "ERROR" "$log_step" "Unable to create DB defaults file."; return 1; }
   _NFD_MYSQL_BIN=$(_nfd_mysql_bin)
   # Single exit point so the defaults file (which holds the DB password) is removed on every path.
   local rc=0
-  _copy_run "$src_prefix" "$dst_prefix" "$log_step" || rc=$?
+  _copy_run "$src_prefix" "$dst_prefix" "$log_step" "$tables_csv" || rc=$?
   rm -f "$_NFD_COPY_DFILE"; _NFD_COPY_DFILE=""
   return $rc
 }
@@ -1042,8 +1244,62 @@ _copy_run() {
   local src_prefix="$1"
   local dst_prefix="$2"
   local log_step="$3"
+  # Both tunables are operator-supplied and are interpolated straight into SQL / passed to sleep,
+  # so validate them here. A non-numeric or non-positive chunk produced "LIMIT 1 OFFSET -1", which
+  # the boundary lookup then reports as a syntax error and the whole copy aborts; falling back to
+  # the default keeps a typo in an env var from failing an otherwise healthy staging build.
   local chunk="${NFD_STAGING_COPY_CHUNK:-50000}"
+  local chunk_ok=1
+  case "$chunk" in
+    ''|*[!0-9]*) chunk_ok=0 ;;
+  esac
+  # A string of digits is not automatically a decimal number to $(( )): a leading zero makes it
+  # octal, so "08" and "09" are arithmetic errors (which the boundary lookup then reports as a
+  # failure and aborts the copy) and "0100000" would silently mean 32768. Bound the length first so
+  # the conversion itself cannot overflow, then force base 10.
+  if [ "$chunk_ok" -eq 1 ] && [ "${#chunk}" -gt 9 ]; then
+    chunk_ok=0
+  fi
+  if [ "$chunk_ok" -eq 1 ]; then
+    chunk=$((10#$chunk))
+    if [ "$chunk" -lt 1 ]; then
+      chunk_ok=0
+    fi
+  fi
+  if [ "$chunk_ok" -eq 0 ]; then
+    log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_CHUNK='${NFD_STAGING_COPY_CHUNK}'; falling back to 50000."
+    chunk=50000
+  fi
+  # Target bytes per copy statement; paired with the row chunk above, whichever is smaller wins.
+  local max_mb="${NFD_STAGING_COPY_MAX_MB:-64}"
+  local max_mb_ok=1
+  case "$max_mb" in
+    ''|*[!0-9]*) max_mb_ok=0 ;;
+  esac
+  if [ "$max_mb_ok" -eq 1 ] && [ "${#max_mb}" -gt 6 ]; then
+    max_mb_ok=0
+  fi
+  # Force base 10 before any arithmetic, exactly as the chunk above does: "08" is a valid digit
+  # string but an invalid octal literal, and $(( )) treats a leading zero as octal. Without this
+  # the multiplication below aborts the whole script with "value too great for base".
+  if [ "$max_mb_ok" -eq 1 ]; then
+    max_mb=$((10#$max_mb))
+    if [ "$max_mb" -lt 1 ]; then
+      max_mb_ok=0
+    fi
+  fi
+  if [ "$max_mb_ok" -eq 0 ]; then
+    log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_MAX_MB='${NFD_STAGING_COPY_MAX_MB}'; falling back to 64."
+    max_mb=64
+  fi
+  local max_bytes=$(( max_mb * 1048576 ))
   local pace="${NFD_STAGING_COPY_PACE:-0}"
+  case "$pace" in
+    ''|.|*[!0-9.]*|*.*.*)
+      log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_PACE='${NFD_STAGING_COPY_PACE}'; falling back to 0."
+      pace=0
+      ;;
+  esac
   local like_prefix
   like_prefix=$(printf '%s' "$src_prefix" | sed 's/[_%]/\\&/g')
   # Prepended to every INSERT: FK/unique checks off (parent/child order is irrelevant) and a
@@ -1054,18 +1310,44 @@ _copy_run() {
 
   log "INFO" "$log_step" "Copying table data server-side (src=${src_prefix} dst=${dst_prefix}, chunk=${chunk}, pace=${pace})"
 
-  local tables
-  tables=$(_nfd_msql "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '${like_prefix}%' ESCAPE '\\\\' ORDER BY TABLE_NAME;" 2>&1)
-  if [ $? -ne 0 ]; then
-    log "ERROR" "$log_step" "Unable to list source tables: $tables"
+  # Classify every name once. Views carry no rows and are skipped; a name that is in the list but
+  # no longer in the schema is an error, not something to pass over quietly.
+  local meta
+  meta=$(_nfd_msql "SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE();" 2>&1)
+  if [ $? -ne 0 ] || printf '%s' "$meta" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+    log "ERROR" "$log_step" "Unable to read table metadata: $meta"
     return 1
   fi
+  local base_csv="," view_csv="," mname mtype
+  while IFS=$'\t' read -r mname mtype; do
+    [ -n "$mname" ] || continue
+    if [ "$mtype" = "BASE TABLE" ]; then base_csv="${base_csv}${mname},"; else view_csv="${view_csv}${mname},"; fi
+  done <<< "$meta"
 
-  local table bare dst cols pk last bound out
+  local -a tbls=()
+  IFS=',' read -r -a tbls <<< "$tables_csv"
+  local tables copied=0
+  tables=$(printf '%s\n' "${tbls[@]}")
+
+  local table bare dst qtable qdst cols pk qpk minpk last lower_op bound out tchunk avg byte_rows
   while IFS= read -r table; do
     [ -z "$table" ] && continue
+    case "$base_csv" in
+      *",${table},"*) ;;
+      *)
+        case "$view_csv" in
+          *",${table},"*) log "INFO" "$log_step" "Skipping view $table"; continue ;;
+          *) log "ERROR" "$log_step" "Source table $table is no longer in the database."; return 1 ;;
+        esac
+        ;;
+    esac
+    copied=$((copied + 1))
     bare="${table#"$src_prefix"}"
     dst="${dst_prefix}${bare}"
+    # Escape once per table. Identifiers may legally contain a backtick, which MySQL doubles;
+    # everything else (hyphens, dots, spaces, non-ASCII) quotes as-is.
+    qtable=${table//\`/\`\`}
+    qdst=${dst//\`/\`\`}
 
     cols=$(_nfd_table_columns "$table")
     if [ -z "$cols" ]; then
@@ -1074,10 +1356,30 @@ _copy_run() {
     fi
 
     pk=$(_nfd_table_pk "$table")
+    qpk=${pk//\`/\`\`}
+
+    # Cap the chunk by BYTES as well as by rows. The configured chunk is a row count, but row
+    # widths span orders of magnitude: 50000 rows of a page-builder post_content is gigabytes in a
+    # single statement, where the dump-and-import path this replaced never exceeded
+    # net_buffer_length per statement. A transaction that large means proportional undo, redo and
+    # binlog-cache pressure on a shared host. AVG_ROW_LENGTH is an InnoDB estimate, so it is only
+    # ever used to LOWER the chunk, and the result is floored so a bad estimate cannot reduce the
+    # copy to a crawl.
+    tchunk="$chunk"
+    avg=$(_nfd_msql "SELECT AVG_ROW_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$(_nfd_sql_str "$table")';" 2>/dev/null)
+    case "$avg" in ''|*[!0-9]*) avg=0 ;; esac
+    if [ "$avg" -gt 0 ]; then
+      byte_rows=$(( max_bytes / avg ))
+      [ "$byte_rows" -lt 1000 ] && byte_rows=1000
+      [ "$byte_rows" -lt "$tchunk" ] && tchunk="$byte_rows"
+    fi
+    if [ "$tchunk" != "$chunk" ]; then
+      log "INFO" "$log_step" "Chunk for $table lowered to ${tchunk} rows (about ${avg} bytes/row)"
+    fi
 
     if [ -z "$pk" ]; then
       log "INFO" "$log_step" "Copying $table -> $dst (single statement; no single numeric PK)"
-      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\`;" 2>&1)
+      out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\`;" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Failed copying $table -> $dst: $out"
         return 1
@@ -1086,34 +1388,64 @@ _copy_run() {
       continue
     fi
 
-    last=$(_nfd_msql "SELECT MIN(\`${pk}\`)-1 FROM \`${table}\`;" 2>/dev/null)
-    if [ -z "$last" ] || [ "$last" = "NULL" ]; then
+    # Capture stderr rather than discarding it: an empty result must mean "no rows", never "the
+    # lookup failed". Reading a failure as an empty table skipped the table silently and still
+    # returned success -- on deploy_db that left a production table empty after the pre-deploy
+    # backup had already been removed. A genuinely empty table returns NULL, not an error.
+    minpk=$(_nfd_msql "SELECT MIN(\`${qpk}\`) FROM \`${qtable}\`;" 2>&1)
+    if [ $? -ne 0 ] || printf '%s' "$minpk" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+      log "ERROR" "$log_step" "Unable to read the key range of $table: $minpk"
+      return 1
+    fi
+    if [ -z "$minpk" ] || [ "$minpk" = "NULL" ]; then
       log "INFO" "$log_step" "Skipping empty table $table"
       continue
     fi
 
-    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${pk}\`, size ${chunk})"
+    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${qpk}\`, size ${tchunk})"
+    # The first range INCLUDES the lowest key, so the cursor never has to name "one below the
+    # minimum". Seeding it with MIN(pk)-1 instead underflows on an UNSIGNED key whose lowest value
+    # is 0 -- MySQL raises ERROR 1690 (BIGINT UNSIGNED value is out of range) -- and the copy then
+    # read that failure as an empty table and skipped it. lower_op flips to > after the first
+    # chunk, so every row is still copied exactly once.
+    lower_op=">="
+    last="$minpk"
     while true; do
-      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` > ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>/dev/null)
+      # An empty result here legitimately means "fewer than $chunk rows remain", which ends the
+      # loop with a final open-ended range. An ERROR must not take that same branch: doing so
+      # turned a failed boundary lookup into one unbounded INSERT covering the rest of the table,
+      # silently discarding the chunking this function exists to provide.
+      bound=$(_nfd_msql "SELECT \`${qpk}\` FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} ORDER BY \`${qpk}\` ASC LIMIT 1 OFFSET $((tchunk - 1));" 2>&1)
+      if [ $? -ne 0 ] || printf '%s' "$bound" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+        log "ERROR" "$log_step" "Unable to resolve the next key boundary for $table: $bound"
+        return 1
+      fi
       if [ -z "$bound" ] || [ "$bound" = "NULL" ]; then
-        out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` > ${last};" 2>&1)
+        out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last};" 2>&1)
         if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
-          log "ERROR" "$log_step" "Failed copying $table -> $dst (final range > ${last}): $out"
+          log "ERROR" "$log_step" "Failed copying $table -> $dst (final range ${lower_op} ${last}): $out"
           return 1
         fi
         break
       fi
-      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` > ${last} AND \`${pk}\` <= ${bound};" 2>&1)
+      out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} AND \`${qpk}\` <= ${bound};" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Failed copying $table -> $dst (range ${last}..${bound}): $out"
         return 1
       fi
       last="$bound"
+      lower_op=">"
       [ "$pace" != "0" ] && sleep "$pace"
     done
     log "INFO" "$log_step" "Copied $table -> $dst"
   done < <(printf '%s\n' "$tables")
 
+  # Reporting success having copied nothing is what let a mismatched table list go unnoticed while
+  # the schema import had already emptied the destination.
+  if [ "$copied" -eq 0 ]; then
+    log "ERROR" "$log_step" "No tables were copied; the table list did not match anything in the database."
+    return 1
+  fi
   return 0
 }
 
@@ -1158,6 +1490,17 @@ copy_triggers() {
     return 1
   fi
 
+  # Verify the rewrite actually redirected everything before importing. A trigger that still names
+  # the source environment would write across the staging/production boundary once installed, and
+  # nothing downstream would notice, so this fails the operation instead.
+  local residual
+  residual=$(_nfd_trigger_dump_residuals "$tfile" "$from_prefix" "$tables_arg")
+  if [ -n "$residual" ]; then
+    log "ERROR" "$log_step" "Refusing to import triggers: [${residual}] still reference the source environment after rewriting. Installing them would let a trigger on one environment write to the other. Review these triggers by hand."
+    rm -f "$tfile"
+    return 1
+  fi
+
   out=$(wp db import "$tfile" --default-character-set="$charset" --path="$tgt_path" --skip-themes --skip-plugins --quiet 2>&1)
   if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
     log "ERROR" "$log_step" "Unable to import triggers: $out"
@@ -1190,6 +1533,16 @@ search_replace_paced() {
   local log_step="$4"
   local tbl_prefix="$5"
   local rate="${NFD_STAGING_SR_RATE_MB:-25}"
+  # This reaches awk as a divisor. A non-numeric value is not caught by awk's own "r <= 0" guard --
+  # awk compares a non-numeric string to 0 as a STRING, so the guard is false and the division goes
+  # fatal -- and sleep is then handed awk's error text once per table. Validate it the same way the
+  # copy tunables are validated.
+  case "$rate" in
+    ''|.|*[!0-9.]*|*.*.*)
+      log "ERROR" "$log_step" "Invalid NFD_STAGING_SR_RATE_MB='${NFD_STAGING_SR_RATE_MB}'; falling back to 25."
+      rate=25
+      ;;
+  esac
   local like_prefix
   like_prefix=$(printf '%s' "$tbl_prefix" | sed 's/[_%]/\\&/g')
 
@@ -1485,7 +1838,7 @@ create() {
     log "ERROR" "create:update_prefix_sql" "SQL export file not found: $STAGING_DIR/.export-sql"
     delete_temp_staging 2 "SQL export file not found."
   fi
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "create:update_prefix_sql" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -1516,7 +1869,7 @@ create() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database).
   log "INFO" "create" "[STEP] Copy table data."
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "create:copy_data"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "create:copy_data" "$PRODUCTION_TABLES"; then
     delete_temp_staging 3 "Unable to copy table data to staging."
   fi
 
@@ -1834,7 +2187,7 @@ clone() {
 
   # Rewrite production -> staging table/constraint/trigger prefixes (and strip DEFINER) in the dump.
   log "INFO" "clone:rewrite_prefix" "Rewriting table prefixes in schema dump"
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "clone:rewrite_prefix" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -1855,7 +2208,7 @@ clone() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database): no row bytes cross
   # the client connection, so this scales with site size instead of tripping the throttle.
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "clone:copy_data"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "clone:copy_data" "$PRODUCTION_TABLES"; then
     error "Unable to copy table data to staging."
   fi
 
@@ -1933,6 +2286,14 @@ deploy_files() {
 # Helper: restore from backup and log
 _restore_db_from_backup() {
   local BACKUP="$1"
+  # A rollback can be reached before the backup exists (an early failure) or after it was found
+  # unusable and removed. Piping an empty path into wp db import would report a confusing gzip
+  # error and read as an attempted-and-failed restore; say plainly that there is nothing to
+  # restore from instead.
+  if [ -z "$BACKUP" ] || [ ! -s "$BACKUP" ]; then
+    log "ERROR" "deploy_db:restore" "No usable backup to restore from. Manual intervention needed."
+    return
+  fi
   log "INFO" "deploy_db:restore" "Restoring original production database from backup $BACKUP"
   set +e
   if gzip -d < "$BACKUP" | wp db import - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>&1; then
@@ -1950,8 +2311,7 @@ deploy_db() {
   set +e
 
   TIMESTAMP=$(date +%s)
-  BACKUP_FILE="$PRODUCTION_DIR/.db_backup_before_deploy_$TIMESTAMP.sql"
-  COMPRESSED_BACKUP="$BACKUP_FILE.gz"
+  COMPRESSED_BACKUP=""
   RESTORED=0
 
   # Trap for automatic rollback in case of unexpected exit
@@ -1962,6 +2322,7 @@ deploy_db() {
       _restore_db_from_backup "$COMPRESSED_BACKUP"
       RESTORED=1
     fi
+    rm -f "$STAGING_DIR/.export-sql"
     error 'Unable to import database'
   }
   trap _on_exit EXIT
@@ -1976,15 +2337,48 @@ deploy_db() {
     else
       log "DEBUG" "deploy_db" "Rollback already performed, skipping."
     fi
+    rm -f "$STAGING_DIR/.export-sql"
     error "$msg"
   }
 
   # 1. Backup database production site
-  log "INFO" "deploy_db" "Backing up production database to $COMPRESSED_BACKUP"
-  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
-  if [ $? -ne 0 ]; then
-    fail_and_exit "Failed to backup production database."
+  #
+  # This archive is a complete dump of the production database. PRODUCTION_DIR is the document
+  # root, so it used to be downloadable at /.db_backup_before_deploy_<epoch>.sql.gz -- a name that
+  # is guessable to the second, and the file is only removed on the success path, so a failed
+  # deploy left it there. Write it under nfd-private instead, which log() gives a deny-all
+  # .htaccess, and let mktemp add entropy and 0600 permissions. The log call below runs first so
+  # the directory and its .htaccess exist before anything is written into it.
+  log "INFO" "deploy_db" "Backing up production database"
+  COMPRESSED_BACKUP=$(mktemp "$PRODUCTION_DIR/nfd-private/db_backup_before_deploy_${TIMESTAMP}_XXXXXXXX.sql.gz" 2>/dev/null)
+  if [ -z "$COMPRESSED_BACKUP" ]; then
+    RESTORED=1
+    fail_and_exit "Unable to create the production backup file; aborting before any change to production."
   fi
+  set -o pipefail
+  wp db export - --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet | gzip > "$COMPRESSED_BACKUP"
+  BACKUP_STATUS=$?
+  set +o pipefail
+  # Only gzip's exit status was checked before, and gzip succeeds on empty input: a failed export
+  # produced a well-formed empty archive, and production was dropped a few lines below with
+  # nothing to roll back to. Check the whole pipeline, that the archive is intact, and that it
+  # actually decompresses to something -- an export that exits 0 but writes nothing still yields a
+  # valid 20-byte archive. head -c bounds the decompression so this stays cheap on a large dump.
+  # Nothing has been dropped at this point, so RESTORED is set first to skip a pointless restore.
+  # Require an actual table in the archive, not just bytes: mysqldump writes ~50 bytes of header
+  # before anything else, so a dump that produced no tables at all still decompressed to something.
+  # head bounds the work on a large dump.
+  BACKUP_HEAD_BYTES=0
+  if gzip -dc "$COMPRESSED_BACKUP" 2>/dev/null | head -c 65536 | grep -q "CREATE TABLE"; then
+    BACKUP_HEAD_BYTES=1
+  fi
+  if [ $BACKUP_STATUS -ne 0 ] || [ ! -s "$COMPRESSED_BACKUP" ] || ! gzip -t "$COMPRESSED_BACKUP" 2>/dev/null \
+     || [ "${BACKUP_HEAD_BYTES:-0}" -lt 1 ]; then
+    rm -f "$COMPRESSED_BACKUP"
+    RESTORED=1
+    fail_and_exit "Production backup failed or is unreadable; aborting before any change to production."
+  fi
+  log "INFO" "deploy_db" "Production backup written ($(wc -c < "$COMPRESSED_BACKUP") bytes)."
 
   # 2. Drop views/tables (best effort)
   log "INFO" "deploy_db" "Dropping existing views and tables in production (best-effort)"
@@ -2019,7 +2413,7 @@ deploy_db() {
 
     # 4. Rewrite staging -> production prefixes (and strip DEFINER) in the schema dump.
     log "INFO" "deploy_db" "Replacing staging prefixes in schema SQL"
-    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" 1; then
+    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" 1 "$STAGING_TABLES"; then
       fail_and_exit "Unable to update prefix in staging SQL."
     fi
 
@@ -2053,7 +2447,7 @@ deploy_db() {
 
     # 5b. Copy row data staging -> production server-side (INSERT ... SELECT in the shared DB).
     log "INFO" "deploy_db" "Copying staging table data into production (server-side)"
-    if ! copy_table_data_server_side "$PRODUCTION_DIR" "staging_${DB_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data"; then
+    if ! copy_table_data_server_side "$PRODUCTION_DIR" "staging_${DB_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data" "$STAGING_TABLES"; then
       fail_and_exit "Unable to copy staging table data into production."
     fi
 
@@ -2115,9 +2509,11 @@ deploy_db() {
   write_deploy_result "success" "Database deployed successfully." "deploy_db"
   echo '{"status":"success","message":"Database deployed successfully."}'
 
-  # Clear backup
+  # Clear backup and the schema dump. Both sit under a web-served directory, so neither should
+  # outlive the deploy: create and clone already delete the dump, deploy_db never did.
   rm -f "$COMPRESSED_BACKUP"
-  log "INFO" "deploy_db" "Cleaned up backup file."
+  rm -f "$STAGING_DIR/.export-sql"
+  log "INFO" "deploy_db" "Cleaned up backup file and schema dump."
 
   # Restore normal behaviour
   set -e
