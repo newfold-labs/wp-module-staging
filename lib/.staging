@@ -1176,8 +1176,14 @@ _copy_run() {
   if [ "$max_mb_ok" -eq 1 ] && [ "${#max_mb}" -gt 6 ]; then
     max_mb_ok=0
   fi
-  if [ "$max_mb_ok" -eq 1 ] && [ "$max_mb" -lt 1 ]; then
-    max_mb_ok=0
+  # Force base 10 before any arithmetic, exactly as the chunk above does: "08" is a valid digit
+  # string but an invalid octal literal, and $(( )) treats a leading zero as octal. Without this
+  # the multiplication below aborts the whole script with "value too great for base".
+  if [ "$max_mb_ok" -eq 1 ]; then
+    max_mb=$((10#$max_mb))
+    if [ "$max_mb" -lt 1 ]; then
+      max_mb_ok=0
+    fi
   fi
   if [ "$max_mb_ok" -eq 0 ]; then
     log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_MAX_MB='${NFD_STAGING_COPY_MAX_MB}'; falling back to 64."
