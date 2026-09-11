@@ -1022,17 +1022,23 @@ _nfd_msql() {
   "${_NFD_MYSQL_BIN:-mysql}" --defaults-extra-file="$_NFD_COPY_DFILE" -D "$DB_NAME" -N -e "$1"
 }
 
-# --- Utility: is an identifier safe to interpolate into the statements below? ---
-# Table and column names come from information_schema rather than from the operator, but MySQL
-# allows almost anything inside backticks, including a backtick itself (written as ``) and a quote.
-# Such a name cannot be interpolated safely here: it breaks out of the quoting and the statement
-# either fails or means something else. WordPress and its plugins only ever create word-character
-# names, so refuse anything else rather than guess at it.
-_nfd_safe_ident() {
-  case "$1" in
-    ''|*[!A-Za-z0-9_]*) return 1 ;;
-  esac
-  return 0
+# --- Utility: escape an identifier for use between backticks ---
+# Table and column names come from information_schema, and MySQL identifiers may legally contain
+# hyphens, dots, spaces and non-ASCII characters. All of those quote correctly between backticks
+# and must keep copying. The only character that needs handling is a backtick itself, which MySQL
+# escapes by doubling; left alone it closes the quoting and the statement means something else.
+_nfd_sql_ident() {
+  local s=${1//\`/\`\`}
+  printf '%s' "$s"
+}
+
+# --- Utility: escape a value for use inside a single-quoted SQL string ---
+# The information_schema lookups compare the table name as a string rather than using it as an
+# identifier, so those need string escaping, not backtick escaping.
+_nfd_sql_str() {
+  local s=${1//\\/\\\\}
+  s=${s//\'/\\\'}
+  printf '%s' "$s"
 }
 
 # --- Utility: comma-separated backticked list of NON-generated columns for a table ---
@@ -1044,15 +1050,13 @@ _nfd_safe_ident() {
 # Echoes e.g. "`ID`,`post_title`"; empty on failure.
 _nfd_table_columns() {
   local table="$1"
-  local out="" col
-  _nfd_safe_ident "$table" || { printf ''; return; }
+  local out="" col esc
+  esc=$(_nfd_sql_str "$table")
   while IFS= read -r col; do
     [ -z "$col" ] && continue
-    # Dropping an unsupported column from the list would silently lose that column's data, so
-    # resolve nothing at all and let the caller fail on the empty result.
-    _nfd_safe_ident "$col" || { printf ''; return; }
+    col=${col//\`/\`\`}
     if [ -z "$out" ]; then out="\`$col\`"; else out="$out,\`$col\`"; fi
-  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
+  done < <(_nfd_msql "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${esc}' AND (GENERATION_EXPRESSION IS NULL OR GENERATION_EXPRESSION='') ORDER BY ORDINAL_POSITION;" 2>/dev/null)
   printf '%s' "$out"
 }
 
@@ -1062,16 +1066,14 @@ _nfd_table_columns() {
 # the caller copies the table in one statement (such tables are small: term_relationships, etc.).
 _nfd_table_pk() {
   local table="$1"
-  local pkinfo pkcount pkcol pktype
-  _nfd_safe_ident "$table" || { printf ''; return; }
-  pkinfo=$(_nfd_msql "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${table}' AND COLUMN_KEY='PRI';" 2>/dev/null)
+  local pkinfo pkcount pkcol pktype esc
+  esc=$(_nfd_sql_str "$table")
+  pkinfo=$(_nfd_msql "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='${esc}' AND COLUMN_KEY='PRI';" 2>/dev/null)
   pkcount=$(printf '%s\n' "$pkinfo" | grep -c .)
   [ "$pkcount" -eq 1 ] || { printf ''; return; }
-  pkcol=$(printf '%s' "$pkinfo" | awk '{print $1}')
-  pktype=$(printf '%s' "$pkinfo" | awk '{print $2}')
-  # An unsupported key name means no chunking rather than broken SQL; the caller then copies the
-  # table in one statement, which is correct, just unchunked.
-  _nfd_safe_ident "$pkcol" || { printf ''; return; }
+  # Split on the tab the client emits rather than on whitespace: a column name may contain spaces.
+  pkcol=$(printf '%s' "$pkinfo" | awk -F'\t' '{print $1}')
+  pktype=$(printf '%s' "$pkinfo" | awk -F'\t' '{print $2}')
   case "$pktype" in
     tinyint|smallint|mediumint|int|integer|bigint) printf '%s' "$pkcol" ;;
     *) printf '' ;;
@@ -1167,15 +1169,15 @@ _copy_run() {
     return 1
   fi
 
-  local table bare dst cols pk minpk last lower_op bound out
+  local table bare dst qtable qdst cols pk qpk minpk last lower_op bound out
   while IFS= read -r table; do
     [ -z "$table" ] && continue
-    if ! _nfd_safe_ident "$table"; then
-      log "ERROR" "$log_step" "Refusing to copy $table: the table name contains characters that cannot be quoted safely."
-      return 1
-    fi
     bare="${table#"$src_prefix"}"
     dst="${dst_prefix}${bare}"
+    # Escape once per table. Identifiers may legally contain a backtick, which MySQL doubles;
+    # everything else (hyphens, dots, spaces, non-ASCII) quotes as-is.
+    qtable=${table//\`/\`\`}
+    qdst=${dst//\`/\`\`}
 
     cols=$(_nfd_table_columns "$table")
     if [ -z "$cols" ]; then
@@ -1184,10 +1186,11 @@ _copy_run() {
     fi
 
     pk=$(_nfd_table_pk "$table")
+    qpk=${pk//\`/\`\`}
 
     if [ -z "$pk" ]; then
       log "INFO" "$log_step" "Copying $table -> $dst (single statement; no single numeric PK)"
-      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\`;" 2>&1)
+      out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\`;" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Failed copying $table -> $dst: $out"
         return 1
@@ -1200,7 +1203,7 @@ _copy_run() {
     # lookup failed". Reading a failure as an empty table skipped the table silently and still
     # returned success -- on deploy_db that left a production table empty after the pre-deploy
     # backup had already been removed. A genuinely empty table returns NULL, not an error.
-    minpk=$(_nfd_msql "SELECT MIN(\`${pk}\`) FROM \`${table}\`;" 2>&1)
+    minpk=$(_nfd_msql "SELECT MIN(\`${qpk}\`) FROM \`${qtable}\`;" 2>&1)
     if [ $? -ne 0 ] || printf '%s' "$minpk" | grep -qE "ERROR [0-9]+ \(.*\)"; then
       log "ERROR" "$log_step" "Unable to read the key range of $table: $minpk"
       return 1
@@ -1210,7 +1213,7 @@ _copy_run() {
       continue
     fi
 
-    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${pk}\`, size ${chunk})"
+    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${qpk}\`, size ${chunk})"
     # The first range INCLUDES the lowest key, so the cursor never has to name "one below the
     # minimum". Seeding it with MIN(pk)-1 instead underflows on an UNSIGNED key whose lowest value
     # is 0 -- MySQL raises ERROR 1690 (BIGINT UNSIGNED value is out of range) -- and the copy then
@@ -1223,20 +1226,20 @@ _copy_run() {
       # loop with a final open-ended range. An ERROR must not take that same branch: doing so
       # turned a failed boundary lookup into one unbounded INSERT covering the rest of the table,
       # silently discarding the chunking this function exists to provide.
-      bound=$(_nfd_msql "SELECT \`${pk}\` FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} ORDER BY \`${pk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>&1)
+      bound=$(_nfd_msql "SELECT \`${qpk}\` FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} ORDER BY \`${qpk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$bound" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Unable to resolve the next key boundary for $table: $bound"
         return 1
       fi
       if [ -z "$bound" ] || [ "$bound" = "NULL" ]; then
-        out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last};" 2>&1)
+        out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last};" 2>&1)
         if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
           log "ERROR" "$log_step" "Failed copying $table -> $dst (final range ${lower_op} ${last}): $out"
           return 1
         fi
         break
       fi
-      out=$(_nfd_msql "$sess INSERT INTO \`${dst}\` (${cols}) SELECT ${cols} FROM \`${table}\` WHERE \`${pk}\` ${lower_op} ${last} AND \`${pk}\` <= ${bound};" 2>&1)
+      out=$(_nfd_msql "$sess INSERT INTO \`${qdst}\` (${cols}) SELECT ${cols} FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} AND \`${qpk}\` <= ${bound};" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$out" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Failed copying $table -> $dst (range ${last}..${bound}): $out"
         return 1
