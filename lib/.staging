@@ -829,11 +829,26 @@ rewrite_dump_prefixes() {
     }
   ' "$sql_file" || return 1
 
-  # Safety net for the whole class of bug this function can cause. Every DROP/CREATE in the dump
-  # must now name a destination table; one that still names a SOURCE table would be executed
-  # against the live source, dropping it and recreating it empty, and with a schema-only dump
-  # there are no INSERTs to refill it. Fail rather than import that.
-  if grep -qE "^(DROP TABLE IF EXISTS|CREATE TABLE) \`${from_prefix}" "$sql_file"; then
+  # Safety net for the whole class of bug this function can cause. Assert POSITIVELY that every
+  # DROP/CREATE now names a destination table. Testing the other way round -- "nothing still names
+  # a SOURCE table" -- looks equivalent but is not: when the prefix handed in does not match what
+  # is actually in the dump (deploy_db takes the table list from the staging install but builds the
+  # prefix from production's, and nothing checks they agree), the rewrite matches nothing, the
+  # surviving statements name neither prefix, and the negative test passes. The import then drops
+  # and recreates the live source tables empty.
+  local bt stray line n
+  bt='`'
+  stray=''
+  while IFS= read -r line; do
+    n=${line#*${bt}}
+    n=${n%${bt}*}
+    [ -n "$n" ] || continue
+    case "$n" in
+      "${to_prefix}"*) ;;
+      *) stray="$n"; break ;;
+    esac
+  done < <(grep -E "^(DROP TABLE IF EXISTS|CREATE TABLE) ${bt}" "$sql_file" || true)
+  if [ -n "$stray" ]; then
     return 1
   fi
   return 0
@@ -1187,12 +1202,23 @@ copy_table_data_server_side() {
   local src_prefix="$2"
   local dst_prefix="$3"
   local log_step="$4"
+  local tables_csv="${5:-}"
+
+  # Copy exactly the tables the schema was built from. Re-deriving the list here with a LIKE meant
+  # table identity was decided three different ways (SHOW TABLES for the dump, information_schema
+  # for the copy, the dump list for the rewrite) and they do not agree: information_schema LIKE is
+  # case-insensitive on MariaDB while SHOW TABLES is not, so a table named WP_Caps was enumerated
+  # for copying with no staging schema behind it and the copy failed with ERROR 1146.
+  if [ -z "$tables_csv" ]; then
+    log "ERROR" "$log_step" "No tables given to copy; refusing to guess the table list."
+    return 1
+  fi
 
   _NFD_COPY_DFILE=$(_nfd_mysql_defaults_file) || { log "ERROR" "$log_step" "Unable to create DB defaults file."; return 1; }
   _NFD_MYSQL_BIN=$(_nfd_mysql_bin)
   # Single exit point so the defaults file (which holds the DB password) is removed on every path.
   local rc=0
-  _copy_run "$src_prefix" "$dst_prefix" "$log_step" || rc=$?
+  _copy_run "$src_prefix" "$dst_prefix" "$log_step" "$tables_csv" || rc=$?
   rm -f "$_NFD_COPY_DFILE"; _NFD_COPY_DFILE=""
   return $rc
 }
@@ -1269,16 +1295,38 @@ _copy_run() {
 
   log "INFO" "$log_step" "Copying table data server-side (src=${src_prefix} dst=${dst_prefix}, chunk=${chunk}, pace=${pace})"
 
-  local tables
-  tables=$(_nfd_msql "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '${like_prefix}%' ESCAPE '\\\\' ORDER BY TABLE_NAME;" 2>&1)
-  if [ $? -ne 0 ]; then
-    log "ERROR" "$log_step" "Unable to list source tables: $tables"
+  # Classify every name once. Views carry no rows and are skipped; a name that is in the list but
+  # no longer in the schema is an error, not something to pass over quietly.
+  local meta
+  meta=$(_nfd_msql "SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE();" 2>&1)
+  if [ $? -ne 0 ] || printf '%s' "$meta" | grep -qE "ERROR [0-9]+ \(.*\)"; then
+    log "ERROR" "$log_step" "Unable to read table metadata: $meta"
     return 1
   fi
+  local base_csv="," view_csv="," mname mtype
+  while IFS=$'\t' read -r mname mtype; do
+    [ -n "$mname" ] || continue
+    if [ "$mtype" = "BASE TABLE" ]; then base_csv="${base_csv}${mname},"; else view_csv="${view_csv}${mname},"; fi
+  done <<< "$meta"
+
+  local -a tbls=()
+  IFS=',' read -r -a tbls <<< "$tables_csv"
+  local tables copied=0
+  tables=$(printf '%s\n' "${tbls[@]}")
 
   local table bare dst qtable qdst cols pk qpk minpk last lower_op bound out tchunk avg byte_rows
   while IFS= read -r table; do
     [ -z "$table" ] && continue
+    case "$base_csv" in
+      *",${table},"*) ;;
+      *)
+        case "$view_csv" in
+          *",${table},"*) log "INFO" "$log_step" "Skipping view $table"; continue ;;
+          *) log "ERROR" "$log_step" "Source table $table is no longer in the database."; return 1 ;;
+        esac
+        ;;
+    esac
+    copied=$((copied + 1))
     bare="${table#"$src_prefix"}"
     dst="${dst_prefix}${bare}"
     # Escape once per table. Identifiers may legally contain a backtick, which MySQL doubles;
@@ -1377,6 +1425,12 @@ _copy_run() {
     log "INFO" "$log_step" "Copied $table -> $dst"
   done < <(printf '%s\n' "$tables")
 
+  # Reporting success having copied nothing is what let a mismatched table list go unnoticed while
+  # the schema import had already emptied the destination.
+  if [ "$copied" -eq 0 ]; then
+    log "ERROR" "$log_step" "No tables were copied; the table list did not match anything in the database."
+    return 1
+  fi
   return 0
 }
 
@@ -1800,7 +1854,7 @@ create() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database).
   log "INFO" "create" "[STEP] Copy table data."
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "create:copy_data"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "create:copy_data" "$PRODUCTION_TABLES"; then
     delete_temp_staging 3 "Unable to copy table data to staging."
   fi
 
@@ -2139,7 +2193,7 @@ clone() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database): no row bytes cross
   # the client connection, so this scales with site size instead of tripping the throttle.
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "clone:copy_data"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "clone:copy_data" "$PRODUCTION_TABLES"; then
     error "Unable to copy table data to staging."
   fi
 
@@ -2372,7 +2426,7 @@ deploy_db() {
 
     # 5b. Copy row data staging -> production server-side (INSERT ... SELECT in the shared DB).
     log "INFO" "deploy_db" "Copying staging table data into production (server-side)"
-    if ! copy_table_data_server_side "$PRODUCTION_DIR" "staging_${DB_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data"; then
+    if ! copy_table_data_server_side "$PRODUCTION_DIR" "staging_${DB_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data" "$STAGING_TABLES"; then
       fail_and_exit "Unable to copy staging table data into production."
     fi
 
