@@ -663,10 +663,25 @@ drop_views_and_tables() {
   # --------------------
   # VIEWS
   # --------------------
+  # Scope the view list to this install's table prefix, the way the table list below already is.
+  # Production and staging share one database, so an unscoped query returns BOTH environments'
+  # views and the loop drops them all: calling this for staging destroyed production's views. It
+  # also broke clone outright once the dump became schema-only, because the table list captured at
+  # startup still named those views and mysqldump then exited with "Couldn't find table".
+  # If the prefix cannot be resolved, drop nothing rather than fall back to dropping everything.
+  local VIEW_PREFIX VIEW_LIKE
+  VIEW_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path="$WP_PATH" --skip-themes --skip-plugins --quiet 2>/dev/null)
   TMP_VIEWS_LOG=$(mktemp)
-  log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ..."
-  wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE();" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
-  VIEWS_STATUS=$?
+  if [ -z "$VIEW_PREFIX" ]; then
+    log "ERROR" "drop_views_and_tables" "Unable to resolve the table prefix for $WP_PATH; skipping view drop."
+    : > "$TMP_VIEWS_LOG"
+    VIEWS_STATUS=0
+  else
+    VIEW_LIKE=$(printf '%s' "$VIEW_PREFIX" | sed 's/[_%]/\\&/g')
+    log "INFO" "drop_views_and_tables" "BEFORE QUERY: wp db query SELECT table_name ... LIKE '${VIEW_LIKE}%'"
+    wp db query "SELECT table_name FROM information_schema.views WHERE table_schema=DATABASE() AND table_name LIKE '${VIEW_LIKE}%' ESCAPE '\\\\';" --skip-column-names --path="$WP_PATH" --skip-themes --skip-plugins --quiet >"$TMP_VIEWS_LOG" 2>&1
+    VIEWS_STATUS=$?
+  fi
   log "INFO" "drop_views_and_tables" "AFTER QUERY, exit code: $VIEWS_STATUS"
   VIEWS=$(cat "$TMP_VIEWS_LOG")
   log "INFO" "drop_views_and_tables" "AFTER QUERY, VIEWS_RAW: $VIEWS"
