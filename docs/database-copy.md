@@ -29,10 +29,11 @@ All optional; the defaults suit typical sites.
 | Variable | Default | Accepted | Effect |
 |----------|---------|----------|--------|
 | `NFD_STAGING_COPY_CHUNK` | `50000` | integer >= 1 | Rows per `INSERT ... SELECT` batch for tables with a single numeric primary key. |
+| `NFD_STAGING_COPY_MAX_MB` | `64` | integer >= 1 | Target size of one copy statement. A per-table row count is derived from `AVG_ROW_LENGTH` and the smaller of it and the chunk above is used, so a table of very wide rows is not copied in one huge transaction. Only ever lowers the chunk, and is floored at 1000 rows. |
 | `NFD_STAGING_COPY_PACE` | `0` | number >= 0 | Seconds to sleep between chunks. Raise to spread a very large copy over more time. |
 | `NFD_STAGING_SR_RATE_MB` | `25` | number >= 0 | Paces the URL search-replace by table size (MB per second of read budget); `0` disables pacing. |
 
-`NFD_STAGING_COPY_CHUNK` and `NFD_STAGING_COPY_PACE` are validated before use. A value outside the
+All four are validated before use. A value outside the
 accepted range (including `0` for the chunk size, which is not a way to disable chunking) is
 ignored, the default is used instead, and the reason is written to the staging log.
 
