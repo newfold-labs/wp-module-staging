@@ -963,29 +963,18 @@ _nfd_trigger_dump_residuals() {
     # correct statement (INSERT INTO `staging_wp_x` (wp_user_id, ...) reported wp_user_id and
     # failed the whole copy), and it missed a modifier split across a newline because the window
     # excluded newlines. \s spans newlines, and blanked comments have become spaces by now.
-    my $kw = qr/(?:INSERT|REPLACE)(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|DELAYED|IGNORE))*\s+INTO|UPDATE|FROM|JOIN|TABLE/i;
-    while ($s =~ /\b(?:$kw)(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|IGNORE|QUICK|DELAYED))*\s+`?($from\w+)`?/gi) { $bad{$1} = 1 }
-    # A source-prefixed name still used as a QUALIFIER (wp_counts.col). The rewrite only
-    # redirects the table position, so a statement like
-    #   UPDATE wp_counts SET c = c + 1 WHERE wp_counts.name = ...
-    # imports with the target rewritten and the qualifier left behind, and then every write to
-    # the staging table fails with "Unknown column". Refuse it instead of shipping that.
-    # Only flag a qualifier that is genuinely one of the source tables. Matching any prefixed
-    # name before a dot also catches table ALIASES (FROM `wp_src` AS wp_a ... wp_a.id), and
-    # refusing those failed clones whose triggers were correct and correctly rewritten.
+    # Any SOURCE TABLE NAME still present after rewriting is a reference that was not redirected.
+    # Testing membership of the authoritative table list is exact, so it needs no guesses about
+    # SQL shape: it catches the forms the keyword heuristics missed (STRAIGHT_JOIN, which \bJOIN
+    # cannot match; comma-joined tables; multi-table DELETE) without flagging aliases, columns or
+    # modifiers, which is what the heuristics kept getting wrong in both directions.
     if (length $ENV{NFD_SRC_TABLES}) {
       my %src = map { $_ => 1 } grep { length } split /,/, $ENV{NFD_SRC_TABLES};
-      while ($s =~ /(?<![A-Za-z0-9_])($from\w+)\s*\./gi) { $bad{$1} = 1 if $src{$1} }
+      for my $t (keys %src) {
+        my $q = quotemeta $t;
+        $bad{$t} = 1 if $s =~ /`$q`/ || $s =~ /(?<![A-Za-z0-9_])$q(?![A-Za-z0-9_])/;
+      }
     }
-    # A source-prefixed table still carrying a database qualifier (NEW./OLD. are row aliases).
-    # A source-prefixed table still qualified with THIS database. Matching any qualifier would
-    # flag alias.column and table.column, which are not table references at all.
-    if (length $ENV{NFD_DB}) {
-      my $db = quotemeta $ENV{NFD_DB};
-      while ($s =~ /(?<![A-Za-z0-9_])`?$db`?\s*\.\s*`?($from\w+)`?/gi) { $bad{$1} = 1 }
-    }
-    # A stored-procedure call. Requires whitespace then an identifier so a column named `call`
-    # (backticks are not blanked above) is not mistaken for one.
     $bad{"CALL"} = 1 if $s =~ /\bCALL\s+[`A-Za-z0-9_]/i;
     print join(" ", sort keys %bad);
   ' "$sql_file"
@@ -2376,7 +2365,13 @@ deploy_db() {
   # actually decompresses to something -- an export that exits 0 but writes nothing still yields a
   # valid 20-byte archive. head -c bounds the decompression so this stays cheap on a large dump.
   # Nothing has been dropped at this point, so RESTORED is set first to skip a pointless restore.
-  BACKUP_HEAD_BYTES=$(gzip -dc "$COMPRESSED_BACKUP" 2>/dev/null | head -c 512 | wc -c)
+  # Require an actual table in the archive, not just bytes: mysqldump writes ~50 bytes of header
+  # before anything else, so a dump that produced no tables at all still decompressed to something.
+  # head bounds the work on a large dump.
+  BACKUP_HEAD_BYTES=0
+  if gzip -dc "$COMPRESSED_BACKUP" 2>/dev/null | head -c 65536 | grep -q "CREATE TABLE"; then
+    BACKUP_HEAD_BYTES=1
+  fi
   if [ $BACKUP_STATUS -ne 0 ] || [ ! -s "$COMPRESSED_BACKUP" ] || ! gzip -t "$COMPRESSED_BACKUP" 2>/dev/null \
      || [ "${BACKUP_HEAD_BYTES:-0}" -lt 1 ]; then
     rm -f "$COMPRESSED_BACKUP"
