@@ -813,7 +813,7 @@ rewrite_trigger_dump() {
   local from_prefix="$2"
   local to_prefix="$3"
   local name_prefix="$4"
-  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" perl -0777 -i -pe '
+  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" NFD_DB="${DB_NAME:-}" perl -0777 -i -pe '
     my $from = quotemeta $ENV{NFD_FROM};
     my $to   = $ENV{NFD_TO};
     my $np   = $ENV{NFD_NP};
@@ -822,12 +822,21 @@ rewrite_trigger_dump() {
     # Trigger name (quoted or bare), immediately before BEFORE/AFTER: strip any existing
     # prod_/staging_ and prepend the target prefix so it is unique in the shared schema.
     s{(\bTRIGGER\s+)`?(?:prod_|staging_)?([A-Za-z0-9_]+)`?(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
-    # Database-qualified references (db.tbl, `db`.`tbl`, db . tbl). The rules below anchor on the
-    # prefix appearing directly after a keyword or a backtick, so a qualifier hid the table from
-    # both of them and the reference survived verbatim -- a staging trigger then wrote into the
+    # References qualified with THIS database (db.tbl, `db`.`tbl`, db . tbl). The rules below
+    # anchor on the prefix appearing directly after a keyword or a backtick, so a qualifier hid the
+    # table from both and the reference survived verbatim: a staging trigger then wrote into the
     # PRODUCTION table. Staging and production share one database, so the qualifier is redundant
-    # and is dropped. NEW./OLD. are excluded: those are row aliases, not schema names.
-    s{(?<![A-Za-z0-9_.])(?!(?:NEW|OLD)\s*\.)`?[A-Za-z0-9_]+`?\s*\.\s*`?$from([A-Za-z0-9_]+)`?}{"`".$to.$1."`"}gie;
+    # and is dropped.
+    #
+    # Only the real database name is matched. Accepting any qualifier would rewrite alias.column
+    # and table.column too -- `SELECT s.wp_flag FROM wp_src s` became SELECT `staging_wp_flag`,
+    # which imports cleanly and then fails at runtime with "Unknown column". A qualifier naming a
+    # DIFFERENT database is left alone: it points outside the shared database, so it is not part of
+    # the staging/production boundary.
+    if (length $ENV{NFD_DB}) {
+      my $db = quotemeta $ENV{NFD_DB};
+      s{(?<![A-Za-z0-9_])`?$db`?\s*\.\s*`?$from([A-Za-z0-9_]+)`?}{"`".$to.$1."`"}gie;
+    }
     # The trigger target table after the event (quoted or bare).
     s{(\b(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)`?$from([A-Za-z0-9_]+)`?}{$1."`".$to.$2."`"}gie;
     # Backticked source-table references anywhere in the body.
@@ -853,7 +862,7 @@ rewrite_trigger_dump() {
 _nfd_trigger_dump_residuals() {
   local sql_file="$1"
   local from_prefix="$2"
-  NFD_FROM="$from_prefix" perl -0777 -ne '
+  NFD_FROM="$from_prefix" NFD_DB="${DB_NAME:-}" perl -0777 -ne '
     my $from = quotemeta $ENV{NFD_FROM};
     my $s = $_;
     # Blank quoted literals and ordinary comments first, so trigger TEXT that merely mentions a
@@ -865,10 +874,23 @@ _nfd_trigger_dump_residuals() {
     $s =~ s{--[^\n]*}{ }g;
     my %bad;
     # A source-prefixed table still sitting after a table-referencing keyword.
-    while ($s =~ /\b(?:INTO|UPDATE|FROM|JOIN|TABLE)\b[^;\n]{0,60}?(?<![A-Za-z0-9_.])($from\w+)/gi) { $bad{$1} = 1 }
+    # A source-prefixed table still sitting in a TABLE position: directly after a table-referencing
+    # keyword, with only optional modifiers and whitespace in between. Scanning a fixed window
+    # after the keyword instead was wrong both ways: it flagged the column list of an already
+    # correct statement (INSERT INTO `staging_wp_x` (wp_user_id, ...) reported wp_user_id and
+    # failed the whole copy), and it missed a modifier split across a newline because the window
+    # excluded newlines. \s spans newlines, and blanked comments have become spaces by now.
+    while ($s =~ /\b(?:INTO|UPDATE|FROM|JOIN|TABLE)\b(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|IGNORE|QUICK|DELAYED))*\s+`?($from\w+)`?/gi) { $bad{$1} = 1 }
     # A source-prefixed table still carrying a database qualifier (NEW./OLD. are row aliases).
-    while ($s =~ /(?<![A-Za-z0-9_])(?!(?:NEW|OLD)\s*\.)[A-Za-z0-9_]+\s*\.\s*`?($from\w+)/gi) { $bad{$1} = 1 }
-    $bad{"CALL"} = 1 if $s =~ /\bCALL\b/i;
+    # A source-prefixed table still qualified with THIS database. Matching any qualifier would
+    # flag alias.column and table.column, which are not table references at all.
+    if (length $ENV{NFD_DB}) {
+      my $db = quotemeta $ENV{NFD_DB};
+      while ($s =~ /(?<![A-Za-z0-9_])`?$db`?\s*\.\s*`?($from\w+)`?/gi) { $bad{$1} = 1 }
+    }
+    # A stored-procedure call. Requires whitespace then an identifier so a column named `call`
+    # (backticks are not blanked above) is not mistaken for one.
+    $bad{"CALL"} = 1 if $s =~ /\bCALL\s+[`A-Za-z0-9_]/i;
     print join(" ", sort keys %bad);
   ' "$sql_file"
 }
