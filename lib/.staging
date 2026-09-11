@@ -842,7 +842,12 @@ rewrite_trigger_dump() {
     s{/\*!\d+\s+DEFINER=[^*]*\*/}{}g;
     # Trigger name (quoted or bare), immediately before BEFORE/AFTER: strip any existing
     # prod_/staging_ and prepend the target prefix so it is unique in the shared schema.
-    s{(\bTRIGGER\s+)`?(?:prod_|staging_)?([A-Za-z0-9_]+)`?(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    # Backticked form first, accepting any characters: a trigger named `wp_my-trg` was left
+    # unprefixed by a word-character pattern and then collided with the source trigger in the
+    # shared schema (ERROR 1359). The bare form stays word-characters, which is all an unquoted
+    # identifier can hold.
+    s{(\bTRIGGER\s+)`(?:prod_|staging_)?([^`]+)`(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
+    s{(\bTRIGGER\s+)(?:prod_|staging_)?([A-Za-z0-9_]+)(\s+(?:BEFORE|AFTER)\b)}{$1."`".$np.$2."`".$3}gie;
     # References qualified with THIS database (db.tbl, `db`.`tbl`, db . tbl). The rules below
     # anchor on the prefix appearing directly after a keyword or a backtick, so a qualifier hid the
     # table from both and the reference survived verbatim: a staging trigger then wrote into the
@@ -863,7 +868,10 @@ rewrite_trigger_dump() {
     # Backticked source-table references anywhere in the body.
     s{`$from([A-Za-z0-9_]+)`}{"`".$to.$1."`"}ge;
     # Bare source-table references in the body after a table-referencing keyword.
-    s{\b(INTO|UPDATE|FROM|JOIN|TABLE)(\s+)`?$from([A-Za-z0-9_]+)`?}{$1.$2."`".$to.$3."`"}gie;
+    # Only INSERT/REPLACE INTO names a table. A bare INTO also matches SELECT ... INTO <var>,
+    # which rewrote a declared local variable into a table identifier and made the trigger fail
+    # to import with "Undeclared variable".
+    s{\b((?:INSERT|REPLACE)\s+INTO|UPDATE|FROM|JOIN|TABLE)(\s+)`?$from([A-Za-z0-9_]+)`?}{$1.$2."`".$to.$3."`"}gie;
   ' "$sql_file"
 }
 
@@ -901,7 +909,14 @@ _nfd_trigger_dump_residuals() {
     # correct statement (INSERT INTO `staging_wp_x` (wp_user_id, ...) reported wp_user_id and
     # failed the whole copy), and it missed a modifier split across a newline because the window
     # excluded newlines. \s spans newlines, and blanked comments have become spaces by now.
-    while ($s =~ /\b(?:INTO|UPDATE|FROM|JOIN|TABLE)\b(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|IGNORE|QUICK|DELAYED))*\s+`?($from\w+)`?/gi) { $bad{$1} = 1 }
+    my $kw = qr/(?:INSERT|REPLACE)(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|DELAYED|IGNORE))*\s+INTO|UPDATE|FROM|JOIN|TABLE/i;
+    while ($s =~ /\b(?:$kw)(?:\s+(?:LOW_PRIORITY|HIGH_PRIORITY|IGNORE|QUICK|DELAYED))*\s+`?($from\w+)`?/gi) { $bad{$1} = 1 }
+    # A source-prefixed name still used as a QUALIFIER (wp_counts.col). The rewrite only
+    # redirects the table position, so a statement like
+    #   UPDATE wp_counts SET c = c + 1 WHERE wp_counts.name = ...
+    # imports with the target rewritten and the qualifier left behind, and then every write to
+    # the staging table fails with "Unknown column". Refuse it instead of shipping that.
+    while ($s =~ /(?<![A-Za-z0-9_])($from\w+)\s*\./g) { $bad{$1} = 1 }
     # A source-prefixed table still carrying a database qualifier (NEW./OLD. are row aliases).
     # A source-prefixed table still qualified with THIS database. Matching any qualifier would
     # flag alias.column and table.column, which are not table references at all.
