@@ -1145,6 +1145,23 @@ _copy_run() {
     log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_CHUNK='${NFD_STAGING_COPY_CHUNK}'; falling back to 50000."
     chunk=50000
   fi
+  # Target bytes per copy statement; paired with the row chunk above, whichever is smaller wins.
+  local max_mb="${NFD_STAGING_COPY_MAX_MB:-64}"
+  local max_mb_ok=1
+  case "$max_mb" in
+    ''|*[!0-9]*) max_mb_ok=0 ;;
+  esac
+  if [ "$max_mb_ok" -eq 1 ] && [ "${#max_mb}" -gt 6 ]; then
+    max_mb_ok=0
+  fi
+  if [ "$max_mb_ok" -eq 1 ] && [ "$max_mb" -lt 1 ]; then
+    max_mb_ok=0
+  fi
+  if [ "$max_mb_ok" -eq 0 ]; then
+    log "ERROR" "$log_step" "Invalid NFD_STAGING_COPY_MAX_MB='${NFD_STAGING_COPY_MAX_MB}'; falling back to 64."
+    max_mb=64
+  fi
+  local max_bytes=$(( max_mb * 1048576 ))
   local pace="${NFD_STAGING_COPY_PACE:-0}"
   case "$pace" in
     ''|.|*[!0-9.]*|*.*.*)
@@ -1169,7 +1186,7 @@ _copy_run() {
     return 1
   fi
 
-  local table bare dst qtable qdst cols pk qpk minpk last lower_op bound out
+  local table bare dst qtable qdst cols pk qpk minpk last lower_op bound out tchunk avg byte_rows
   while IFS= read -r table; do
     [ -z "$table" ] && continue
     bare="${table#"$src_prefix"}"
@@ -1187,6 +1204,25 @@ _copy_run() {
 
     pk=$(_nfd_table_pk "$table")
     qpk=${pk//\`/\`\`}
+
+    # Cap the chunk by BYTES as well as by rows. The configured chunk is a row count, but row
+    # widths span orders of magnitude: 50000 rows of a page-builder post_content is gigabytes in a
+    # single statement, where the dump-and-import path this replaced never exceeded
+    # net_buffer_length per statement. A transaction that large means proportional undo, redo and
+    # binlog-cache pressure on a shared host. AVG_ROW_LENGTH is an InnoDB estimate, so it is only
+    # ever used to LOWER the chunk, and the result is floored so a bad estimate cannot reduce the
+    # copy to a crawl.
+    tchunk="$chunk"
+    avg=$(_nfd_msql "SELECT AVG_ROW_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$(_nfd_sql_str "$table")';" 2>/dev/null)
+    case "$avg" in ''|*[!0-9]*) avg=0 ;; esac
+    if [ "$avg" -gt 0 ]; then
+      byte_rows=$(( max_bytes / avg ))
+      [ "$byte_rows" -lt 1000 ] && byte_rows=1000
+      [ "$byte_rows" -lt "$tchunk" ] && tchunk="$byte_rows"
+    fi
+    if [ "$tchunk" != "$chunk" ]; then
+      log "INFO" "$log_step" "Chunk for $table lowered to ${tchunk} rows (about ${avg} bytes/row)"
+    fi
 
     if [ -z "$pk" ]; then
       log "INFO" "$log_step" "Copying $table -> $dst (single statement; no single numeric PK)"
@@ -1213,7 +1249,7 @@ _copy_run() {
       continue
     fi
 
-    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${qpk}\`, size ${chunk})"
+    log "INFO" "$log_step" "Copying $table -> $dst (chunked by \`${qpk}\`, size ${tchunk})"
     # The first range INCLUDES the lowest key, so the cursor never has to name "one below the
     # minimum". Seeding it with MIN(pk)-1 instead underflows on an UNSIGNED key whose lowest value
     # is 0 -- MySQL raises ERROR 1690 (BIGINT UNSIGNED value is out of range) -- and the copy then
@@ -1226,7 +1262,7 @@ _copy_run() {
       # loop with a final open-ended range. An ERROR must not take that same branch: doing so
       # turned a failed boundary lookup into one unbounded INSERT covering the rest of the table,
       # silently discarding the chunking this function exists to provide.
-      bound=$(_nfd_msql "SELECT \`${qpk}\` FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} ORDER BY \`${qpk}\` ASC LIMIT 1 OFFSET $((chunk - 1));" 2>&1)
+      bound=$(_nfd_msql "SELECT \`${qpk}\` FROM \`${qtable}\` WHERE \`${qpk}\` ${lower_op} ${last} ORDER BY \`${qpk}\` ASC LIMIT 1 OFFSET $((tchunk - 1));" 2>&1)
       if [ $? -ne 0 ] || printf '%s' "$bound" | grep -qE "ERROR [0-9]+ \(.*\)"; then
         log "ERROR" "$log_step" "Unable to resolve the next key boundary for $table: $bound"
         return 1
