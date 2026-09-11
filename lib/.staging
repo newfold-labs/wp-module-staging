@@ -920,13 +920,19 @@ _nfd_dump_bin() {
 # Keeps the password out of the process list (no -p on the command line). Parses DB_HOST forms
 # host, host:port and host:/path/to/socket. Echoes the file path; the caller must rm it.
 _nfd_mysql_defaults_file() {
-  local f host port socket esc_user esc_pass
+  local f host port socket raw esc_user esc_pass
   f=$(mktemp) || return 1
   chmod 600 "$f"
-  host="$DB_HOST"; port=""; socket=""
-  case "$DB_HOST" in
-    *:/*) host="${DB_HOST%%:*}"; socket="${DB_HOST#*:}" ;;
-    *:*)  host="${DB_HOST%%:*}"; port="${DB_HOST##*:}" ;;
+  # WordPress accepts a "p:" prefix on DB_HOST to ask for a persistent connection. It is not part
+  # of the host name, and WP-CLI strips it before handing the value to the client. The old path
+  # went through WP-CLI and never saw it; this one must strip it too, or "p:localhost" parses as
+  # host "p" with the real host taken for a port and every dump and copy fails to connect.
+  local raw="$DB_HOST"
+  case "$raw" in p:*) raw="${raw#p:}" ;; esac
+  host="$raw"; port=""; socket=""
+  case "$raw" in
+    *:/*) host="${raw%%:*}"; socket="${raw#*:}" ;;
+    *:*)  host="${raw%%:*}"; port="${raw##*:}" ;;
   esac
   # An option file is not shell. In an UNQUOTED value MySQL ends the value at a '#' (it starts a
   # comment), strips surrounding whitespace, and expands backslash escapes (\s, \t, \n, \\), so a
