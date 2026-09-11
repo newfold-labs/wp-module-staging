@@ -799,24 +799,44 @@ rewrite_dump_prefixes() {
   local to_prefix="$3"
   local name_prefix="$4"
   local strip_definer="${5:-0}"
-  local tmp
-  tmp=$(mktemp) || return 1
+  local tables_csv="${6:-}"
 
-  local -a expr=(
-    -e "s/\`${from_prefix}([^\`]+)\`/\`${to_prefix}\\1\`/g"
-    -e "s/CONSTRAINT \`(prod_|staging_)?([^\`]+)\`/CONSTRAINT \`${name_prefix}\\2\`/g"
-    -e "s/TRIGGER \`(prod_|staging_)?([^\`]+)\`/TRIGGER \`${name_prefix}\\2\`/g"
-  )
-  if [ "$strip_definer" = "1" ]; then
-    expr+=(-e "s/\\/\\*\\![0-9]+ DEFINER=[^*]*\\*\\///g")
-  fi
+  # The table list is required. Without it the only way to find table names in the dump is to match
+  # the prefix anywhere, and that is not safe: see below.
+  [ -n "$tables_csv" ] || return 1
 
-  if sed -E "${expr[@]}" "$sql_file" > "$tmp"; then
-    mv "$tmp" "$sql_file"
-    return 0
+  NFD_FROM="$from_prefix" NFD_TO="$to_prefix" NFD_NP="$name_prefix" \
+  NFD_TABLES="$tables_csv" NFD_STRIP="$strip_definer" perl -0777 -i -pe '
+    my $from = $ENV{NFD_FROM};
+    my $to   = $ENV{NFD_TO};
+    my $np   = $ENV{NFD_NP};
+    my %tbl  = map { $_ => 1 } grep { length } split /,/, $ENV{NFD_TABLES};
+    # Rewrite a backticked identifier only when it is one of the tables actually being dumped.
+    # Matching the prefix anywhere renames COLUMN and INDEX names that happen to start with the
+    # table prefix too (wp_user_id and similar are a normal naming convention for plugin tables),
+    # which leaves the staging schema with columns the site does not know about and makes the row
+    # copy fail with "Unknown column".
+    s{`([^`]*)`}{
+      my $id = $1;
+      ($tbl{$id} && index($id, $from) == 0)
+        ? q{`} . $to . substr($id, length $from) . q{`}
+        : q{`} . $id . q{`};
+    }ge;
+    s{CONSTRAINT\s+`(?:prod_|staging_)?([^`]+)`}{"CONSTRAINT `".$np.$1."`"}gie;
+    s{TRIGGER\s+`(?:prod_|staging_)?([^`]+)`}{"TRIGGER `".$np.$1."`"}gie;
+    if ($ENV{NFD_STRIP} eq "1") {
+      s{/\*!\d+\s+DEFINER=[^*]*\*/}{}g;
+    }
+  ' "$sql_file" || return 1
+
+  # Safety net for the whole class of bug this function can cause. Every DROP/CREATE in the dump
+  # must now name a destination table; one that still names a SOURCE table would be executed
+  # against the live source, dropping it and recreating it empty, and with a schema-only dump
+  # there are no INSERTs to refill it. Fail rather than import that.
+  if grep -qE "^(DROP TABLE IF EXISTS|CREATE TABLE) \`${from_prefix}" "$sql_file"; then
+    return 1
   fi
-  rm -f "$tmp"
-  return 1
+  return 0
 }
 
 # --- Rewrite prefixes in a TRIGGER-only dump (in place) ---
@@ -1749,7 +1769,7 @@ create() {
     log "ERROR" "create:update_prefix_sql" "SQL export file not found: $STAGING_DIR/.export-sql"
     delete_temp_staging 2 "SQL export file not found."
   fi
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "create:update_prefix_sql" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -2098,7 +2118,7 @@ clone() {
 
   # Rewrite production -> staging table/constraint/trigger prefixes (and strip DEFINER) in the dump.
   log "INFO" "clone:rewrite_prefix" "Rewriting table prefixes in schema dump"
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "clone:rewrite_prefix" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -2318,7 +2338,7 @@ deploy_db() {
 
     # 4. Rewrite staging -> production prefixes (and strip DEFINER) in the schema dump.
     log "INFO" "deploy_db" "Replacing staging prefixes in schema SQL"
-    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" 1; then
+    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" 1 "$STAGING_TABLES"; then
       fail_and_exit "Unable to update prefix in staging SQL."
     fi
 
