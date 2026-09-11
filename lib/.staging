@@ -769,6 +769,12 @@ drop_views_and_tables() {
 # clauses (which reference a MySQL account that may not exist or lack privilege on shared hosting,
 # and would otherwise fail the import of views/triggers).
 #
+# The table pattern matches any backticked identifier starting with the prefix, not just word
+# characters. MySQL allows hyphens, dots, spaces and non-ASCII in a table name, and missing one is
+# destructive now that the dump is schema-only: the unrewritten `DROP TABLE IF EXISTS` / `CREATE
+# TABLE` pair targets the SOURCE table, so importing it drops the production table and recreates it
+# empty. The old full dump refilled it from its own INSERTs, which hid this.
+#
 # Args: $1 file, $2 from_prefix, $3 to_prefix, $4 constraint/trigger name prefix (staging_/prod_),
 #       $5 strip_definer (1 to strip, default 0).
 # Returns 0 on success, 1 on failure.
@@ -782,7 +788,7 @@ rewrite_dump_prefixes() {
   tmp=$(mktemp) || return 1
 
   local -a expr=(
-    -e "s/\`${from_prefix}([a-zA-Z0-9_]+)\`/\`${to_prefix}\\1\`/g"
+    -e "s/\`${from_prefix}([^\`]+)\`/\`${to_prefix}\\1\`/g"
     -e "s/CONSTRAINT \`(prod_|staging_)?([^\`]+)\`/CONSTRAINT \`${name_prefix}\\2\`/g"
     -e "s/TRIGGER \`(prod_|staging_)?([^\`]+)\`/TRIGGER \`${name_prefix}\\2\`/g"
   )
