@@ -1,16 +1,15 @@
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-09-04T12:51:12+00:00\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
-"Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2026-09-16T09:12:44+00:00\n"
+"Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
@@ -20,81 +19,273 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
+#: includes/Staging.php:370
+msgid "Cloning can only be done from the production environment."
+msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
+
+#: includes/Staging.php:395
+msgid "Staging environment already exists!"
+msgstr "Testomgeving bestaat al!"
+
+#: includes/Staging.php:485
+msgid "Unable to create the deployment lock directory."
+msgstr "Kan de deployment lock-map niet aanmaken."
+
+#: includes/Staging.php:493
+msgid "Unable to open the deployment lock file."
+msgstr "Het deployment lock-bestand kan niet worden geopend."
+
+#: includes/Staging.php:641
+msgid "Deployment failed. Check the staging log for details."
+msgstr "Deployment mislukt. Controleer het stagelogboek voor details."
+
+#: includes/Staging.php:682
+msgid "Files deployed successfully."
+msgstr "Bestanden succesvol gedeployeerd."
+
+#: includes/Staging.php:683
+msgid "Database deployed successfully."
+msgstr "Database succesvol uitgerold."
+
+#: includes/Staging.php:684
+msgid "Files and Database deployed successfully."
+msgstr "Bestanden en database succesvol uitgerold."
+
+#: includes/Staging.php:687
+msgid "Deployment completed successfully."
+msgstr "Inzet succesvol voltooid."
+
+#: includes/Staging.php:727
+#: includes/Staging.php:745
+#: includes/Staging.php:774
+#: includes/Staging.php:803
+#: includes/Staging.php:1362
+#: includes/Staging.php:1373
+msgid "Deployment in progress. This may take several minutes."
+msgstr "Inzet in uitvoering. Dit kan enkele minuten duren."
+
+#: includes/Staging.php:736
+msgid "The deployment stopped before it completed. Please try again."
+msgstr "De uitrol stopte voordat deze voltooid was. Probeer het alsjeblieft opnieuw."
+
+#: includes/Staging.php:845
+msgid "Unable to start the deployment process."
+msgstr "Het uitrolproces kan niet starten."
+
+#: includes/Staging.php:1090
+msgid "The deployment is still running. Please wait and check again shortly."
+msgstr "De uitrol loopt nog steeds. Wacht alstublieft en controleer binnenkort opnieuw."
+
+#: includes/Staging.php:1095
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
+
+#: includes/Staging.php:1105
+msgid "The staging operation did not complete, please get in touch with our support."
+msgstr "De staging is niet voltooid, neem contact op met onze support."
+
+#: includes/Staging.php:1129
+msgid "You must switch to the production environment before destroying staging."
+msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
+
+#: includes/Staging.php:1151
+msgid "Switch to an environment you are already in, you cannot."
+msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
+
+#: includes/Staging.php:1241
+msgid "Invalid staging CLI command."
+msgstr "Ongeldig testomgeving CLI commando."
+
+#. translators: Invalid character that was entered
+#: includes/Staging.php:1308
+#, php-format
+msgid "Invalid character (%s) in command."
+msgstr "Ongeldig teken (%s) in command."
+
+#: includes/Staging.php:1317
+msgid "Unable to execute script (disabled_function)."
+msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
+
+#: includes/Staging.php:1330
+msgid "Filesystem credentials required."
+msgstr "Bestandssysteemgegevens vereist."
+
+#: includes/Staging.php:1334
+msgid "Unable to initialize WP Filesystem."
+msgstr "WP Filesystem kan niet initialiseren."
+
+#: includes/Staging.php:1341
+msgid "Unable to execute script (permission error)."
+msgstr "Kan script niet uitvoeren (toestemmingsfout)."
+
 #: includes/Staging.php:1379
 msgid "A deployment is currently in progress. Please wait for it to finish."
 msgstr "Er is momenteel een uitzending gaande. Wacht alstublieft tot deze is afgerond."
 
-#: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
+#: includes/Staging.php:1392
+msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
+msgstr "Het staging-authenticatietoken kan niet worden opgeslagen. Een persistent objectcache kan niet synchroon lopen met de database, of de database accepteert geen schrijfopdrachten."
+
+#: includes/Staging.php:1417
+#: views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Logstamopstelling"
+
+#: includes/Staging.php:1431
+msgid "Don't have capabilities to access this page"
+msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
+
+#: includes/Staging.php:1532
+msgid "Staging configuration was automatically repaired."
+msgstr "De stagingconfiguratie werd automatisch gerepareerd."
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "Geen subopdracht opgegeven"
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Ongeldige gebruiker."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Ongeldig implementatietype"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Ongeldige actie"
+
+#: includes/StagingCLI.php:96
+msgid "Invalid JSON response"
+msgstr "Ongeldig JSON-antwoord"
+
+#: includes/StagingCLI.php:239
+msgid "Error: "
+msgstr "Fout: "
+
+#: includes/StagingCLI.php:288
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "De opgegeven $data was geen geldig array of JSON-tekenreeks."
+
+#: includes/StagingMenu.php:33
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Testomgeving"
+
+#: includes/StagingMenu.php:53
+msgid "Staging Environment"
+msgstr "Testomgeving"
+
+#: includes/StagingMenu.php:55
+msgid "Staging Actions"
+msgstr "Testomgeving acties"
+
+#: includes/StagingMenu.php:71
+#: includes/StagingMenu.php:72
+msgid "Staging"
+msgstr "Enscenering"
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr "Productie-DIRECTIE:"
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr "Productie-URL:"
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr "Stage DIR:"
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr "Staging-URL:"
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr "Stage-omgeving:"
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr "Filter op datum (JJJJ-MM-DD):"
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr "Items per pagina:"
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr "Redden"
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr "Terugstellen"
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr "Log"
+
+#: views/staging-log.php:63
+#: views/staging-log.php:65
+msgid "Prev"
+msgstr "Vorige"
+
+#: views/staging-log.php:132
+#: views/staging-log.php:134
+msgid "Next"
+msgstr "Volgend"
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
+msgstr "Geen logboek gevonden voor de geselecteerde datum."
 
 #: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "Er is een onbekende fout opgetreden."
+msgid "Production Site"
+msgstr "Productie site"
 
 #: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "annuleren"
+msgid "Currently editing"
+msgstr "Momenteel bewerken"
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr "Momenteel niet bewerkt"
 
 #: build/staging/bundle.js:1
 msgid "Clone"
 msgstr "Dupliceren"
 
 #: build/staging/bundle.js:1
-msgid "Clone to staging"
-msgstr "Kopieer naar testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Gekopieerd naar testomgeving"
-
-#: includes/Staging.php:370
-msgid "Cloning can only be done from the production environment."
-msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
 msgid "Confirm Clone Action"
 msgstr "Bevestig kloonactie"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Verwijderen bevestigen"
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Bevestig implementatie"
+msgid "Clone to staging"
+msgstr "Kopieer naar testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Staging Site"
+msgstr "Testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "You don't have a staging site yet."
+msgstr "U heeft nog geen testomgeving."
 
 #: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr "Testomgeving aanmaken"
 
 #: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Aangemaakt"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Momenteel bewerken"
-
-#: includes/Staging.php:683
-msgid "Database deployed successfully."
-msgstr "Database succesvol uitgerold."
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Verwijderen"
-
-#: build/staging/bundle.js:1
 msgid "Delete Staging Site"
 msgstr "Testomgeving verwijderen"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
 
 #: build/staging/bundle.js:1
 msgid "Deleted Staging"
@@ -105,20 +296,56 @@ msgid "Deleting the staging site, this should take about a minute."
 msgstr "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
 
 #: build/staging/bundle.js:1
-msgid "Deploy"
-msgstr "Implementeren"
+msgid "Cancel"
+msgstr "annuleren"
 
 #: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Site implementeren"
+msgid "Cloned to Staging"
+msgstr "Gekopieerd naar testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Testomgeving aangemaakt"
+
+#: build/staging/bundle.js:1
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Created"
+msgstr "Aangemaakt"
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Verwijderen bevestigen"
+
+#: build/staging/bundle.js:1
+msgid "Deploy"
+msgstr "Implementeren"
 
 #: build/staging/bundle.js:1
 msgid "Deploy all changes"
 msgstr "Alle wijzigingen implementeren"
 
 #: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Bevestig implementatie"
+
+#: build/staging/bundle.js:1
 msgid "Deploy database only"
 msgstr "Alleen database implementeren"
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
 
 #: build/staging/bundle.js:1
 msgid "Deploy files only"
@@ -132,188 +359,21 @@ msgstr "Geïmplementeerd"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
 
-#: includes/Staging.php:687
-msgid "Deployment completed successfully."
-msgstr "Inzet succesvol voltooid."
-
-#: includes/Staging.php:641
-msgid "Deployment failed. Check the staging log for details."
-msgstr "Deployment mislukt. Controleer het stagelogboek voor details."
-
-#: includes/Staging.php:727 includes/Staging.php:745 includes/Staging.php:774 includes/Staging.php:803 includes/Staging.php:1362 includes/Staging.php:1373
-msgid "Deployment in progress. This may take several minutes."
-msgstr "Inzet in uitvoering. Dit kan enkele minuten duren."
-
-#: includes/Staging.php:1431
-msgid "Don't have capabilities to access this page"
-msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Site implementeren"
 
 #: build/staging/bundle.js:1
 msgid "Error"
 msgstr "Foutmelding"
 
-#: includes/StagingCLI.php:239
-msgid "Error: "
-msgstr "Fout: "
-
-#: includes/Staging.php:684
-msgid "Files and Database deployed successfully."
-msgstr "Bestanden en database succesvol uitgerold."
-
-#: includes/Staging.php:682
-msgid "Files deployed successfully."
-msgstr "Bestanden succesvol gedeployeerd."
-
-#: includes/Staging.php:1330
-msgid "Filesystem credentials required."
-msgstr "Bestandssysteemgegevens vereist."
-
-#: views/staging-log.php:24
-msgid "Filter by date (YYYY-MM-DD):"
-msgstr "Filter op datum (JJJJ-MM-DD):"
-
-#: includes/StagingCLI.php:96
-msgid "Invalid JSON response"
-msgstr "Ongeldig JSON-antwoord"
-
-#: includes/StagingCLI.php:84
-msgid "Invalid action"
-msgstr "Ongeldige actie"
-
-#. translators: Invalid character that was entered
-#: includes/Staging.php:1308
-#, php-format
-msgid "Invalid character (%s) in command."
-msgstr "Ongeldig teken (%s) in command."
-
-#: includes/StagingCLI.php:67
-msgid "Invalid deploy type"
-msgstr "Ongeldig implementatietype"
-
-#: includes/Staging.php:1241
-msgid "Invalid staging CLI command."
-msgstr "Ongeldig testomgeving CLI commando."
-
-#: includes/StagingCLI.php:39
-msgid "Invalid user."
-msgstr "Ongeldige gebruiker."
-
-#: views/staging-log.php:26
-msgid "Items per page:"
-msgstr "Items per pagina:"
-
 #: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "De productieomgeving nu laden."
-
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "De testomgeving wordt nu geladen."
-
-#: views/staging-log.php:39
-msgid "Log"
-msgstr "Log"
-
-#: includes/Staging.php:1417 views/staging-log.php:11
-msgid "Log Staging"
-msgstr "Logstamopstelling"
-
-#: views/staging-log.php:132 views/staging-log.php:134
-msgid "Next"
-msgstr "Volgend"
-
-#: views/staging-log.php:140
-msgid "No log found for selected date."
-msgstr "Geen logboek gevonden voor de geselecteerde datum."
-
-#: includes/StagingCLI.php:19
-msgid "No sub-command provided"
-msgstr "Geen subopdracht opgegeven"
-
-#: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "Momenteel niet bewerkt"
-
-#: views/staging-log.php:63 views/staging-log.php:65
-msgid "Prev"
-msgstr "Vorige"
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
 
 #: build/staging/bundle.js:1
 msgid "Proceed"
 msgstr "Doorgaan"
-
-#: views/staging-log.php:14
-msgid "Production DIR:"
-msgstr "Productie-DIRECTIE:"
-
-#: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Productie site"
-
-#: views/staging-log.php:15
-msgid "Production URL:"
-msgstr "Productie-URL:"
-
-#: includes/StagingCLI.php:288
-msgid "Provided $data wasn't valid array or JSON string."
-msgstr "De opgegeven $data was geen geldig array of JSON-tekenreeks."
-
-#: views/staging-log.php:34
-msgid "Reset"
-msgstr "Terugstellen"
-
-#: views/staging-log.php:32
-msgid "Save"
-msgstr "Redden"
-
-#: includes/Staging.php:1095
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
-
-#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
-msgid "Staging"
-msgstr "Enscenering"
-
-#: includes/StagingMenu.php:33
-msgctxt "Menu item text"
-msgid "Staging"
-msgstr "Testomgeving"
-
-#: includes/StagingMenu.php:55
-msgid "Staging Actions"
-msgstr "Testomgeving acties"
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Testomgeving aangemaakt"
-
-#: views/staging-log.php:16
-msgid "Staging DIR:"
-msgstr "Stage DIR:"
-
-#: includes/StagingMenu.php:53
-msgid "Staging Environment"
-msgstr "Testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Testomgeving"
-
-#: views/staging-log.php:17
-msgid "Staging URL:"
-msgstr "Staging-URL:"
-
-#: includes/Staging.php:1532
-msgid "Staging configuration was automatically repaired."
-msgstr "De stagingconfiguratie werd automatisch gerepareerd."
-
-#: includes/Staging.php:395
-msgid "Staging environment already exists!"
-msgstr "Testomgeving bestaat al!"
-
-#: views/staging-log.php:18
-msgid "Staging environment:"
-msgstr "Stage-omgeving:"
 
 #: build/staging/bundle.js:1
 msgid "Switch"
@@ -324,93 +384,41 @@ msgid "Switch to Production"
 msgstr "Overschakelen naar productie"
 
 #: build/staging/bundle.js:1
-msgid "Switch to Staging"
-msgstr "Overschakelen naar testomgeving"
-
-#: includes/Staging.php:1151
-msgid "Switch to an environment you are already in, you cannot."
-msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
+msgid "This will navigate you to the production environment"
+msgstr "Dit zal je naar de productieomgeving navigeren"
 
 #: build/staging/bundle.js:1
-msgid "Switching"
-msgstr "Schakelen"
+msgid "Loading the production environment now."
+msgstr "De productieomgeving nu laden."
 
 #: build/staging/bundle.js:1
 msgid "Switching to the production environment, this should take about a minute."
 msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
 
 #: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
-
-#: includes/Staging.php:1090
-msgid "The deployment is still running. Please wait and check again shortly."
-msgstr "De uitrol loopt nog steeds. Wacht alstublieft en controleer binnenkort opnieuw."
-
-#: includes/Staging.php:736
-msgid "The deployment stopped before it completed. Please try again."
-msgstr "De uitrol stopte voordat deze voltooid was. Probeer het alsjeblieft opnieuw."
-
-#: includes/Staging.php:1105
-msgid "The staging operation did not complete, please get in touch with our support."
-msgstr "De staging is niet voltooid, neem contact op met onze support."
-
-#: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
-
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "Dit zal je naar de productieomgeving navigeren"
+msgid "Switch to Staging"
+msgstr "Overschakelen naar testomgeving"
 
 #: build/staging/bundle.js:1
 msgid "This will navigate you to the staging environment"
 msgstr "Dit brengt u naar de testomgeving"
 
 #: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
+msgid "Loading the staging environment now."
+msgstr "De testomgeving wordt nu geladen."
 
 #: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
 
-#: includes/Staging.php:485
-msgid "Unable to create the deployment lock directory."
-msgstr "Kan de deployment lock-map niet aanmaken."
+#: build/staging/bundle.js:1
+msgid "Switching"
+msgstr "Schakelen"
 
-#: includes/Staging.php:1317
-msgid "Unable to execute script (disabled_function)."
-msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
-
-#: includes/Staging.php:1341
-msgid "Unable to execute script (permission error)."
-msgstr "Kan script niet uitvoeren (toestemmingsfout)."
-
-#: includes/Staging.php:1334
-msgid "Unable to initialize WP Filesystem."
-msgstr "WP Filesystem kan niet initialiseren."
-
-#: includes/Staging.php:493
-msgid "Unable to open the deployment lock file."
-msgstr "Het deployment lock-bestand kan niet worden geopend."
-
-#: includes/Staging.php:845
-msgid "Unable to start the deployment process."
-msgstr "Het uitrolproces kan niet starten."
-
-#: includes/Staging.php:1392
-msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
-msgstr "Het staging-authenticatietoken kan niet worden opgeslagen. Een persistent objectcache kan niet synchroon lopen met de database, of de database accepteert geen schrijfopdrachten."
+#: build/staging/bundle.js:1
+msgid "An unknown error has occurred."
+msgstr "Er is een onbekende fout opgetreden."
 
 #: build/staging/bundle.js:1
 msgid "Working…"
 msgstr "Werkend..."
-
-#: build/staging/bundle.js:1
-msgid "You don't have a staging site yet."
-msgstr "U heeft nog geen testomgeving."
-
-#: includes/Staging.php:1129
-msgid "You must switch to the production environment before destroying staging."
-msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
