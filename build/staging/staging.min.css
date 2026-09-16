@@ -911,8 +911,7 @@ body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-containe
 		background-repeat: no-repeat;
 		background-size: 1.5em 1.5em;
 		padding-right: 2.5rem;
-		-webkit-print-color-adjust: exact;
-		        print-color-adjust: exact;
+		print-color-adjust: exact;
 }
 
 		.nfd-root select:where([size]:not([size="1"])) {
@@ -921,8 +920,7 @@ body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-containe
 		background-repeat: unset;
 		background-size: initial;
 		padding-right: 0.75rem;
-		-webkit-print-color-adjust: unset;
-		        print-color-adjust: unset;
+		print-color-adjust: unset;
 }
 
 		.nfd-root select[multiple] {
@@ -956,8 +954,7 @@ body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-containe
 		.nfd-root [type='checkbox'] {
 		appearance: none;
 		padding: 0;
-		-webkit-print-color-adjust: exact;
-		        print-color-adjust: exact;
+		print-color-adjust: exact;
 		display: inline-block;
 		vertical-align: middle;
 		background-origin: border-box;
@@ -1031,8 +1028,7 @@ body.nfd-brand--bluehost-india .newfold-staging-page.is-thinking > .nfd-containe
 		.nfd-root [type='radio'] {
 		appearance: none;
 		padding: 0;
-		-webkit-print-color-adjust: exact;
-		        print-color-adjust: exact;
+		print-color-adjust: exact;
 		display: inline-block;
 		vertical-align: middle;
 		background-origin: border-box;
