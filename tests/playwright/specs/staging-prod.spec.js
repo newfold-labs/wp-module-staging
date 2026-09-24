@@ -10,7 +10,7 @@ import {
   closeAllNotifications,
   expectNotification,
   confirmModalAction,
-} from '../helpers/index.mjs';
+} from '../helpers/index.js';
 
 test.describe('Staging Page - Production Environment', () => {
   test('Is Accessible', async ({ page }) => {
