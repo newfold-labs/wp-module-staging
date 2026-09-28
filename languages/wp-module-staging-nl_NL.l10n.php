@@ -5,7 +5,7 @@ return [
 	'language' => 'nl_NL',
 	'project-id-version' => 'newfold-labswp-module-staging',
 	'pot-creation-date' => '2025-02-19T11:37:53+00:00',
-	'po-revision-date' => '2026-09-16T09:12:44+00:00',
+	'po-revision-date' => '2026-09-28T17:05:34+00:00',
 	'x-generator' => 'WP-CLI 2.11.0',
 	'messages' => [
 		'Cloning can only be done from the production environment.' => 'Klonen kan alleen worden gedaan vanuit de productieomgeving.',
