@@ -6,7 +6,7 @@ import {
   setupAndNavigate,
   confirmModalAction,
   expectNotification,
-} from '../helpers/index.mjs';
+} from '../helpers/index.js';
 
 test.describe('Staging Page - Staging Environment', () => {
   test('Displays staging environment properly', async ({ page }) => {
