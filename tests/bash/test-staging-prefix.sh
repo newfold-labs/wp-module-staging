@@ -4,9 +4,10 @@
 #
 # The staging script runs server-side via PHP exec() and is not exercised by the PHP (wpunit) or
 # Playwright suites, so this is the only automated coverage for the equal-length prefix substitution
-# and the dump prefix rewrite. The tests source lib/.staging with NFD_STAGING_SOURCED=1 (which skips
-# the entrypoint and the top-level wp bootstrap) and call individual functions directly. No database
-# or wp-cli is required: every function tested here is pure text/string logic.
+# and the dump prefix rewrite. The tests *source* lib/.staging; its `BASH_SOURCE == $0` guards are
+# false when sourced, so the entrypoint and the top-level wp bootstrap are skipped, and the tests
+# call individual functions directly. No database or wp-cli is required for the pure text/string
+# functions; the branch-selection tests stub `wp` to capture the SQL that would be emitted.
 #
 # Run: bash tests/bash/test-staging-prefix.sh
 
@@ -18,11 +19,11 @@ if [ ! -f "$STAGING_SCRIPT" ]; then
   exit 1
 fi
 
-# Source the script for testing. The guards keyed on NFD_STAGING_SOURCED skip the entrypoint and the
-# wp bootstrap; set the globals the tested functions read by hand below.
-export NFD_STAGING_SOURCED=1
+# Source the script for testing. Its `BASH_SOURCE == $0` guards are false when the file is sourced
+# (not executed), so the entrypoint and the top-level wp bootstrap are skipped; the tested functions
+# get the globals they need set by hand below.
 # The script reads positional args ($1 command, $2 token, $3.. paths); give it harmless dummies so
-# sourcing its arg-parsing lines does not fail. The NFD_STAGING_SOURCED guards skip all the real work.
+# sourcing its arg-parsing lines (e.g. the -h check) do not trip on unset positionals.
 set -- compat_check token /nonexistent/prod /nonexistent/stg http://p.test http://s.test 0 id slug name
 # shellcheck disable=SC1090
 source "$STAGING_SCRIPT"
@@ -56,7 +57,7 @@ assert_not_contains() { # label haystack needle
 
 echo "== compute_staging_prefix =="
 
-# The spec's own example: wp_5w8a7w6n2r_ -> sg_... (we use st_), same length, clearly different.
+# The spec's own example shape: wp_5w8a7w6n2r_ -> st_5w8a7w6n2r_, same length, clearly different.
 assert_eq "wp_ -> st_" "st_" "$(compute_staging_prefix 'wp_')"
 assert_eq "randomized wp prefix" "st_5w8a7w6n2r_" "$(compute_staging_prefix 'wp_5w8a7w6n2r_')"
 assert_eq "abilitynowbayarea prefix" "st_jqzu_" "$(compute_staging_prefix 'wp_jqzu_')"
@@ -106,6 +107,18 @@ assert_eq "reads new-scheme prefix" "st_5w8a7w6n2r_" "$(read_staging_prefix)"
 # Legacy staging site created with the old prepend.
 printf "%s\n" "<?php" "\$table_prefix = 'staging_wp_5w8a7w6n2r_';" > "$TMP_STAGING/wp-config.php"
 assert_eq "reads legacy prefix (backward compat)" "staging_wp_5w8a7w6n2r_" "$(read_staging_prefix)"
+
+# Manually double-quoted assignment (not WP's default output, but a valid hand edit).
+printf "%s\n" "<?php" "\$table_prefix = \"st_dq_\";" > "$TMP_STAGING/wp-config.php"
+assert_eq "reads double-quoted prefix" "st_dq_" "$(read_staging_prefix)"
+
+# Leading whitespace and extra spaces around the assignment.
+printf "%s\n" "<?php" "   \$table_prefix   =   'st_ws_' ;" > "$TMP_STAGING/wp-config.php"
+assert_eq "reads prefix with leading/surrounding whitespace" "st_ws_" "$(read_staging_prefix)"
+
+# Duplicate $table_prefix lines (malformed): take the first, never a multi-line value.
+printf "%s\n" "<?php" "\$table_prefix = 'st_first_';" "\$table_prefix = 'st_second_';" > "$TMP_STAGING/wp-config.php"
+assert_eq "takes first of duplicate prefix lines" "st_first_" "$(read_staging_prefix)"
 
 # No wp-config: fall back to the legacy scheme so old behavior is preserved.
 rm -f "$TMP_STAGING/wp-config.php"
@@ -200,6 +213,45 @@ fi
 newfk="$(grep -oE 'CONSTRAINT `[^`]+`' "$DUMP3" | head -n1 | sed -E 's/CONSTRAINT `([^`]+)`/\1/')"
 assert_le "constraint name truncated to <= 64 (got ${#newfk})" "${#newfk}" 64
 rm -f "$DUMP3"
+
+echo "== rename branch selection: exact keys for new prefix, broad match for legacy (PRESS0-4144 #1) =="
+# Stub wp to capture the SQL each rename function emits, instead of hitting a database. Defined after
+# the source above so it overrides the script's own wp() wrapper. The rename functions only need it
+# to succeed and return no output.
+CAPTURED="$(mktemp)"
+wp() {
+  if [ "${1:-}" = "db" ] && [ "${2:-}" = "query" ]; then
+    printf '%s\n' "${3:-}" >> "$CAPTURED"
+  fi
+  return 0
+}
+
+# New equal-length prefix (wp_ -> st_): the reverse rename must use EXACT key matches, never a broad
+# "LIKE 'st_%'" that would sweep up unrelated st_* options on production.
+: > "$CAPTURED"; DB_PREFIX='wp_'; STAGING_PREFIX='st_'
+rename_prefixed_keys_to_production /nonexistent/prod "test:rev-new" >/dev/null 2>&1
+rev_new="$(cat "$CAPTURED")"
+assert_contains "new reverse renames the user_roles option exactly" "$rev_new" "= 'wp_user_roles'"
+assert_contains "new reverse reads the staging-prefixed key exactly" "$rev_new" "= 'st_user_roles'"
+assert_contains "new reverse renames capabilities exactly" "$rev_new" "= 'wp_capabilities'"
+assert_not_contains "new reverse never broad-matches the short staging prefix" "$rev_new" "LIKE 'st"
+
+# New equal-length prefix, forward (create/clone): exact matches as well.
+: > "$CAPTURED"; DB_PREFIX='wp_'; STAGING_PREFIX='st_'
+rename_prefixed_keys_to_staging /nonexistent/stg "test:fwd-new" >/dev/null 2>&1
+fwd_new="$(cat "$CAPTURED")"
+assert_contains "new forward writes the staging user_roles key exactly" "$fwd_new" "= 'st_user_roles'"
+assert_not_contains "new forward never broad-matches wp_ with LIKE" "$fwd_new" "LIKE 'wp"
+
+# Legacy synthetic prefix (staging_wp_): must keep the broad LIKE logic (collision-free, and needed
+# to un-mangle old sites). It must NOT fall into the exact-key path.
+: > "$CAPTURED"; DB_PREFIX='wp_'; STAGING_PREFIX='staging_wp_'
+rename_prefixed_keys_to_production /nonexistent/prod "test:rev-legacy" >/dev/null 2>&1
+rev_legacy="$(cat "$CAPTURED")"
+assert_contains "legacy reverse keeps the broad LIKE match" "$rev_legacy" "LIKE 'staging"
+assert_not_contains "legacy reverse does not use the exact-key path" "$rev_legacy" "= 'wp_user_roles'"
+rm -f "$CAPTURED"
+unset -f wp
 
 echo
 echo "-------------------------------------"

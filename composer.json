@@ -64,7 +64,8 @@
       "@i18n-php"
     ],
     "test": "codecept run wpunit",
-    "test-coverage": "codecept run wpunit --coverage wpunit.cov && phpcov merge --php tests/_output/merged.cov --html tests/_output/html tests/_output && echo \"open tests/_output/html/index.html to view the report\""
+    "test-coverage": "codecept run wpunit --coverage wpunit.cov && phpcov merge --php tests/_output/merged.cov --html tests/_output/html tests/_output && echo \"open tests/_output/html/index.html to view the report\"",
+    "test:shell": "bash tests/bash/test-staging-prefix.sh"
   },
   "scripts-descriptions": {
     "fix": "Automatically fix coding standards issues where possible.",
@@ -77,7 +78,8 @@
     "i18n-ci-pre": "CI: regenerate the POT file and sync PO catalogs from it.",
     "i18n-ci-post": "CI: regenerate JED JSON and PHP translation files from PO catalogs.",
     "test": "Run tests.",
-    "test-coverage": "Run tests with coverage, merge coverage and create HTML report."
+    "test-coverage": "Run tests with coverage, merge coverage and create HTML report.",
+    "test:shell": "Run the lib/.staging bash unit tests (staging table prefix logic; no DB required)."
   },
   "config": {
     "allow-plugins": {

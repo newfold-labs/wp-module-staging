@@ -57,10 +57,12 @@ USER_ID=$7
 PLUGIN_ID=$8
 PLUGIN_SLUG=$9
 PLUGIN_NAME="${10}"
-# These bootstrap WordPress via wp-cli. Skipped when the unit tests source this file
-# (NFD_STAGING_SOURCED=1): the tests set the few globals a given function needs by hand and must not
-# shell out to wp. The guard is never taken in production, where the script is exec'd (not sourced).
-if [[ "${NFD_STAGING_SOURCED:-}" != "1" ]]; then
+# These bootstrap WordPress via wp-cli. Run only when the script is EXECUTED (production path:
+# Staging::runCommand execs it). Skipped when the unit tests *source* the file -- they set the few
+# globals a given function needs by hand and must not shell out to wp. The `BASH_SOURCE == $0` test
+# is true only on direct execution and cannot be forced by the environment (unlike an env flag,
+# which could leak into exec() and silently turn the whole script into a no-op).
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
   DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
   DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
@@ -300,7 +302,12 @@ compute_staging_prefix() {
 read_staging_prefix() {
   local prefix=""
   if [ -f "$STAGING_DIR/wp-config.php" ]; then
-    prefix=$(grep '^\$table_prefix' "$STAGING_DIR/wp-config.php" | cut -d \' -f 2)
+    # Take the value between the first pair of quotes on the first $table_prefix assignment.
+    # Splitting on the quote character accepts WP's single-quoted output AND a manually
+    # double-quoted edit, tolerates leading whitespace, and `exit` takes only the first match so a
+    # malformed config with several lines cannot yield a multi-line value (which would otherwise be
+    # interpolated into every clone/deploy SQL statement). No match -> empty -> legacy fallback.
+    prefix=$(awk -F"['\"]" '/^[[:space:]]*\$table_prefix[[:space:]]*=/ {print $2; exit}' "$STAGING_DIR/wp-config.php")
   fi
   if [ -z "$prefix" ]; then
     prefix="staging_${DB_PREFIX}"
@@ -319,9 +326,55 @@ set_staging_config_value() {
     || true
 }
 
+# Rename the prefix-embedded WordPress keys from one table prefix to another by EXACT match.
+#
+# These are the keys whose NAME contains the table prefix and that a site needs for roles/caps to
+# work after a prefix change: the `user_roles` option and the per-user `capabilities` / `user_level`
+# user meta -- WordPress's own documented "change the table prefix" set. The equal-length staging
+# prefix is short and not synthetic (e.g. "st_"), so the broad "LIKE <prefix>%" used for the legacy
+# "staging_" scheme is unsafe here: it would also match unrelated options/usermeta that merely begin
+# with that short string (a plugin option literally named `st_license` on an "st_" site would be
+# rewritten to `wp_license`, corrupting it). Exact key matches cannot over-match. Prefix-embedded
+# admin-UI meta (metaboxhidden_* etc.) is prefix-embedded too but only cosmetic, so it is
+# intentionally not carried across the prefix change.
+#
+# Operates on the install at $1, whose option/usermeta tables use the TO prefix (the rename runs
+# after the data is in that install). Args: $1 wp path, $2 from-prefix, $3 to-prefix, $4 log step.
+# Returns 0 on success, 1 on failure.
+rename_embedded_keys_exact() {
+  local wp_path="$1"
+  local from="$2"
+  local to="$3"
+  local log_step="$4"
+  local failed=0
+  local spec table col key out
+  log "INFO" "$log_step" "Renaming prefix-embedded keys by exact match (${from} -> ${to})"
+  set +e
+  for spec in "options:option_name:user_roles" "usermeta:meta_key:capabilities" "usermeta:meta_key:user_level"; do
+    IFS=: read -r table col key <<< "$spec"
+    # Remove any row already at the destination name (a WP boot can auto-create defaults) so the
+    # rename cannot collide on a UNIQUE/duplicate key; the authoritative imported row then wins it.
+    out=$(wp db query "DELETE FROM \`${to}${table}\` WHERE ${col} = '${to}${key}';" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1) || failed=1
+    [ -n "$out" ] && while IFS= read -r l; do [ -n "$l" ] && log "ERROR" "$log_step" "$l"; done <<< "$out"
+    out=$(wp db query "UPDATE \`${to}${table}\` SET ${col} = '${to}${key}' WHERE ${col} = '${from}${key}';" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1) || failed=1
+    [ -n "$out" ] && while IFS= read -r l; do [ -n "$l" ] && log "ERROR" "$log_step" "$l"; done <<< "$out"
+  done
+  set -e
+  return $failed
+}
+
 rename_prefixed_keys_to_staging() {
   local wp_path="$1"
   local log_step="$2"
+  # New equal-length prefix: exact key matches (see rename_embedded_keys_exact). Legacy "staging_"
+  # prefixes are synthetic and collision-free, so they keep the broad logic below, preserving
+  # behavior (and the clean-up of broadly-mangled keys) for sites created with the old scheme.
+  if [[ "$STAGING_PREFIX" != staging_* ]]; then
+    rename_embedded_keys_exact "$wp_path" "$DB_PREFIX" "$STAGING_PREFIX" "$log_step"
+    return $?
+  fi
   local db_prefix_like staging_prefix_like
   local query_output
   local failed=0
@@ -400,6 +453,14 @@ rename_prefixed_keys_to_staging() {
 rename_prefixed_keys_to_production() {
   local wp_path="$1"
   local log_step="$2"
+  # New equal-length prefix: exact key matches so a short staging prefix (e.g. "st_") cannot
+  # over-match unrelated production options/usermeta on deploy. Legacy "staging_" sites keep the
+  # broad logic below -- it is synthetic/collision-free AND required, because an old staging site
+  # has every prefix-dependent key broadly mangled to "staging_<prod>...", which must be un-mangled.
+  if [[ "$STAGING_PREFIX" != staging_* ]]; then
+    rename_embedded_keys_exact "$wp_path" "$STAGING_PREFIX" "$DB_PREFIX" "$log_step"
+    return $?
+  fi
   local stg_len=${#STAGING_PREFIX}
   local staging_prefix_like
   # Escape LIKE wildcards in the staging prefix so _ and % match literally.
@@ -2663,10 +2724,11 @@ case "${NFD_STAGING_ENV:-}" in
     ;;
 esac
 
-# NFD_STAGING_SOURCED lets the unit tests source this file to exercise individual functions (e.g.
-# compute_staging_prefix, rewrite_dump_prefixes) without running a real staging operation. It is
-# never set in production: Staging::runCommand() execs the script, so the guard is always taken.
-if [[ "${NFD_STAGING_SOURCED:-}" != "1" ]]; then
+# Run the entrypoint only when the script is EXECUTED, not when the unit tests source it to exercise
+# individual functions. `BASH_SOURCE == $0` holds exactly on direct execution (the production path:
+# Staging::runCommand execs the script) and, unlike an env flag, cannot be set from outside to
+# accidentally turn a real create/clone/deploy into a silent no-op.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   compatibility_check "$1"
   auth_action $2
   lock_check
