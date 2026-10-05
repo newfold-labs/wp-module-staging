@@ -10,7 +10,9 @@ updated: 2026-10-05
 Staging tables live in the **same database** as production; they differ only by table prefix. The
 staging prefix is an **equal-length substitution** of the production prefix: the first two
 characters are swapped for `st` (e.g. `wp_5w8a7w6n2r_` → `st_5w8a7w6n2r_`, or `wp_` → `st_`; `sx` is
-used instead if the production prefix already starts with `st`). Because the staging prefix is never
+used instead if the production prefix already starts with `st`). A production prefix shorter than two
+characters — which WordPress does not generate — falls back to a single distinct character (`s`, or
+`x` if production is already `s`). Because the staging prefix is never
 longer than the production prefix, a staging table name can never exceed MySQL's 64-character
 identifier limit where the production name does not — "if production works, staging works".
 

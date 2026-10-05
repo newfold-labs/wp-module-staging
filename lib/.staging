@@ -774,7 +774,9 @@ delete_temp_staging() {
 	# plain "staging\_%" would miss it and orphan the tables. Fall back to the legacy scheme if unset.
 	# Escape LIKE wildcards so "_" matches literally and the pattern cannot over-match other tables.
 	STAGING_DROP_LIKE=$(printf '%s' "${STAGING_PREFIX:-staging_${DB_PREFIX}}" | sed 's/[_%]/\\&/g')
-	mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE '${STAGING_DROP_LIKE}%';" | tail -n +2 | xargs -I {} mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DROP TABLE {};"
+	# Backtick-quote the table name in the DROP so an unexpected character in a name cannot change
+	# what the statement means (the escaped backticks are literal in this double-quoted string).
+	mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE '${STAGING_DROP_LIKE}%';" | tail -n +2 | xargs -I {} mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DROP TABLE \`{}\`;"
     log "INFO" "delete_temp_staging:step3" "Removed all staging tables."
   fi
   if [ "$step" -ge 2 ]; then
