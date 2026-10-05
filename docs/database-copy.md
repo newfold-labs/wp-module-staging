@@ -2,14 +2,26 @@
 name: wp-module-staging
 title: Database copy
 description: How create/clone/deploy copy the database, and the environment variables that tune it.
-updated: 2026-09-11
+updated: 2026-10-05
 ---
 
 # Database copy
 
-Staging tables live in the **same database** as production; they differ only by table prefix
-(`staging_` prepended to the production prefix). `create`, `clone`, and `deploy_db` therefore copy
-the database **server-side**, without moving the row data out through the client:
+Staging tables live in the **same database** as production; they differ only by table prefix. The
+staging prefix is an **equal-length substitution** of the production prefix: the first two
+characters are swapped for `st` (e.g. `wp_5w8a7w6n2r_` → `st_5w8a7w6n2r_`, or `wp_` → `st_`; `sx` is
+used instead if the production prefix already starts with `st`). Because the staging prefix is never
+longer than the production prefix, a staging table name can never exceed MySQL's 64-character
+identifier limit where the production name does not — "if production works, staging works".
+
+Sites created before this scheme used a `staging_` **prepend** (8 characters), which could push long
+table names past the limit. Those keep working unchanged: `clone` and `deploy_db` read the staging
+site's actual prefix from its own `wp-config.php` rather than assuming one, so an old `staging_<prod>`
+site reverses correctly and a new `st_<...>` site uses the equal-length prefix. The production↔staging
+prefix mapping is also recorded in the `staging_config` option (`production_prefix`/`staging_prefix`).
+
+`create`, `clone`, and `deploy_db` copy the database **server-side**, without moving the row data out
+through the client:
 
 1. **Schema** is dumped structure-only (`mysqldump --no-data`), its table prefix rewritten, and
    imported. This preserves foreign keys, views, and the prefix/constraint handling.
