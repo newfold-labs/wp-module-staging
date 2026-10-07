@@ -2,7 +2,7 @@
 name: wp-module-staging
 title: Documentation index
 description: Table of contents and quick links.
-updated: 2025-03-18
+updated: 2026-10-07
 ---
 
 # wp-module-staging – Documentation index
@@ -18,6 +18,7 @@ Documentation for wp-module-staging, for **humans** and **AI agents**. Start her
 | [integration.md](integration.md) | How the module registers and how hosts use it. |
 | [database-copy.md](database-copy.md) | How create/clone/deploy copy the database, and the env vars that tune it. |
 | [health-check.md](health-check.md) | Automatic repair of staging metadata and filesystem state. |
+| [bootstrap-check.md](bootstrap-check.md) | WP-CLI probe that names a broken plugin or theme before staging starts. |
 | [development.md](development.md) | Lint, test, and workflow. |
 | [release.md](release.md) | Release process: use the Newfold Prepare Release workflow. |
 

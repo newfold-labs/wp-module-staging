@@ -371,6 +371,11 @@ class Staging {
 			);
 		}
 
+		$bootstrap = $this->check_bootstrap( $this->getProductionDir() );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		return $this->runCommand( 'clone' );
 	}
 
@@ -396,6 +401,11 @@ class Staging {
 			);
 		}
 
+		$bootstrap = $this->check_bootstrap( $this->getProductionDir() );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		return $this->runCommand( 'create' );
 	}
 
@@ -410,7 +420,20 @@ class Staging {
 	 * @return array|\WP_Error
 	 */
 	public function deployToProduction( $type = 'all' ) {
-		return $this->runCommand( $this->getDeployCommandForType( $type ) );
+		$command = $this->getDeployCommandForType( $type );
+
+		/*
+		 * deploy_files changes into the staging directory and runs `wp core version` with plugins
+		 * loaded. deploy_db only runs WP-CLI with --skip-plugins, so a broken plugin cannot fail it.
+		 */
+		if ( 'deploy_db' !== $command ) {
+			$bootstrap = $this->check_bootstrap( $this->getStagingDir() );
+			if ( is_wp_error( $bootstrap ) ) {
+				return $bootstrap;
+			}
+		}
+
+		return $this->runCommand( $command );
 	}
 
 	/**
@@ -1152,11 +1175,38 @@ class Staging {
 			);
 		}
 
+		/*
+		 * `wp newfold sso` boots the destination with every active plugin. Check that install
+		 * before the script turns an empty link into "Unable to create SSO link".
+		 */
+		$target    = ( 'staging' === $env ) ? $this->getStagingDir() : $this->getProductionDir();
+		$bootstrap = $this->check_bootstrap( $target );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		if ( 'staging' === $env ) {
 			return $this->runCommand( 'sso_staging', array( $user_id ) );
 		}
 
 		return $this->runCommand( 'sso_production', array( $user_id ) );
+	}
+
+	/**
+	 * Stop an operation whose directory cannot bootstrap under WP-CLI.
+	 *
+	 * Runs before runCommand(), so a fatal never writes staging_config or the auth token.
+	 * An empty path fails open and leaves the script to report the missing directory.
+	 *
+	 * @param string $path Production or staging directory the operation will boot.
+	 * @return true|\WP_Error
+	 */
+	protected function check_bootstrap( $path ) {
+		if ( ! is_string( $path ) || '' === $path ) {
+			return true;
+		}
+
+		return ( new StagingBootstrapCheck() )->check( $path );
 	}
 
 	/**

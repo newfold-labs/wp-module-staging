@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-09-28T17:05:34+00:00\n"
+"PO-Revision-Date: 2026-10-07T12:38:35+00:00\n"
 "Language: es_ES\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
@@ -23,121 +23,175 @@ msgstr ""
 msgid "Cloning can only be done from the production environment."
 msgstr "La clonación sólo puede hacerse desde el entorno de producción."
 
-#: includes/Staging.php:395
+#: includes/Staging.php:400
 msgid "Staging environment already exists!"
 msgstr "¡El entorno de preproducción ya existe!"
 
-#: includes/Staging.php:485
+#: includes/Staging.php:508
 msgid "Unable to create the deployment lock directory."
 msgstr "No se puede crear el directorio de bloqueo de despliegue."
 
-#: includes/Staging.php:493
+#: includes/Staging.php:516
 msgid "Unable to open the deployment lock file."
 msgstr "No se puede abrir el archivo de bloqueo de despliegue."
 
-#: includes/Staging.php:641
+#: includes/Staging.php:664
 msgid "Deployment failed. Check the staging log for details."
 msgstr "Despliegue fallido. Consulta el registro de etapas para más detalles."
 
-#: includes/Staging.php:682
+#: includes/Staging.php:705
 msgid "Files deployed successfully."
 msgstr "Los archivos se desplegaron con éxito."
 
-#: includes/Staging.php:683
+#: includes/Staging.php:706
 msgid "Database deployed successfully."
 msgstr "La base de datos se desplegó con éxito."
 
-#: includes/Staging.php:684
+#: includes/Staging.php:707
 msgid "Files and Database deployed successfully."
 msgstr "Archivos y base de datos desplegados con éxito."
 
-#: includes/Staging.php:687
+#: includes/Staging.php:710
 msgid "Deployment completed successfully."
 msgstr "Despliegue completado con éxito."
 
-#: includes/Staging.php:727
-#: includes/Staging.php:745
-#: includes/Staging.php:774
-#: includes/Staging.php:803
-#: includes/Staging.php:1362
-#: includes/Staging.php:1373
+#: includes/Staging.php:750
+#: includes/Staging.php:768
+#: includes/Staging.php:797
+#: includes/Staging.php:826
+#: includes/Staging.php:1412
+#: includes/Staging.php:1423
 msgid "Deployment in progress. This may take several minutes."
 msgstr "Despliegue en curso. Esto puede tardar varios minutos."
 
-#: includes/Staging.php:736
+#: includes/Staging.php:759
 msgid "The deployment stopped before it completed. Please try again."
 msgstr "El despliegue se detuvo antes de completarse. Por favor, inténtalo de nuevo."
 
-#: includes/Staging.php:845
+#: includes/Staging.php:868
 msgid "Unable to start the deployment process."
 msgstr "No se puede iniciar el proceso de despliegue."
 
-#: includes/Staging.php:1090
+#: includes/Staging.php:1113
 msgid "The deployment is still running. Please wait and check again shortly."
 msgstr "El despliegue sigue en marcha. Por favor, esperad y volváis a comprobar en breve."
 
-#: includes/Staging.php:1095
+#: includes/Staging.php:1118
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Si algo ha salido mal, por favor ponte en contacto con nuestro soporte."
 
-#: includes/Staging.php:1105
+#: includes/Staging.php:1128
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr "La operación de preparación no se completó, por favor ponte en contacto con nuestro soporte."
 
-#: includes/Staging.php:1129
+#: includes/Staging.php:1152
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Debes cambiar al entorno de producción antes de destruir la preproducción."
 
-#: includes/Staging.php:1151
+#: includes/Staging.php:1174
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Cambiar a un entorno en el que ya está, no puede."
 
-#: includes/Staging.php:1241
+#: includes/Staging.php:1291
 msgid "Invalid staging CLI command."
 msgstr "Comando CLI de preproducción inválido."
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:1308
+#: includes/Staging.php:1358
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Carácter inválido (%s) en el comando."
 
-#: includes/Staging.php:1317
+#: includes/Staging.php:1367
 msgid "Unable to execute script (disabled_function)."
 msgstr "No se puede ejecutar el script (disabled_function)."
 
-#: includes/Staging.php:1330
+#: includes/Staging.php:1380
 msgid "Filesystem credentials required."
 msgstr "Se requieren credenciales del sistema de archivos."
 
-#: includes/Staging.php:1334
+#: includes/Staging.php:1384
 msgid "Unable to initialize WP Filesystem."
 msgstr "No se puede inicializar el sistema de archivos WP."
 
-#: includes/Staging.php:1341
+#: includes/Staging.php:1391
 msgid "Unable to execute script (permission error)."
 msgstr "No se puede ejecutar el script (error de permisos)."
 
-#: includes/Staging.php:1379
+#: includes/Staging.php:1429
 msgid "A deployment is currently in progress. Please wait for it to finish."
 msgstr "Actualmente se está realizando un despliegue. Por favor, esperad a que termine."
 
-#: includes/Staging.php:1392
+#: includes/Staging.php:1442
 msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr "No se puede almacenar el token de autenticación por etapas. Una caché de objetos persistente puede estar desincronizada con la base de datos, o la base de datos no acepta escrituras."
 
-#: includes/Staging.php:1417
+#: includes/Staging.php:1467
 #: views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Escenificación de troncos"
 
-#: includes/Staging.php:1431
+#: includes/Staging.php:1481
 msgid "Don't have capabilities to access this page"
 msgstr "No tengo capacidad para acceder a esta página"
 
-#: includes/Staging.php:1532
+#: includes/Staging.php:1582
 msgid "Staging configuration was automatically repaired."
 msgstr "La configuración de etapas se reparaba automáticamente."
+
+#: includes/StagingBootstrapCheck.php:186
+msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr ""
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:194
+#, php-format
+msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
+msgstr ""
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:201
+#, php-format
+msgid "The plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
+msgstr ""
+
+#. translators: 1: plugin or theme that declared the symbol first, 2: plugin or theme that declared it again.
+#: includes/StagingBootstrapCheck.php:216
+#, php-format
+msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate one of them, then try again."
+msgstr ""
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:225
+#, php-format
+msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr ""
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:233
+#, php-format
+msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr ""
+
+#: includes/StagingBootstrapCheck.php:238
+msgid "A plugin has a code conflict (Cannot redeclare). Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr ""
+
+#: includes/StagingBootstrapCheck.php:249
+msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr ""
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:257
+#, php-format
+msgid "The theme \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr ""
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:264
+#, php-format
+msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr ""
 
 #: includes/StagingCLI.php:19
 msgid "No sub-command provided"
