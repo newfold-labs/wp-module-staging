@@ -93,6 +93,7 @@ class StagingBootstrapCheckWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTes
 		$this->assertTrue( ( new StagingBootstrapCheck() )->check( $this->directory ) );
 		$this->assertStringContainsString( 'PATH="$PATH:/usr/local/bin"', StagingWPUnitTest::$executed_commands[0] );
 		$this->assertStringNotContainsString( '--skip-plugins', StagingWPUnitTest::$executed_commands[0] );
+		$this->assertCount( 1, StagingWPUnitTest::$executed_commands );
 	}
 
 	/**
@@ -125,6 +126,10 @@ class StagingBootstrapCheckWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTes
 		$this->assertSame( StagingBootstrapCheck::ERROR_CODE, $result->get_error_code() );
 		$this->assertStringContainsString( 'bluehost-wordpress-plugin', $result->get_error_message() );
 		$this->assertStringContainsString( '[ERROR] [bootstrap_check] status=1', $this->log_contents() );
+		$this->assertStringContainsString( 'WP_DISABLE_FATAL_ERROR_HANDLER', StagingWPUnitTest::$executed_commands[0] );
+		$this->assertStringContainsString( 'wp_cache_delete', StagingWPUnitTest::$executed_commands[1] );
+		$this->assertStringContainsString( '--skip-plugins', StagingWPUnitTest::$executed_commands[1] );
+		$this->assertStringNotContainsString( 'enable_loading_object_cache_dropin', StagingWPUnitTest::$executed_commands[1] );
 	}
 
 	/**
@@ -198,6 +203,10 @@ class StagingBootstrapCheckWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTes
 		StagingWPUnitTest::$exec_responses[] = array(
 			'status' => $status,
 			'output' => $output,
+		);
+		StagingWPUnitTest::$exec_responses[] = array(
+			'status' => 0,
+			'output' => array(),
 		);
 	}
 

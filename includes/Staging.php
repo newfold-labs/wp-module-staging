@@ -376,6 +376,16 @@ class Staging {
 			return $bootstrap;
 		}
 
+		/*
+		 * clone() runs `wp core version` in the staging directory with plugins loaded. A fatal
+		 * there is not reported cleanly: the script's ERR trap deletes the staging directory and
+		 * staging_config. Probe staging first, and drop its object cache, same as a switch.
+		 */
+		$bootstrap = $this->check_bootstrap( $this->getStagingDir() );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		return $this->runCommand( 'clone' );
 	}
 

@@ -75,10 +75,35 @@ class StagingBootstrapCheck {
 	 * "There has been a critical error on this website." and no file path. error_get_last() still
 	 * has the fatal at shutdown, and this runs before WordPress registers its own handler.
 	 *
+	 * WP_DISABLE_FATAL_ERROR_HANDLER keeps that handler from mailing a recovery link or writing
+	 * options. The probe skips the object-cache drop-in, so those writes would land in the database
+	 * and leave the live cache stale. The next switch or clone then dies with a generic error
+	 * even after the broken file has been restored.
+	 *
 	 * @var string
 	 */
 	const FATAL_REPORTER = <<<'PHP'
-register_shutdown_function( function () { $e = error_get_last(); if ( is_array( $e ) && in_array( $e['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ), true ) ) { fwrite( STDERR, 'NFD_BOOTSTRAP_FATAL: ' . strtok( (string) $e['message'], "\n" ) . ' in ' . $e['file'] . ':' . $e['line'] . "\n" ); } } );
+defined('WP_DISABLE_FATAL_ERROR_HANDLER') || define('WP_DISABLE_FATAL_ERROR_HANDLER', true); register_shutdown_function( function () { $e = error_get_last(); if ( is_array( $e ) && in_array( $e['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ), true ) ) { fwrite( STDERR, 'NFD_BOOTSTRAP_FATAL: ' . strtok( (string) $e['message'], "\n" ) . ' in ' . $e['file'] . ':' . $e['line'] . "\n" ); } } );
+PHP;
+
+	/**
+	 * PHP passed to the cache-eviction `wp --exec`, before WordPress loads.
+	 *
+	 * @var string
+	 */
+	const CACHE_EVICTION_BOOT = "defined('WP_DISABLE_FATAL_ERROR_HANDLER') || define('WP_DISABLE_FATAL_ERROR_HANDLER', true);";
+
+	/**
+	 * Option keys to drop from the probed install's object cache after the bootstrap.
+	 *
+	 * Passed to `wp eval`, so it runs once the drop-in is loaded. alloptions is the one that
+	 * matters: autoloaded options are served from it. The others are named so a key stored on its
+	 * own is dropped too.
+	 *
+	 * @var string
+	 */
+	const CACHE_EVICTION = <<<'PHP'
+foreach ( array( 'alloptions', 'notoptions', 'staging_auth_token', 'staging_config', 'staging_environment', 'nfd_coming_soon', 'cron', 'recovery_mode_email_last_sent' ) as $key ) { wp_cache_delete( $key, 'options' ); }
 PHP;
 
 	/**
@@ -110,6 +135,16 @@ PHP;
 
 		$text   = implode( "\n", $output );
 		$status = (int) $status;
+
+		/*
+		 * The probe skipped the object-cache drop-in, and a full or partial boot may have written
+		 * options straight to the database. Drop the cached copies on this install before returning,
+		 * or the next command that loads the drop-in (switch's `wp newfold sso`) reads the stale copy.
+		 * A missing wp binary never booted WordPress, so there is nothing to drop.
+		 */
+		if ( ! $this->is_tool_missing( $status, $text ) ) {
+			$this->evict_object_cache( $path );
+		}
 
 		// Exit 0 means eval finished. A BOM or extra echoed text must not look like a fatal.
 		if ( 0 === $status ) {
@@ -403,6 +438,32 @@ PHP;
 			escapeshellarg( 'echo "ok";' ),
 			escapeshellarg( untrailingslashit( $path ) )
 		);
+	}
+
+	/**
+	 * Drop cached options for the install that was just probed.
+	 *
+	 * Runs with plugins skipped and the object-cache drop-in loaded, which is the opposite of the
+	 * probe. wp_cache_delete() then reaches the same Redis keys the next web request or SSO command
+	 * will read. A broken drop-in must not turn into a user-facing error, so the result is ignored.
+	 *
+	 * @param string $path Directory that was probed.
+	 * @return void
+	 */
+	protected function evict_object_cache( $path ) {
+		$command = sprintf(
+			'PATH="$PATH:/usr/local/bin" timeout %d wp --exec=%s eval %s --path=%s --skip-plugins --skip-themes --quiet 2>/dev/null',
+			self::TIMEOUT_SECONDS,
+			escapeshellarg( self::CACHE_EVICTION_BOOT ),
+			escapeshellarg( self::CACHE_EVICTION ),
+			escapeshellarg( untrailingslashit( $path ) )
+		);
+
+		$output = array();
+		$status = 0;
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec
+		exec( $command, $output, $status );
 	}
 
 	/**

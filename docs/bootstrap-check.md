@@ -13,7 +13,8 @@ Staging create, clone, file deploy, and environment switch each run at least one
 
 | Operation | Directory |
 |-----------|-----------|
-| Create, clone | Production |
+| Create | Production |
+| Clone | Production, then staging |
 | Deploy files, deploy files and database | Staging |
 | Switch to staging / production | The destination |
 
@@ -25,7 +26,9 @@ The probe is one command, capped at 10 seconds. `PATH` includes `/usr/local/bin`
 PATH="$PATH:/usr/local/bin" timeout 10 wp --exec='…' eval 'echo "ok";' --path="$dir" --quiet
 ```
 
-`--exec` is the same object-cache drop-in skip used by the `wp()` wrapper in `lib/.staging`. Plugins and themes are loaded. There is no `--skip-plugins` or `--skip-themes`.
+`--exec` is the same object-cache drop-in skip used by the `wp()` wrapper in `lib/.staging`, and it defines `WP_DISABLE_FATAL_ERROR_HANDLER`. Plugins and themes are loaded. There is no `--skip-plugins` or `--skip-themes`.
+
+WordPress's own fatal handler would otherwise mail a recovery link and write options while that drop-in is skipped. Those writes go to the database and leave the object cache stale, so the next switch (`wp newfold sso` loads the drop-in) or clone dies with a generic error even after the broken file is restored. After every probe that actually booted WordPress, a second `wp eval` drops `alloptions` and the staging option keys for that install. That command skips plugins and loads the drop-in, so the delete hits the same cache the next request will read.
 
 Exit 0 is a pass, even when a plugin prints a UTF-8 BOM or extra text around `ok`. A missing `wp` or `timeout`, a disabled `exec()`, a directory that is not there, or the 10 second cap all fail open. A slow bootstrap is not a fatal, and the staging script already reports a missing tool. Any other non-zero exit is blocked only when the output contains a PHP fatal (`NFD_BOOTSTRAP_FATAL:`, `Fatal error`, `Parse error`, or WordPress's critical-error text). A database connection error, or a site that is not installed, is logged and left to the staging script.
 
