@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-10-07T12:38:35+00:00\n"
+"PO-Revision-Date: 2026-10-08T07:36:45+00:00\n"
 "Language: fr_FR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
@@ -139,56 +139,74 @@ msgstr "Je n’ai pas la possibilité d’accéder à cette page"
 msgid "Staging configuration was automatically repaired."
 msgstr "La configuration des étapes a été automatiquement réparée."
 
-#: includes/StagingBootstrapCheck.php:186
+#: includes/StagingBootstrapCheck.php:242
 msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr ""
 
 #. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:194
+#: includes/StagingBootstrapCheck.php:250
 #, php-format
 msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
 msgstr ""
 
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:258
+#, php-format
+msgid "The must-use plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Remove it from mu-plugins, then try again."
+msgstr ""
+
 #. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:201
+#: includes/StagingBootstrapCheck.php:265
 #, php-format
 msgid "The plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
 msgstr ""
 
 #. translators: 1: plugin or theme that declared the symbol first, 2: plugin or theme that declared it again.
-#: includes/StagingBootstrapCheck.php:216
+#: includes/StagingBootstrapCheck.php:280
 #, php-format
-msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate one of them, then try again."
+msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
 msgstr ""
 
 #. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:225
+#: includes/StagingBootstrapCheck.php:289
 #, php-format
 msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
 msgstr ""
 
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:297
+#, php-format
+msgid "The must-use plugin \"%s\" has a code conflict (Cannot redeclare). Remove it from mu-plugins, then try again."
+msgstr ""
+
 #. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:233
+#: includes/StagingBootstrapCheck.php:305
 #, php-format
 msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
 msgstr ""
 
-#: includes/StagingBootstrapCheck.php:238
+#: includes/StagingBootstrapCheck.php:310
 msgid "A plugin has a code conflict (Cannot redeclare). Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr ""
 
-#: includes/StagingBootstrapCheck.php:249
+#: includes/StagingBootstrapCheck.php:321
 msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr ""
 
 #. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:257
+#: includes/StagingBootstrapCheck.php:329
 #, php-format
 msgid "The theme \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr ""
 
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:337
+#, php-format
+msgid "The must-use plugin \"%s\" caused a fatal error while loading WordPress. Remove it from mu-plugins, then try again."
+msgstr ""
+
 #. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:264
+#: includes/StagingBootstrapCheck.php:344
 #, php-format
 msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr ""

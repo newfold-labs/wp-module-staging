@@ -2,7 +2,7 @@
 name: wp-module-staging
 title: Documentation index
 description: Table of contents and quick links.
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 
 # wp-module-staging – Documentation index
