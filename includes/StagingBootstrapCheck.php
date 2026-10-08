@@ -107,16 +107,18 @@ foreach ( array( 'alloptions', 'notoptions', 'staging_auth_token', 'staging_conf
 PHP;
 
 	/**
-	 * Bootstrap WordPress at $path by running `wp eval` with plugins and themes loaded.
+	 * Bootstrap WordPress at $path by running `wp eval`.
 	 *
 	 * Missing wp/timeout, a disabled exec(), a directory that is not there, a probe that exceeds
 	 * the timeout, or a non-zero exit that is not a PHP fatal all fail open: the staging script
 	 * already reports those. Only a PHP fatal is returned to the user.
 	 *
-	 * @param string $path Production or staging directory.
+	 * @param string $path             Production or staging directory.
+	 * @param bool   $load_extensions  Whether to load regular plugins and themes. Must-use plugins,
+	 *                                 drop-ins, and wp-config.php load either way.
 	 * @return true|\WP_Error
 	 */
-	public function check( $path ) {
+	public function check( $path, $load_extensions = true ) {
 		$path = is_string( $path ) ? $path : '';
 		if ( '' === $path || ! is_dir( $path ) ) {
 			return true;
@@ -126,7 +128,7 @@ PHP;
 			return true;
 		}
 
-		$command = $this->build_command( $path );
+		$command = $this->build_command( $path, $load_extensions );
 		$output  = array();
 		$status  = 0;
 
@@ -426,17 +428,21 @@ PHP;
 	 * /usr/local/bin is where wp lives on the hosts this module targets. runCommand() adds it
 	 * only after this probe, and lib/.staging exports it inside the script, so the probe sets it.
 	 *
-	 * @param string $path Directory to pass to WP-CLI --path.
+	 * @param string $path            Directory to pass to WP-CLI --path.
+	 * @param bool   $load_extensions Whether to load regular plugins and themes.
 	 * @return string
 	 */
-	protected function build_command( $path ) {
+	protected function build_command( $path, $load_extensions = true ) {
+		$skip = $load_extensions ? '' : ' --skip-plugins --skip-themes';
+
 		return sprintf(
-			'PATH="$PATH:/usr/local/bin" timeout %d wp --exec=%s --exec=%s eval %s --path=%s --quiet 2>&1',
+			'PATH="$PATH:/usr/local/bin" timeout %d wp --exec=%s --exec=%s eval %s --path=%s%s --quiet 2>&1',
 			self::TIMEOUT_SECONDS,
 			escapeshellarg( self::WP_CLI_EXEC ),
 			escapeshellarg( self::FATAL_REPORTER ),
 			escapeshellarg( 'echo "ok";' ),
-			escapeshellarg( untrailingslashit( $path ) )
+			escapeshellarg( untrailingslashit( $path ) ),
+			$skip
 		);
 	}
 

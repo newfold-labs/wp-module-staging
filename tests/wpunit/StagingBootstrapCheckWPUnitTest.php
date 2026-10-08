@@ -2,7 +2,7 @@
 
 namespace NewfoldLabs\WP\Module\Staging;
 
-require_once __DIR__ . '/StagingExecMock.php';
+require_once __DIR__ . '/StagingWPUnitTest.php';
 
 /**
  * Tests for the pre-staging WP-CLI bootstrap probe.
@@ -80,6 +80,19 @@ class StagingBootstrapCheckWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTes
 
 		$this->assertTrue( ( new StagingBootstrapCheck() )->check( $this->directory ) );
 		$this->assertStringContainsString( '[WARN] [bootstrap_check] status=1', $this->log_contents() );
+	}
+
+	/**
+	 * A light probe skips regular plugins and themes and still drops the object cache.
+	 *
+	 * @return void
+	 */
+	public function test_light_probe_skips_regular_plugins() {
+		$this->queue( 0, array( 'ok' ) );
+
+		$this->assertTrue( ( new StagingBootstrapCheck() )->check( $this->directory, false ) );
+		$this->assertStringContainsString( '--skip-plugins --skip-themes', StagingWPUnitTest::$executed_commands[0] );
+		$this->assertStringContainsString( 'wp_cache_delete', StagingWPUnitTest::$executed_commands[1] );
 	}
 
 	/**

@@ -377,11 +377,12 @@ class Staging {
 		}
 
 		/*
-		 * clone() runs `wp core version` in the staging directory with plugins loaded. A fatal
-		 * there is not reported cleanly: the script's ERR trap deletes the staging directory and
-		 * staging_config. Probe staging first, and drop its object cache, same as a switch.
+		 * Before move_content_dirs(), clone runs WP-CLI against the existing staging directory
+		 * with --skip-plugins --skip-themes. Regular plugins are replaced by production's copy
+		 * and are not booted, so a full probe would block the clone that repairs them. Must-use
+		 * plugins, drop-ins, and wp-config.php still load and can fail those commands.
 		 */
-		$bootstrap = $this->check_bootstrap( $this->getStagingDir() );
+		$bootstrap = $this->check_bootstrap( $this->getStagingDir(), false );
 		if ( is_wp_error( $bootstrap ) ) {
 			return $bootstrap;
 		}
@@ -433,11 +434,13 @@ class Staging {
 		$command = $this->getDeployCommandForType( $type );
 
 		/*
-		 * deploy_files changes into the staging directory and runs `wp core version` with plugins
-		 * loaded. deploy_db only runs WP-CLI with --skip-plugins, so a broken plugin cannot fail it.
+		 * deploy_files runs `wp core version` and `wp core download`, which WP-CLI runs before
+		 * WordPress loads, and every other call passes --skip-plugins --skip-themes. A regular
+		 * plugin cannot fail the deploy. Must-use plugins, drop-ins, and wp-config.php still can.
+		 * deploy_db never boots those either, so it is not probed.
 		 */
 		if ( 'deploy_db' !== $command ) {
-			$bootstrap = $this->check_bootstrap( $this->getStagingDir() );
+			$bootstrap = $this->check_bootstrap( $this->getStagingDir(), false );
 			if ( is_wp_error( $bootstrap ) ) {
 				return $bootstrap;
 			}
@@ -1208,15 +1211,16 @@ class Staging {
 	 * Runs before runCommand(), so a fatal never writes staging_config or the auth token.
 	 * An empty path fails open and leaves the script to report the missing directory.
 	 *
-	 * @param string $path Production or staging directory the operation will boot.
+	 * @param string $path            Production or staging directory the operation will boot.
+	 * @param bool   $load_extensions Whether that boot loads regular plugins and themes.
 	 * @return true|\WP_Error
 	 */
-	protected function check_bootstrap( $path ) {
+	protected function check_bootstrap( $path, $load_extensions = true ) {
 		if ( ! is_string( $path ) || '' === $path ) {
 			return true;
 		}
 
-		return ( new StagingBootstrapCheck() )->check( $path );
+		return ( new StagingBootstrapCheck() )->check( $path, $load_extensions );
 	}
 
 	/**

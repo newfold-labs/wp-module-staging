@@ -7,16 +7,16 @@ updated: 2026-10-08
 
 # Bootstrap check
 
-Staging create, clone, file deploy, and environment switch each run at least one WP-CLI command that boots WordPress with active plugins and the active theme. Most other commands in `lib/.staging` pass `--skip-plugins` and `--skip-themes`. A single fatal — commonly `create_function()` removed in PHP 8, a `Cannot redeclare` conflict, or other deprecated syntax — kills that bootstrap. The shell script then exits before it can print JSON, and the UI only has a generic failure.
+Switch runs `wp newfold sso`, which boots WordPress with active plugins and the active theme. Create copies those plugins into the new staging site, so it uses the same full probe on production. Clone and file deploy do not boot regular plugins: `wp core version` and `wp core download` run before WordPress loads, and the other commands pass `--skip-plugins` and `--skip-themes`. Must-use plugins, drop-ins, and `wp-config.php` still load. A fatal there — commonly `create_function()` removed in PHP 8, a `Cannot redeclare` conflict, or other deprecated syntax — kills the command. The shell script then exits before it can print JSON, and the UI only has a generic failure.
 
 `StagingBootstrapCheck` runs first, against the directory that command will boot:
 
-| Operation | Directory |
-|-----------|-----------|
-| Create | Production |
-| Clone | Production, then staging |
-| Deploy files, deploy files and database | Staging |
-| Switch to staging / production | The destination |
+| Operation | Directory | Plugins and themes |
+|-----------|-----------|--------------------|
+| Create | Production | Loaded. The copy would otherwise fail on the first switch. |
+| Clone | Production, then the existing staging site | Production: loaded, same reason as create. Staging: skipped. Its plugins are replaced before they would boot, and a full probe would block the clone that repairs them. |
+| Deploy files, deploy files and database | Staging | Skipped. The deploy never loads them. |
+| Switch to staging / production | The destination | Loaded. |
 
 Database-only deploy is not probed. Its WP-CLI calls skip plugins and themes, so a broken plugin does not fail it.
 
@@ -26,7 +26,7 @@ The probe is one command, capped at 10 seconds. `PATH` includes `/usr/local/bin`
 PATH="$PATH:/usr/local/bin" timeout 10 wp --exec='…' eval 'echo "ok";' --path="$dir" --quiet
 ```
 
-`--exec` is the same object-cache drop-in skip used by the `wp()` wrapper in `lib/.staging`, and it defines `WP_DISABLE_FATAL_ERROR_HANDLER`. Plugins and themes are loaded. There is no `--skip-plugins` or `--skip-themes`.
+`--exec` is the same object-cache drop-in skip used by the `wp()` wrapper in `lib/.staging`, and it defines `WP_DISABLE_FATAL_ERROR_HANDLER`. Switch and create omit `--skip-plugins` and `--skip-themes`. Clone of the existing staging site, and file deploy, pass both flags. Must-use plugins still load.
 
 WordPress's own fatal handler would otherwise mail a recovery link and write options while that drop-in is skipped. Those writes go to the database and leave the object cache stale, so the next switch (`wp newfold sso` loads the drop-in) or clone dies with a generic error even after the broken file is restored. After every probe that actually booted WordPress, a second `wp eval` drops `alloptions` and the staging option keys for that install. That command skips plugins and loads the drop-in, so the delete hits the same cache the next request will read.
 
