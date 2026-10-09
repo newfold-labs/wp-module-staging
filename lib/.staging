@@ -57,13 +57,20 @@ USER_ID=$7
 PLUGIN_ID=$8
 PLUGIN_SLUG=$9
 PLUGIN_NAME="${10}"
-DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+# These bootstrap WordPress via wp-cli. Run only when the script is EXECUTED (production path:
+# Staging::runCommand execs it). Skipped when the unit tests *source* the file -- they set the few
+# globals a given function needs by hand and must not shell out to wp. The `BASH_SOURCE == $0` test
+# is true only on direct execution and cannot be forced by the environment (unlike an env flag,
+# which could leak into exec() and silently turn the whole script into a no-op).
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  DB_HOST=$(wp eval 'echo DB_HOST;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+  PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
+fi
 # LOG_FILE must be set after PRODUCTION_DIR is set
 LOG_FILE="$PRODUCTION_DIR/nfd-private/nfd-staging.log"  # Log file always in production uploads
 CONTENT_DIRS=(uploads themes plugins)
@@ -261,27 +268,136 @@ normalize_fk_names() {
   return 0
 }
 
+# --- Staging table prefix: equal-length substitution (PRESS0-4144) ---
+#
+# The staging prefix historically PREPENDED "staging_" (8 chars) to the production prefix, which
+# pushed long table names past MySQL's 64-char identifier limit (e.g. WooCommerce's
+# woocommerce_downloadable_product_permissions on a randomized prefix). Instead we SUBSTITUTE an
+# equal-length marker: swap the first two characters of the production prefix for "st" (falling
+# back to "sx" if the production prefix already starts with "st", so the two can never be equal).
+# The result is never longer than the production prefix, so any table name valid in production is
+# valid in staging. The production<->staging mapping is stored in staging_config, and for existing
+# staging sites the prefix is read back from the staging install's own wp-config.php so sites
+# created with the old "staging_" scheme keep working unchanged (see read_staging_prefix).
+compute_staging_prefix() {
+  local prod="$1"
+  local marker="st"
+  if [ "${#prod}" -lt 2 ]; then
+    # Degenerate 1-char (or empty) prefix: a single distinct char, never longer than production.
+    if [ "$prod" = "s" ]; then printf 'x'; else printf 's'; fi
+    return
+  fi
+  # Never let the staging prefix equal the production prefix.
+  if [ "${prod:0:2}" = "$marker" ]; then
+    marker="sx"
+  fi
+  printf '%s%s' "$marker" "${prod:2}"
+}
+
+# Resolve the staging site's ACTUAL table prefix from its own wp-config.php. This is the ground
+# truth for clone/deploy, which operate on an existing staging site: a site created with the new
+# equal-length scheme returns e.g. "st_5w8a7w6n2r_", and one created with the old scheme returns
+# "staging_wp_5w8a7w6n2r_", so both reverse correctly with no special-casing. Falls back to the
+# legacy "staging_<prod>" scheme only if the value cannot be read, preserving old behavior.
+read_staging_prefix() {
+  local prefix=""
+  if [ -f "$STAGING_DIR/wp-config.php" ]; then
+    # Take the value between the first pair of quotes on the first $table_prefix assignment.
+    # Splitting on the quote character accepts WP's single-quoted output AND a manually
+    # double-quoted edit, tolerates leading whitespace, and `exit` takes only the first match so a
+    # malformed config with several lines cannot yield a multi-line value (which would otherwise be
+    # interpolated into every clone/deploy SQL statement). No match -> empty -> legacy fallback.
+    prefix=$(awk -F"['\"]" '/^[[:space:]]*\$table_prefix[[:space:]]*=/ {print $2; exit}' "$STAGING_DIR/wp-config.php")
+  fi
+  if [ -z "$prefix" ]; then
+    prefix="staging_${DB_PREFIX}"
+  fi
+  printf '%s' "$prefix"
+}
+
+# Store a key in the staging_config option array (insert if absent, update if present). Used to
+# persist the production<->staging prefix mapping so the PHP/REST layer (pre-deploy length check)
+# can reason about table names without shelling out. Best-effort: never fails the run.
+set_staging_config_value() {
+  local key="$1"
+  local value="$2"
+  wp option patch insert staging_config "$key" "$value" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null \
+    || wp option patch update staging_config "$key" "$value" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null \
+    || true
+}
+
+# Rename the prefix-embedded WordPress keys from one table prefix to another by EXACT match.
+#
+# These are the keys whose NAME contains the table prefix and that a site needs for roles/caps to
+# work after a prefix change: the `user_roles` option and the per-user `capabilities` / `user_level`
+# user meta -- WordPress's own documented "change the table prefix" set. The equal-length staging
+# prefix is short and not synthetic (e.g. "st_"), so the broad "LIKE <prefix>%" used for the legacy
+# "staging_" scheme is unsafe here: it would also match unrelated options/usermeta that merely begin
+# with that short string (a plugin option literally named `st_license` on an "st_" site would be
+# rewritten to `wp_license`, corrupting it). Exact key matches cannot over-match. Prefix-embedded
+# admin-UI meta (metaboxhidden_* etc.) is prefix-embedded too but only cosmetic, so it is
+# intentionally not carried across the prefix change.
+#
+# Operates on the install at $1, whose option/usermeta tables use the TO prefix (the rename runs
+# after the data is in that install). Args: $1 wp path, $2 from-prefix, $3 to-prefix, $4 log step.
+# Returns 0 on success, 1 on failure.
+rename_embedded_keys_exact() {
+  local wp_path="$1"
+  local from="$2"
+  local to="$3"
+  local log_step="$4"
+  local failed=0
+  local spec table col key out
+  log "INFO" "$log_step" "Renaming prefix-embedded keys by exact match (${from} -> ${to})"
+  set +e
+  for spec in "options:option_name:user_roles" "usermeta:meta_key:capabilities" "usermeta:meta_key:user_level"; do
+    IFS=: read -r table col key <<< "$spec"
+    # Remove any row already at the destination name (a WP boot can auto-create defaults) so the
+    # rename cannot collide on a UNIQUE/duplicate key; the authoritative imported row then wins it.
+    out=$(wp db query "DELETE FROM \`${to}${table}\` WHERE ${col} = '${to}${key}';" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1) || failed=1
+    [ -n "$out" ] && while IFS= read -r l; do [ -n "$l" ] && log "ERROR" "$log_step" "$l"; done <<< "$out"
+    out=$(wp db query "UPDATE \`${to}${table}\` SET ${col} = '${to}${key}' WHERE ${col} = '${from}${key}';" \
+      --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1) || failed=1
+    [ -n "$out" ] && while IFS= read -r l; do [ -n "$l" ] && log "ERROR" "$log_step" "$l"; done <<< "$out"
+  done
+  set -e
+  return $failed
+}
+
 rename_prefixed_keys_to_staging() {
   local wp_path="$1"
   local log_step="$2"
-  local db_prefix_like
+  # New equal-length prefix: exact key matches (see rename_embedded_keys_exact). Legacy "staging_"
+  # prefixes are synthetic and collision-free, so they keep the broad logic below, preserving
+  # behavior (and the clean-up of broadly-mangled keys) for sites created with the old scheme.
+  if [[ "$STAGING_PREFIX" != staging_* ]]; then
+    rename_embedded_keys_exact "$wp_path" "$DB_PREFIX" "$STAGING_PREFIX" "$log_step"
+    return $?
+  fi
+  local db_prefix_like staging_prefix_like
   local query_output
   local failed=0
   local like_escape_suffix=" ESCAPE '\\\\'"
-  local staging_options_table="staging_${DB_PREFIX}options"
-  local staging_usermeta_table="staging_${DB_PREFIX}usermeta"
-  # Escape LIKE wildcards in DB_PREFIX so _ and % match literally in SQL LIKE patterns.
+  local prod_len=${#DB_PREFIX}
+  local stg_len=${#STAGING_PREFIX}
+  local staging_options_table="${STAGING_PREFIX}options"
+  local staging_usermeta_table="${STAGING_PREFIX}usermeta"
+  # Escape LIKE wildcards in each prefix so _ and % match literally in SQL LIKE patterns.
   db_prefix_like=$(printf '%s' "$DB_PREFIX" | sed 's/[_%]/\\&/g')
-  log "INFO" "$log_step" "Renaming prefix-dependent option names and meta keys to staging prefix"
+  staging_prefix_like=$(printf '%s' "$STAGING_PREFIX" | sed 's/[_%]/\\&/g')
+  log "INFO" "$log_step" "Renaming prefix-dependent option names and meta keys to staging prefix (${DB_PREFIX} -> ${STAGING_PREFIX})"
   set +e
-  # Remove auto-created staging-prefixed rows when the imported copy still uses production prefix names.
-  query_output=$(wp db query "DELETE o1 FROM \`${staging_options_table}\` o1 INNER JOIN \`${staging_options_table}\` o2 ON o2.option_name = REPLACE(o1.option_name, 'staging_', '') WHERE o1.option_name LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} AND o1.option_name != o2.option_name;" \
+  # Remove auto-created staging-prefixed rows when the imported copy still uses production prefix
+  # names. De-stage by stripping the staging prefix and restoring the production prefix, rather than
+  # a literal 'staging_' REPLACE, so this works for any equal-length staging prefix.
+  query_output=$(wp db query "DELETE o1 FROM \`${staging_options_table}\` o1 INNER JOIN \`${staging_options_table}\` o2 ON o2.option_name = CONCAT('${DB_PREFIX}', SUBSTRING(o1.option_name, $((stg_len + 1)))) WHERE o1.option_name LIKE '${staging_prefix_like}%'${like_escape_suffix} AND o1.option_name != o2.option_name;" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
   local opt_del_status=$?
   if [ -n "$query_output" ]; then
     while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "$line"; done <<< "$query_output"
   fi
-  query_output=$(wp db query "UPDATE \`${staging_options_table}\` SET option_name = CONCAT('staging_', option_name) WHERE option_name LIKE '${db_prefix_like}%'${like_escape_suffix};" \
+  query_output=$(wp db query "UPDATE \`${staging_options_table}\` SET option_name = CONCAT('${STAGING_PREFIX}', SUBSTRING(option_name, $((prod_len + 1)))) WHERE option_name LIKE '${db_prefix_like}%'${like_escape_suffix};" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
   local opt_status=$?
   if [ -n "$query_output" ]; then
@@ -289,7 +405,7 @@ rename_prefixed_keys_to_staging() {
   fi
   local meta_del_status=0
   local meta_status=0
-  query_output=$(wp db query "SELECT 1 FROM \`${staging_usermeta_table}\` WHERE meta_key LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} LIMIT 1;" \
+  query_output=$(wp db query "SELECT 1 FROM \`${staging_usermeta_table}\` WHERE meta_key LIKE '${staging_prefix_like}%'${like_escape_suffix} LIMIT 1;" \
     --path="$wp_path" --skip-themes --skip-plugins --skip-column-names --quiet 2>&1)
   local usermeta_staging_check_status=$?
   if [ $usermeta_staging_check_status -ne 0 ]; then
@@ -299,7 +415,7 @@ rename_prefixed_keys_to_staging() {
     meta_del_status=$usermeta_staging_check_status
   elif echo "$query_output" | grep -q '1'; then
     # Remove auto-created staging-prefixed rows when imported copy still uses production prefix names.
-    query_output=$(wp db query "DELETE m1 FROM \`${staging_usermeta_table}\` m1 INNER JOIN \`${staging_usermeta_table}\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = REPLACE(m1.meta_key, 'staging_', '') WHERE m1.meta_key LIKE 'staging\\_${db_prefix_like}%'${like_escape_suffix} AND m1.meta_key != m2.meta_key;" \
+    query_output=$(wp db query "DELETE m1 FROM \`${staging_usermeta_table}\` m1 INNER JOIN \`${staging_usermeta_table}\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = CONCAT('${DB_PREFIX}', SUBSTRING(m1.meta_key, $((stg_len + 1)))) WHERE m1.meta_key LIKE '${staging_prefix_like}%'${like_escape_suffix} AND m1.meta_key != m2.meta_key;" \
       --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
     meta_del_status=$?
     if [ -n "$query_output" ]; then
@@ -315,7 +431,7 @@ rename_prefixed_keys_to_staging() {
     fi
     meta_status=$usermeta_rename_check_status
   elif echo "$query_output" | grep -q '1'; then
-    query_output=$(wp db query "UPDATE \`${staging_usermeta_table}\` SET meta_key = CONCAT('staging_', meta_key) WHERE meta_key LIKE '${db_prefix_like}%'${like_escape_suffix};" \
+    query_output=$(wp db query "UPDATE \`${staging_usermeta_table}\` SET meta_key = CONCAT('${STAGING_PREFIX}', SUBSTRING(meta_key, $((prod_len + 1)))) WHERE meta_key LIKE '${db_prefix_like}%'${like_escape_suffix};" \
       --path="$wp_path" --skip-themes --skip-plugins --quiet 2>&1)
     meta_status=$?
     if [ -n "$query_output" ]; then
@@ -337,26 +453,43 @@ rename_prefixed_keys_to_staging() {
 rename_prefixed_keys_to_production() {
   local wp_path="$1"
   local log_step="$2"
-  log "INFO" "$log_step" "Cleaning staging-prefixed option names and meta keys for production"
+  # New equal-length prefix: exact key matches so a short staging prefix (e.g. "st_") cannot
+  # over-match unrelated production options/usermeta on deploy. Legacy "staging_" sites keep the
+  # broad logic below -- it is synthetic/collision-free AND required, because an old staging site
+  # has every prefix-dependent key broadly mangled to "staging_<prod>...", which must be un-mangled.
+  if [[ "$STAGING_PREFIX" != staging_* ]]; then
+    rename_embedded_keys_exact "$wp_path" "$STAGING_PREFIX" "$DB_PREFIX" "$log_step"
+    return $?
+  fi
+  local stg_len=${#STAGING_PREFIX}
+  local staging_prefix_like
+  # Escape LIKE wildcards in the staging prefix so _ and % match literally.
+  staging_prefix_like=$(printf '%s' "$STAGING_PREFIX" | sed 's/[_%]/\\&/g')
+  log "INFO" "$log_step" "Cleaning staging-prefixed option names and meta keys for production (${STAGING_PREFIX} -> ${DB_PREFIX})"
   set +e
 
-  # Options: drop staging-prefixed rows where the un-prefixed version already exists
-  wp db query "DELETE o1 FROM \`${DB_PREFIX}options\` o1 INNER JOIN \`${DB_PREFIX}options\` o2 ON o2.option_name = REPLACE(o1.option_name, 'staging_', '') WHERE o1.option_name LIKE 'staging\_${DB_PREFIX}%' AND o1.option_name != o2.option_name;" \
+  # De-stage a key by stripping the staging prefix and restoring the production prefix, rather than
+  # a literal 'staging_' REPLACE, so this reverses any equal-length staging prefix. The staging
+  # prefix is read from the staging site's own wp-config (see read_staging_prefix), so old
+  # "staging_<prod>" sites and new "st_<...>" sites both reverse correctly here.
+
+  # Options: drop staging-prefixed rows where the de-staged version already exists
+  wp db query "DELETE o1 FROM \`${DB_PREFIX}options\` o1 INNER JOIN \`${DB_PREFIX}options\` o2 ON o2.option_name = CONCAT('${DB_PREFIX}', SUBSTRING(o1.option_name, $((stg_len + 1)))) WHERE o1.option_name LIKE '${staging_prefix_like}%' ESCAPE '\\\\' AND o1.option_name != o2.option_name;" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local opt_del_status=$?
 
   # Options: rename remaining staging-prefixed rows (no conflict)
-  wp db query "UPDATE \`${DB_PREFIX}options\` SET option_name = REPLACE(option_name, 'staging_', '') WHERE option_name LIKE 'staging\_${DB_PREFIX}%';" \
+  wp db query "UPDATE \`${DB_PREFIX}options\` SET option_name = CONCAT('${DB_PREFIX}', SUBSTRING(option_name, $((stg_len + 1)))) WHERE option_name LIKE '${staging_prefix_like}%' ESCAPE '\\\\';" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local opt_status=$?
 
-  # Usermeta: drop staging-prefixed rows where the un-prefixed version exists for the same user
-  wp db query "DELETE m1 FROM \`${DB_PREFIX}usermeta\` m1 INNER JOIN \`${DB_PREFIX}usermeta\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = REPLACE(m1.meta_key, 'staging_', '') WHERE m1.meta_key LIKE 'staging\_${DB_PREFIX}%' AND m1.meta_key != m2.meta_key;" \
+  # Usermeta: drop staging-prefixed rows where the de-staged version exists for the same user
+  wp db query "DELETE m1 FROM \`${DB_PREFIX}usermeta\` m1 INNER JOIN \`${DB_PREFIX}usermeta\` m2 ON m2.user_id = m1.user_id AND m2.meta_key = CONCAT('${DB_PREFIX}', SUBSTRING(m1.meta_key, $((stg_len + 1)))) WHERE m1.meta_key LIKE '${staging_prefix_like}%' ESCAPE '\\\\' AND m1.meta_key != m2.meta_key;" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local meta_del_status=$?
 
   # Usermeta: rename remaining staging-prefixed rows (no conflict)
-  wp db query "UPDATE \`${DB_PREFIX}usermeta\` SET meta_key = REPLACE(meta_key, 'staging_', '') WHERE meta_key LIKE 'staging\_${DB_PREFIX}%';" \
+  wp db query "UPDATE \`${DB_PREFIX}usermeta\` SET meta_key = CONCAT('${DB_PREFIX}', SUBSTRING(meta_key, $((stg_len + 1)))) WHERE meta_key LIKE '${staging_prefix_like}%' ESCAPE '\\\\';" \
     --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null
   local meta_status=$?
 
@@ -636,7 +769,14 @@ delete_temp_staging() {
 	DB_PASS=$(grep DB_PASSWORD "$WP_CONFIG" | cut -d \' -f 4)
 	DB_HOST=$(grep DB_HOST "$WP_CONFIG" | cut -d \' -f 4)
 	TABLE_PREFIX=$(grep '^\$table_prefix' "$WP_CONFIG" | cut -d \' -f 2)
-	mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE 'staging\_%';" | tail -n +2 | xargs -I {} mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DROP TABLE {};"
+	# Drop the staging tables by their actual prefix. Callers set STAGING_PREFIX (create computes the
+	# equal-length prefix; clone reads the existing one), so a new "st_..." site is cleaned up too; a
+	# plain "staging\_%" would miss it and orphan the tables. Fall back to the legacy scheme if unset.
+	# Escape LIKE wildcards so "_" matches literally and the pattern cannot over-match other tables.
+	STAGING_DROP_LIKE=$(printf '%s' "${STAGING_PREFIX:-staging_${DB_PREFIX}}" | sed 's/[_%]/\\&/g')
+	# Backtick-quote the table name in the DROP so an unexpected character in a name cannot change
+	# what the statement means (the escaped backticks are literal in this double-quoted string).
+	mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE '${STAGING_DROP_LIKE}%';" | tail -n +2 | xargs -I {} mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DROP TABLE \`{}\`;"
     log "INFO" "delete_temp_staging:step3" "Removed all staging tables."
   fi
   if [ "$step" -ge 2 ]; then
@@ -1725,6 +1865,16 @@ finalize_new_content_dirs() {
 create() {
   log "INFO" "create" "[STEP] Start."
 
+  # Compute the equal-length staging table prefix for this new site (PRESS0-4144) and record the
+  # production<->staging mapping in staging_config. staging_config already exists on production
+  # (Staging::runCommand writes it before this script runs); the import-config step below copies it
+  # into the staging install. STAGING_PREFIX is global on purpose: delete_temp_staging reads it to
+  # clean up the right tables on a failed create.
+  STAGING_PREFIX=$(compute_staging_prefix "$DB_PREFIX")
+  log "INFO" "create" "[STEP] Staging table prefix: ${DB_PREFIX} -> ${STAGING_PREFIX}"
+  set_staging_config_value production_prefix "$DB_PREFIX"
+  set_staging_config_value staging_prefix "$STAGING_PREFIX"
+
   # Move to production directory
   log "INFO" "create" "[STEP] Move to production directory."
   set +e
@@ -1821,7 +1971,7 @@ create() {
   log "INFO" "create" "[STEP] Set core config."
   log "DEBUG" "create:core_config" "Comando: wp core config --dbhost=*** --dbname=*** --dbuser=*** --dbpass=*** --dbprefix=*** --skip-themes --skip-plugins --quiet"
   set +e
-  CONFIG_OUTPUT=$(wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="staging_$DB_PREFIX" --skip-themes --skip-plugins --quiet 2>&1)
+  CONFIG_OUTPUT=$(wp core config --dbhost="$DB_HOST" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbprefix="$STAGING_PREFIX" --skip-themes --skip-plugins --quiet 2>&1)
   CONFIG_STATUS=$?
   set -e
   log "DEBUG" "create:core_config" "wp core config exit code: $CONFIG_STATUS"
@@ -1838,7 +1988,7 @@ create() {
     log "ERROR" "create:update_prefix_sql" "SQL export file not found: $STAGING_DIR/.export-sql"
     delete_temp_staging 2 "SQL export file not found."
   fi
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "$STAGING_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "create:update_prefix_sql" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -1869,13 +2019,13 @@ create() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database).
   log "INFO" "create" "[STEP] Copy table data."
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "create:copy_data" "$PRODUCTION_TABLES"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "$STAGING_PREFIX" "create:copy_data" "$PRODUCTION_TABLES"; then
     delete_temp_staging 3 "Unable to copy table data to staging."
   fi
 
   # Copy triggers last, after the data is in place.
   log "INFO" "create" "[STEP] Copy triggers."
-  if ! copy_triggers "$PRODUCTION_DIR" "$STAGING_DIR" "$PRODUCTION_TABLES" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" "create:copy_triggers"; then
+  if ! copy_triggers "$PRODUCTION_DIR" "$STAGING_DIR" "$PRODUCTION_TABLES" "$DB_PREFIX" "$STAGING_PREFIX" "staging_" "create:copy_triggers"; then
     delete_temp_staging 3 "Unable to copy triggers to staging."
   fi
 
@@ -1931,7 +2081,7 @@ create() {
   # Search replace URLs
   log "INFO" "create" "[STEP] Search replace URLs."
   set +e
-  search_replace_paced "$STAGING_DIR" "$PRODUCTION_URL" "$STAGING_URL" "create:search_replace" "staging_$DB_PREFIX"
+  search_replace_paced "$STAGING_DIR" "$PRODUCTION_URL" "$STAGING_URL" "create:search_replace" "$STAGING_PREFIX"
   SR_STATUS=$?
   set -e
   log "DEBUG" "create:search_replace" "search_replace_paced exit code: $SR_STATUS"
@@ -2160,6 +2310,11 @@ sso_production() {
 
 clone() {
   cd "$PRODUCTION_DIR" || error 'Unable to move to production directory.'
+  # Clone re-clones production into the EXISTING staging site, so use that site's actual table
+  # prefix (new "st_..." or legacy "staging_..."), not a freshly computed one. Resolve it before the
+  # error trap so delete_temp_staging cleans up the right tables on failure.
+  STAGING_PREFIX=$(read_staging_prefix)
+  log "INFO" "clone" "[STEP] Staging table prefix: ${DB_PREFIX} -> ${STAGING_PREFIX}"
   trap 'delete_temp_staging 5 "Clone failed unexpectedly."' ERR
 
   log "DEBUG" "clone:before_get_sessions" "About to fetch session tokens if user ID is set"
@@ -2187,7 +2342,7 @@ clone() {
 
   # Rewrite production -> staging table/constraint/trigger prefixes (and strip DEFINER) in the dump.
   log "INFO" "clone:rewrite_prefix" "Rewriting table prefixes in schema dump"
-  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
+  if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "$DB_PREFIX" "$STAGING_PREFIX" "staging_" 1 "$PRODUCTION_TABLES"; then
     log "ERROR" "clone:rewrite_prefix" "Unable to update database prefix."
     delete_temp_staging 2 "Unable to update database prefix."
   fi
@@ -2208,12 +2363,12 @@ clone() {
 
   # Copy row data server-side (INSERT ... SELECT within the shared database): no row bytes cross
   # the client connection, so this scales with site size instead of tripping the throttle.
-  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "staging_$DB_PREFIX" "clone:copy_data" "$PRODUCTION_TABLES"; then
+  if ! copy_table_data_server_side "$PRODUCTION_DIR" "$DB_PREFIX" "$STAGING_PREFIX" "clone:copy_data" "$PRODUCTION_TABLES"; then
     error "Unable to copy table data to staging."
   fi
 
   # Triggers last, after the data is in place.
-  if ! copy_triggers "$PRODUCTION_DIR" "$STAGING_DIR" "$PRODUCTION_TABLES" "$DB_PREFIX" "staging_$DB_PREFIX" "staging_" "clone:copy_triggers"; then
+  if ! copy_triggers "$PRODUCTION_DIR" "$STAGING_DIR" "$PRODUCTION_TABLES" "$DB_PREFIX" "$STAGING_PREFIX" "staging_" "clone:copy_triggers"; then
     error "Unable to copy triggers to staging."
   fi
   log "INFO" "clone" "[STEP] Rename prefix-dependent keys in staging DB"
@@ -2234,7 +2389,7 @@ clone() {
     run_or_fail "clone:core_download" "Unable to install WordPress in staging directory." wp core download --version="$WP_VER" --force
     sync_php_ai_client "$PRODUCTION_DIR" "$STAGING_DIR"
   fi
-  if ! search_replace_paced "$STAGING_DIR" "$PRODUCTION_URL" "$STAGING_URL" "clone:search_replace" "staging_$DB_PREFIX"; then
+  if ! search_replace_paced "$STAGING_DIR" "$PRODUCTION_URL" "$STAGING_URL" "clone:search_replace" "$STAGING_PREFIX"; then
     error "Unable to update URLs on staging."
   fi
   run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
@@ -2306,6 +2461,13 @@ _restore_db_from_backup() {
 
 deploy_db() {
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  # Resolve the staging site's actual table prefix (new "st_..." or legacy "staging_..."); it is the
+  # source prefix for the staging->production rewrite below. rewrite_dump_prefixes asserts every
+  # rewritten statement names a production-prefixed table, so a wrong prefix here fails safe (the
+  # deploy aborts and production is restored from backup) rather than touching the wrong tables.
+  STAGING_PREFIX=$(read_staging_prefix)
+  log "INFO" "deploy_db" "Staging table prefix: ${STAGING_PREFIX} -> ${DB_PREFIX}"
 
   # Disable global set -e and handle errors manually
   set +e
@@ -2385,11 +2547,13 @@ deploy_db() {
   drop_views_and_tables "$PRODUCTION_DIR"
 
   # --- Custom cleanup for staging prefix ---
-  # Only if the effective staging prefix is 'staging_wp_'
+  # Best-effort removal of a few options that must not overwrite production on deploy. Gated on the
+  # default production prefix, as before; the staging options table is addressed by the resolved
+  # staging prefix (e.g. "st_options" or legacy "staging_wp_options") instead of a hardcoded name.
   if [[ "${DB_PREFIX}" == "wp_" ]]; then
       if [[ "$STAGING_DIR" != "" ]]; then
-        log "INFO" "deploy_db:cleanup" "Cleaning specific options from staging_wp_options"
-        wp db query "DELETE FROM staging_wp_options WHERE option_name IN ('wp_page_for_privacy_policy','wp_attachment_pages_enabled','wp_force_deactivated_plugins', 'wp_smush_api_auth');" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+        log "INFO" "deploy_db:cleanup" "Cleaning specific options from ${STAGING_PREFIX}options"
+        wp db query "DELETE FROM \`${STAGING_PREFIX}options\` WHERE option_name IN ('wp_page_for_privacy_policy','wp_attachment_pages_enabled','wp_force_deactivated_plugins', 'wp_smush_api_auth');" --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
       fi
   fi
 
@@ -2413,7 +2577,7 @@ deploy_db() {
 
     # 4. Rewrite staging -> production prefixes (and strip DEFINER) in the schema dump.
     log "INFO" "deploy_db" "Replacing staging prefixes in schema SQL"
-    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" 1 "$STAGING_TABLES"; then
+    if ! rewrite_dump_prefixes "$STAGING_DIR/.export-sql" "${STAGING_PREFIX}" "${DB_PREFIX}" "prod_" 1 "$STAGING_TABLES"; then
       fail_and_exit "Unable to update prefix in staging SQL."
     fi
 
@@ -2447,13 +2611,13 @@ deploy_db() {
 
     # 5b. Copy row data staging -> production server-side (INSERT ... SELECT in the shared DB).
     log "INFO" "deploy_db" "Copying staging table data into production (server-side)"
-    if ! copy_table_data_server_side "$PRODUCTION_DIR" "staging_${DB_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data" "$STAGING_TABLES"; then
+    if ! copy_table_data_server_side "$PRODUCTION_DIR" "${STAGING_PREFIX}" "${DB_PREFIX}" "deploy_db:copy_data" "$STAGING_TABLES"; then
       fail_and_exit "Unable to copy staging table data into production."
     fi
 
     # 5c. Copy triggers last, after the data is in place.
     # Reuse the STAGING_TABLES list validated above (do not re-query silently).
-    if ! copy_triggers "$STAGING_DIR" "$PRODUCTION_DIR" "$STAGING_TABLES" "staging_${DB_PREFIX}" "${DB_PREFIX}" "prod_" "deploy_db:copy_triggers"; then
+    if ! copy_triggers "$STAGING_DIR" "$PRODUCTION_DIR" "$STAGING_TABLES" "${STAGING_PREFIX}" "${DB_PREFIX}" "prod_" "deploy_db:copy_triggers"; then
       fail_and_exit "Unable to copy triggers into production."
     fi
 
@@ -2562,20 +2726,26 @@ case "${NFD_STAGING_ENV:-}" in
     ;;
 esac
 
-compatibility_check "$1"
-auth_action $2
-lock_check
+# Run the entrypoint only when the script is EXECUTED, not when the unit tests source it to exercise
+# individual functions. `BASH_SOURCE == $0` holds exactly on direct execution (the production path:
+# Staging::runCommand execs the script) and, unlike an env flag, cannot be set from outside to
+# accidentally turn a real create/clone/deploy into a silent no-op.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  compatibility_check "$1"
+  auth_action $2
+  lock_check
 
-case "$1" in
-  create) create "$@";;
-  destroy) destroy "$@";;
-  clone) clone "$@";;
-  deploy_files) deploy_files "$@";;
-  deploy_db) deploy_db "$@";;
-  deploy_files_db) deploy_files_db "$@";;
-  sso_staging) sso_staging "$@";;
-  sso_production) sso_production "$@";;
-  *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
-esac
+  case "$1" in
+    create) create "$@";;
+    destroy) destroy "$@";;
+    clone) clone "$@";;
+    deploy_files) deploy_files "$@";;
+    deploy_db) deploy_db "$@";;
+    deploy_files_db) deploy_files_db "$@";;
+    sso_staging) sso_staging "$@";;
+    sso_production) sso_production "$@";;
+    *) log "ERROR" "main" "Unknown command: $1"; echo '{"status":"error","message":"Unknown command: '$1'"}'; exit 1;;
+  esac
+fi
 
 # Lock is released by cleanup EXIT trap, or by error()/release_staging_lock on failure paths
