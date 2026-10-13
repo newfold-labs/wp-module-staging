@@ -116,7 +116,7 @@ const App = () => {
 		// console.log('setError', error);
 		setIsLoading( false );
 		setIsThinking( false );
-		setIsError(true);
+		setIsError( true );
 		makeNotice( 'error', errorLabel, msgError, 'error' );
 	};
 
@@ -407,10 +407,7 @@ const App = () => {
 			setIsThinking( false );
 			return false;
 		}
-		if (
-			response.status === 'running' ||
-			response.status === 'unknown'
-		) {
+		if ( response.status === 'running' || response.status === 'unknown' ) {
 			return pollDeployStatus( deployTypeParam );
 		}
 		if ( response.status === 'success' ) {
@@ -427,11 +424,123 @@ const App = () => {
 		return false;
 	};
 
+	// Between content-copy bursts. Each advance() call does a bounded unit of work server-side (the
+	// engine's ~10s budget or one bash bookend), so the client just paces the poll; it never waits on a
+	// single long request. Short enough to keep the deploy moving, long enough not to hammer the box.
+	const COPY_ADVANCE_INTERVAL_MS = 1500;
+
+	// Hard ceiling on burst calls so a server that never reaches a terminal status cannot loop forever.
+	// The engine guarantees forward progress per call, so even a very large deploy finishes well under
+	// this; it is a safety net, not an expected bound.
+	const COPY_MAX_BURSTS = 100000;
+
+	const advanceContentCopy = ( restart ) =>
+		apiFetch( {
+			url: NewfoldRuntime.createApiUrl(
+				apiNamespace + 'staging/copy/advance',
+				{
+					type: 'deploy_files',
+					// rest_sanitize_boolean reads '1'/'0'; only the first call restarts (discards any prior
+					// terminal job state), later calls resume the in-flight job.
+					restart: restart ? '1' : '0',
+				}
+			),
+			method: 'POST',
+		} );
+
+	/**
+	 * Drive the stepped, chunked files deploy to completion by repeatedly POSTing the advance route,
+	 * one bounded burst per call, until the server reports a terminal status. Replaces the single
+	 * fire-and-forget POST + long poll, so no request runs long enough to trip the box's CPU/process
+	 * limits or a proxy read timeout.
+	 *
+	 * @return {Promise<boolean>} Whether the files deploy completed successfully.
+	 */
+	const deployFilesStepped = async () => {
+		setIsThinking( true );
+		let restart = true;
+		// Tolerate a bounded run of transient request errors (a 502, a dropped connection, a proxy
+		// blip). The server job is durable and the WP-cron fallback keeps advancing it, so a single
+		// hiccup must not make the UI declare the whole deploy failed and (under "all") skip the DB
+		// step. Only give up after several consecutive failures with no successful burst between them.
+		const maxConsecutiveErrors = 10;
+		let consecutiveErrors = 0;
+
+		for ( let burst = 0; burst < COPY_MAX_BURSTS; burst++ ) {
+			let response;
+			try {
+				response = await advanceContentCopy( restart );
+			} catch ( error ) {
+				// Each burst is short, so a 524 here is unusual, but the burst still ran server-side and
+				// resumes from its cursor. Keep restart unchanged (so the first real call still restarts)
+				// and retry after a pace. Other transient errors are retried the same bounded way.
+				consecutiveErrors += 1;
+				if (
+					isCloudflareTimeout( error ) ||
+					consecutiveErrors < maxConsecutiveErrors
+				) {
+					await sleep( COPY_ADVANCE_INTERVAL_MS );
+					continue;
+				}
+				catchError( error );
+				return false;
+			}
+
+			// A call returned: from here on resume the in-flight job, never restart it, and reset the
+			// transient-error run.
+			restart = false;
+			consecutiveErrors = 0;
+
+			if ( ! response?.hasOwnProperty( 'status' ) ) {
+				setError( unknownErrorMsg );
+				setIsThinking( false );
+				return false;
+			}
+			if ( response.status === 'success' ) {
+				makeNotice(
+					'deployed',
+					deployNoticeCompleteText,
+					response.message
+				);
+				setIsThinking( false );
+				return true;
+			}
+			if ( response.status === 'error' ) {
+				setError( response.message );
+				setIsThinking( false );
+				return false;
+			}
+
+			// Still running: surface progress (if the engine reported a percent) and pace the next burst.
+			const percent = response?.progress?.percent;
+			if ( typeof percent === 'number' ) {
+				makeNotice(
+					'deploying',
+					working,
+					`${ deployNoticeStartText } (${ percent }%)`,
+					'info',
+					8000
+				);
+			}
+			await sleep( COPY_ADVANCE_INTERVAL_MS );
+		}
+
+		setError( unknownErrorMsg );
+		setIsThinking( false );
+		return false;
+	};
+
 	/**
 	 * @param {string} deployTypeParam One of 'all', 'files', or 'db'
 	 * @return {Promise<boolean>} Whether the deploy step completed successfully.
 	 */
 	const deployType = async ( deployTypeParam ) => {
+		// Files deploy runs through the stepped, chunked content-copy engine; db stays on the legacy
+		// single-request path until it is chunked too.
+		if ( deployTypeParam === 'files' ) {
+			return deployFilesStepped();
+		}
+
 		setIsThinking( true );
 		try {
 			const response = await apiFetch( {

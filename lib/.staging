@@ -131,8 +131,19 @@ resolve_db_charset() {
 }
 
 # --- Staging lock (WordPress transient) ---
+#
+# STAGING_LOCK_OWNED is set to 1 only by the process that actually acquired the lock in lock_check.
+# release_staging_lock then deletes the lock ONLY when this process owns it. Without this guard a
+# command that was BLOCKED by the lock (its error() path), or one that never takes the lock at all
+# (compat_check, which exits before lock_check yet still fires the cleanup EXIT trap), would delete the
+# lock held by the operation that is actually running, letting a second command run concurrently with
+# it -- e.g. a deploy enumerating a tree a clone is still rsyncing. The loser must never free the
+# winner's lock.
+STAGING_LOCK_OWNED=0
 release_staging_lock() {
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
   wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
+  STAGING_LOCK_OWNED=0
 }
 
 # --- Async deploy result ---
@@ -728,6 +739,8 @@ lock_check() {
   fi
 
   wp transient set nfd_staging_lock "active:$CURRENT_TIME" "$LOCK_TTL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
+  # This process now owns the lock; only it may release it (see release_staging_lock).
+  STAGING_LOCK_OWNED=1
   log "INFO" "lock_check" "Lock set successfully."
 }
 
@@ -1916,6 +1929,20 @@ finalize_new_content_dirs() {
     NEW="$TO/wp-content/$DIR-new"
     OLD="$TO/wp-content/$DIR-old"
 
+    # No prepared "-new" for this dir means it was already promoted by an interrupted earlier run of
+    # this same finalize (the rename consumed its "-new"), or there is simply nothing to promote. Skip
+    # it: re-promoting would fail on the missing "-new", and treating that as an error would wrongly
+    # fail a deploy that already (partly) succeeded. Any stale "-old" is swept at the end.
+    if [ ! -d "$NEW" ]; then
+      log "INFO" "finalize_new_content_dirs:$DIR" "No $NEW to promote (already promoted or nothing to copy); skipping"
+      # If an interrupted earlier run already promoted this dir (its "-new" was consumed, ORIG now holds
+      # the new content, and the prior production is still asided at "-old"), record it as PROMOTED so a
+      # LATER dir's failure rolls THIS one back too. Without this, rollback would leave a half-deployed
+      # tree -- some dirs new, some old. Only when both exist: otherwise there is nothing to roll back.
+      [ -d "$OLD" ] && [ -d "$ORIG" ] && PROMOTED+=("$DIR")
+      continue
+    fi
+
     # Normalize a leftover aside from an interrupted prior run so the "-old" name is free. If
     # production is in place, the leftover is a disposable post-swap copy; if production is missing,
     # the leftover IS production (interrupted mid-swap) and must be restored, not deleted.
@@ -1958,6 +1985,29 @@ finalize_new_content_dirs() {
     # concurrently in the window since the aside, which correctly triggers rollback below.
     log "INFO" "finalize_new_content_dirs:$DIR" "Promoting $NEW to $ORIG"
     if ! mv -T "$NEW" "$ORIG"; then
+      # The promote can fail because a live request recreated "$ORIG" (e.g. wp_upload_dir() remaking
+      # uploads/YYYY/MM) in the window since the aside. Move that squatter aside and retry once, so a
+      # live write during the swap does not leave production serving an empty dir. The squatter holds
+      # only files written in that microsecond race, which this deploy is replacing anyway.
+      #
+      # Guard this hard: attempt it ONLY when we KNOW production is safely backed up (we set it aside
+      # THIS run, ASIDE=1, and "-old" still holds it). Otherwise the "$ORIG" we are about to move to the
+      # squatter could BE the only copy of production -- e.g. an NFS is_dir() misread left ASIDE=0, or a
+      # concurrent restore just put production back at ORIG -- and moving it away would risk losing it.
+      if [ -e "$ORIG" ] && [ "$ASIDE" -eq 1 ] && [ -d "$OLD" ]; then
+        local SQUATTER
+        SQUATTER="$TO/wp-content/$DIR-squatter-$(date +%s)-$$"
+        if mv -T "$ORIG" "$SQUATTER" 2>/dev/null && mv -T "$NEW" "$ORIG"; then
+          log "WARN" "finalize_new_content_dirs:$DIR" "Promoted after setting a concurrently-created $ORIG aside to $SQUATTER (left for inspection)"
+          # Never rm the squatter from inside this loop: a concurrent "-old"->ORIG restore could race us,
+          # and we cannot prove the squatter is disposable here. Its name is swept by no cleanup path, so
+          # leaking it is harmless; deleting the wrong tree is not. A later sweep/support can clear it.
+          PROMOTED+=("$DIR")
+          continue
+        fi
+        # Retry failed; put the squatter back (best effort) and fall through to recovery.
+        [ -d "$SQUATTER" ] && [ ! -e "$ORIG" ] && mv -T "$SQUATTER" "$ORIG" 2>/dev/null
+      fi
       log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to promote $NEW to $ORIG"
       if [ "$ASIDE" -eq 1 ]; then
         if ! mv -T "$OLD" "$ORIG"; then
@@ -1981,17 +2031,19 @@ finalize_new_content_dirs() {
     log "DEBUG" "finalize_new_content_dirs:$DIR" "Permissions after move: $(ls -ld "$ORIG")"
   done
 
-  # All dirs promoted; production is live. Drop the asides now. This is the only slow step and it is
-  # non-fatal: with --link-dest the unchanged files are hardlinks so this mostly drops extra links,
-  # and an interruption here only leaves a reclaimable "$DIR-old" for the next run to sweep.
-  for DIR in "${FINAL_DIRS[@]}"; do
-    OLD="$TO/wp-content/$DIR-old"
-    if [ -d "$OLD" ]; then
-      log "INFO" "finalize_new_content_dirs:$DIR" "Removing aside $OLD"
-      rm -rf "$OLD" || log "ERROR" "finalize_new_content_dirs:$DIR" "Could not remove aside $OLD (non-fatal; will be swept later)"
-    fi
-  done
-  log "INFO" "finalize_new_content_dirs" "END: Finalized new content dirs in $TO"
+  # All dirs promoted; production is live. The "$DIR-old" asides are deliberately NOT swept here.
+  #
+  # Sweeping them (rm -rf) is the only step whose cost scales with the site's file count, and doing it
+  # inside this call -- which the PHP request blocks on via exec() -- is what used to make finalize run
+  # long enough for PHP-FPM to time out and orphan a still-running bash finalize. The next advance would
+  # then re-enter finalize, collide with the orphan on the transient lock, and report the deploy FAILED
+  # even though production was fully and correctly swapped (and "deploy all" would skip the DB step).
+  #
+  # By leaving the asides, finalize is now only the instant rename swap and cannot time out. Each aside
+  # is a hardlink-heavy, disposable backup of the pre-deploy production; the next deploy's setup sweeps
+  # it via cleanup_failed_new_content_dirs, which is sole-copy-safe (it only removes "-old" when live
+  # production is in place, else restores it). Until then it is a harmless safety copy.
+  log "INFO" "finalize_new_content_dirs" "END: Finalized new content dirs in $TO (asides left for the next setup to sweep)"
 }
 
 # --- Main Functions ---
@@ -2571,6 +2623,93 @@ deploy_files() {
   echo '{"status":"success","message":"Files deployed successfully."}'
 }
 
+# deploy_content_setup / deploy_content_finalize split deploy_files into the two bash-only bookends of
+# the content deploy, so the chunked PHP CopyEngine (includes/Copy) can run step (2) -- the
+# prepare_new_content_dirs --link-dest delta -- between them, one bounded burst per request, instead
+# of the single long rsync that prepare_new_content_dirs would otherwise do in one shot.
+#
+# deploy_files above is left untouched for back-compat (the /staging/deploy route still uses it). The
+# stepped path is: PHP calls deploy_content_setup, then drives CopyEngine until the "-new" tree is
+# built, then calls deploy_content_finalize. Setup and finalize are the exact step (1) and step (3) of
+# deploy_files; only step (2) is handed to PHP. write_deploy_result is a no-op unless NFD_DEPLOY_*
+# are exported (only Staging::startAsyncDeploy does that), so on the stepped path the PHP
+# ContentCopyController owns the deploy-result file; error()/run_or_fail still record a failure.
+
+# Step (1) of a content deploy: sweep any stale -new/-old from a prior attempt and verify the sweep
+# succeeded. Does NOT move core or run prepare/finalize -- the PHP CopyEngine builds the "-new" delta
+# next, then deploy_content_core lays the WordPress core, then deploy_content_finalize swaps.
+deploy_content_setup() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+
+  # Fail if a stale "-new" or "-old" survived the sweep. cleanup_failed_new_content_dirs only LOGS an rm
+  # failure, so verify here:
+  #   - a stale "-new" would be copied on top of and shipped to production;
+  #   - a stale "-old" (the prior deploy's aside, which finalize now leaves for this setup to sweep) left
+  #     in place lets finalize's "already promoted" skip-branch mis-count it as a promoted dir, which can
+  #     corrupt a later-dir rollback. cleanup_failed_new_content_dirs removes "-old" when production is in
+  #     place and restores it (moving it to ORIG) when production is missing, so after a successful sweep
+  #     no "-old" should remain either way.
+  for d in uploads themes plugins; do
+    [ ! -e "$PRODUCTION_DIR/wp-content/$d-new" ] || error "Unable to clear stale $d-new before content copy."
+    [ ! -e "$PRODUCTION_DIR/wp-content/$d-old" ] || error "Unable to clear stale $d-old before content copy."
+  done
+
+  log "INFO" "deploy_content_setup:end" "Content deploy setup complete."
+  echo '{"status":"success","message":"Content deploy setup complete."}'
+}
+
+# Step (2.5) of a content deploy: move the WordPress core into place (or notify the symlink-core
+# watcher) and sync php-ai-client. This runs AFTER the PHP CopyEngine has finished building "-new" and
+# immediately BEFORE finalize, rather than at setup: on the stepped path the content copy between setup
+# and here can take a long time, and downloading new core at setup would leave production running new
+# core against old content for that whole window. Kept as its OWN bounded phase (not folded into
+# finalize) so that finalize is only the instant rename swap -- a phase that cannot time out and orphan
+# a long-running bash process mid-swap. `wp core download --force` is idempotent, so if this phase is
+# interrupted and re-run it simply re-lays the same files.
+deploy_content_core() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  if [ -L "$PRODUCTION_DIR/index.php" ]; then
+    echo "path=$PRODUCTION_DIR" > "/nfssys/etc/wp_symink_watch/$(whoami).notify"
+  else
+    WP_VER=$(wp core version)
+    # --skip-content is load-bearing here, NOT cosmetic. --skip-themes/--skip-plugins only stop WP-CLI
+    # from LOADING themes/plugins at boot; they do not change what `core download` extracts. Without
+    # --skip-content, core download copy()s the tarball's bundled wp-content (akismet, hello.php, the
+    # twenty* themes, the index.php guards) over production's files -- and because the copy phase has
+    # already HARDLINKED each unchanged file into the "-new" tree, rewriting production's inode rewrites
+    # the "-new" copy too, shipping stock bundled content to production on the swap (and corrupting the
+    # "-old" backup, which shares those inodes). --skip-content extracts ONLY core; wp-content comes
+    # solely from the staging copy that built "-new".
+    run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-content --skip-themes --skip-plugins --quiet
+    sync_php_ai_client "$STAGING_DIR" "$PRODUCTION_DIR"
+  fi
+
+  log "INFO" "deploy_content_core:end" "Content deploy core download complete."
+  echo '{"status":"success","message":"Content deploy core download complete."}'
+}
+
+# Step (3) of a content deploy: atomically promote the "-new" tree the PHP CopyEngine built. This is
+# ONLY the instant rename swap now (core download moved to deploy_content_core above), so the window in
+# which an FPM timeout could orphan a still-running bash finalize -- releasing the PHP flock and letting
+# the next poll re-enter finalize and collide on the transient lock_check -- is shrunk to microseconds.
+# Reuses the deploy_files:end SUCCESS marker so the existing log-tail reader (getDeployStatusFromLog)
+# still sees completion.
+deploy_content_finalize() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  finalize_new_content_dirs "$PRODUCTION_DIR" || {
+    cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+    error "Unable to finalize new content directories."
+  }
+
+  log "SUCCESS" "deploy_files:end" "Files deployed successfully."
+  write_deploy_result "success" "Files deployed successfully." "deploy_files"
+  echo '{"status":"success","message":"Files deployed successfully."}'
+}
+
 # Helper: restore from backup and log
 _restore_db_from_backup() {
   local BACKUP="$1"
@@ -2873,6 +3012,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     destroy) destroy "$@";;
     clone) clone "$@";;
     deploy_files) deploy_files "$@";;
+    deploy_content_setup) deploy_content_setup "$@";;
+    deploy_content_core) deploy_content_core "$@";;
+    deploy_content_finalize) deploy_content_finalize "$@";;
     deploy_db) deploy_db "$@";;
     deploy_files_db) deploy_files_db "$@";;
     sso_staging) sso_staging "$@";;

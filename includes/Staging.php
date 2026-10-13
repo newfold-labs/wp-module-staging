@@ -2,6 +2,7 @@
 namespace NewfoldLabs\WP\Module\Staging;
 
 use NewfoldLabs\WP\ModuleLoader\Container;
+use NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController;
 use function NewfoldLabs\WP\ModuleLoader\container;
 
 /**
@@ -37,6 +38,20 @@ class Staging {
 	 */
 	const DEPLOY_JOB_TTL = 1800;
 
+	/**
+	 * WP-cron hook that advances an in-progress stepped content copy.
+	 *
+	 * @var string
+	 */
+	const CONTENT_COPY_CRON_HOOK = 'nfd_staging_advance_content_copy';
+
+	/**
+	 * Seconds between content-copy cron reschedules while a job is still running.
+	 *
+	 * @var int
+	 */
+	const CONTENT_COPY_CRON_INTERVAL = 20;
+
 
 	/**
 	 * Constructor.
@@ -55,6 +70,10 @@ class Staging {
 			}
 		);
 		add_action( 'wp_loaded', array( StagingMenu::class, 'init' ), 100 );
+
+		// WP-cron fallback that advances an in-progress stepped content copy and reschedules itself
+		// until the job finishes, so a closed browser (no more REST polls) still completes a deploy.
+		add_action( self::CONTENT_COPY_CRON_HOOK, array( $this, 'runContentCopyCron' ) );
 
 		// Mark Safe Mode as confirmed so the banner never re-appears
 		add_action( 'init', array( $this, 'confirm_jetpack_safe_mode' ), 20 );
@@ -425,6 +444,159 @@ class Staging {
 	}
 
 	/**
+	 * Advance one bounded unit of the stepped content-copy deploy and return progress.
+	 *
+	 * This is the new chunked deploy path: each call runs at most one bash bookend verb OR one
+	 * CopyEngine burst, so a poll driver (the REST advance route or the cron fallback) makes steady
+	 * progress without any single request running long. The legacy `/staging/deploy` path is
+	 * untouched.
+	 *
+	 * @param string $type    Copy type. Only `deploy_files` is supported for now.
+	 * @param bool   $restart When true, discard any prior job and start fresh (the UI sends this on the
+	 *                        first advance of a new deploy).
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function advanceContentCopy( $type = 'deploy_files', $restart = false ) {
+		$controller = $this->getContentCopyController( $type );
+		if ( is_wp_error( $controller ) ) {
+			return $controller;
+		}
+
+		$result = $controller->advance( (bool) $restart );
+		$this->maybeScheduleContentCopyCron( $result );
+
+		return $result;
+	}
+
+	/**
+	 * Report the current phase/progress of the stepped content-copy deploy without advancing it.
+	 *
+	 * @param string $type Copy type. Only `deploy_files` is supported for now.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function getContentCopyStatus( $type = 'deploy_files' ) {
+		$controller = $this->getContentCopyController( $type );
+		if ( is_wp_error( $controller ) ) {
+			return $controller;
+		}
+
+		return $controller->status();
+	}
+
+	/**
+	 * Build a content-copy controller for a validated copy type.
+	 *
+	 * @param string $type Copy type.
+	 *
+	 * @return ContentCopyController|\WP_Error
+	 */
+	protected function getContentCopyController( $type ) {
+		if ( 'deploy_files' !== $type ) {
+			return new \WP_Error(
+				'invalid_copy_type',
+				__( 'Unsupported content copy type.', 'wp-module-staging' )
+			);
+		}
+
+		return new ContentCopyController( $this );
+	}
+
+	/**
+	 * Run a single content-deploy bash verb through the normal command path.
+	 *
+	 * Exposed so ContentCopyController (a separate class in the Copy namespace) can invoke the
+	 * `deploy_content_setup` / `deploy_content_finalize` verbs while keeping runCommand's token
+	 * handshake, cache resync, NFD_STAGING_ENV, and shell-escaping. These verbs are bounded and
+	 * synchronous (not isDeployCommand()), so runCommand runs them via executeStagingScript.
+	 *
+	 * @param string $verb One of `deploy_content_setup`, `deploy_content_core`, `deploy_content_finalize`.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function runContentDeployVerb( $verb ) {
+		if ( ! in_array( $verb, array( 'deploy_content_setup', 'deploy_content_core', 'deploy_content_finalize' ), true ) ) {
+			return new \WP_Error(
+				'invalid_command',
+				__( 'Invalid staging CLI command.', 'wp-module-staging' )
+			);
+		}
+
+		return $this->runCommand( $verb );
+	}
+
+	/**
+	 * Persist a deploy progress/result payload to the shared result file.
+	 *
+	 * Lets ContentCopyController reuse the exact file the legacy `/staging/deploy` GET status reads,
+	 * so the stepped path's running/success/error states surface through the existing poller too.
+	 *
+	 * @param array $data Result payload.
+	 *
+	 * @return void
+	 */
+	public function recordDeployResult( array $data ) {
+		$this->writeDeployResult( $data );
+	}
+
+	/**
+	 * Cron callback: advance an in-progress content copy and reschedule until it finishes.
+	 *
+	 * @return void
+	 */
+	public function runContentCopyCron() {
+		$controller = new ContentCopyController( $this );
+		if ( ! $controller->isInProgress() ) {
+			// No job, or it already finished; nothing to reschedule.
+			return;
+		}
+
+		$result = $controller->advance();
+		$this->maybeScheduleContentCopyCron( $result );
+	}
+
+	/**
+	 * Schedule or unschedule the content-copy cron fallback based on a job result.
+	 *
+	 * @param array|\WP_Error $result Latest advance()/status() envelope.
+	 *
+	 * @return void
+	 */
+	protected function maybeScheduleContentCopyCron( $result ) {
+		$running = is_array( $result ) && isset( $result['status'] ) && 'running' === $result['status'];
+
+		if ( $running ) {
+			$this->scheduleContentCopyCron();
+		} else {
+			$this->unscheduleContentCopyCron();
+		}
+	}
+
+	/**
+	 * Schedule the next content-copy cron tick if one is not already queued.
+	 *
+	 * @return void
+	 */
+	protected function scheduleContentCopyCron() {
+		if ( ! wp_next_scheduled( self::CONTENT_COPY_CRON_HOOK ) ) {
+			wp_schedule_single_event( time() + self::CONTENT_COPY_CRON_INTERVAL, self::CONTENT_COPY_CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Remove any queued content-copy cron tick (job done, errored, or gone).
+	 *
+	 * @return void
+	 */
+	protected function unscheduleContentCopyCron() {
+		$timestamp = wp_next_scheduled( self::CONTENT_COPY_CRON_HOOK );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, self::CONTENT_COPY_CRON_HOOK );
+		}
+	}
+
+	/**
 	 * Map REST deploy type to the staging CLI command name.
 	 *
 	 * @param string $type Deployment type.
@@ -541,6 +713,15 @@ class Staging {
 	 */
 	protected function isDeployInProgress() {
 		if ( $this->isDeployLockHeld() ) {
+			return true;
+		}
+
+		// A stepped content copy has no PHP deploy flock and can legitimately run far longer than
+		// DEPLOY_JOB_TTL (that is the whole point), so consult it directly. Without this, a big stepped
+		// deploy older than the TTL would let a legacy /staging/deploy start on top of it and rm -rf the
+		// engine's in-progress `-new` tree.
+		$content_copy = new ContentCopyController( $this );
+		if ( $content_copy->isInProgress() ) {
 			return true;
 		}
 
@@ -1223,15 +1404,18 @@ class Staging {
 		}
 
 		$allowedCommands = array(
-			'clone'           => true,
-			'compat_check'    => true,
-			'create'          => true,
-			'deploy_db'       => true,
-			'deploy_files'    => true,
-			'deploy_files_db' => true,
-			'destroy'         => true,
-			'sso_production'  => true,
-			'sso_staging'     => true,
+			'clone'                   => true,
+			'compat_check'            => true,
+			'create'                  => true,
+			'deploy_db'               => true,
+			'deploy_files'            => true,
+			'deploy_files_db'         => true,
+			'deploy_content_setup'    => true,
+			'deploy_content_core'     => true,
+			'deploy_content_finalize' => true,
+			'destroy'                 => true,
+			'sso_production'          => true,
+			'sso_staging'             => true,
 		);
 
 		// Check if command is allowed
@@ -1240,6 +1424,26 @@ class Staging {
 				'invalid_command',
 				__( 'Invalid staging CLI command.', 'wp-module-staging' )
 			);
+		}
+
+		/*
+		 * A stepped content copy builds the production `-new` tree over many short requests. While it is
+		 * in progress, any OTHER staging command would mutate or `rm -rf` the very trees the copy is
+		 * reading from (staging) or writing to (production/`-new`): a concurrent `clone`/`create` runs
+		 * move_content_dirs and wipes staging mid-copy, a `destroy` tears it down, a legacy `deploy_*`
+		 * promotes on top of a half-built tree. Files then vanish mid-copy and a partial tree can be
+		 * finalized over production. Refuse every command except the copy's OWN bounded bookend verbs
+		 * (which are how the in-progress job makes progress) until it finishes. Fail closed.
+		 */
+		$stepped_copy_verbs = array( 'deploy_content_setup', 'deploy_content_core', 'deploy_content_finalize' );
+		if ( ! in_array( $command_name, $stepped_copy_verbs, true ) ) {
+			$content_copy = new ContentCopyController( $this );
+			if ( $content_copy->isInProgress() ) {
+				return new \WP_Error(
+					'content_copy_in_progress',
+					__( 'A content deploy is already in progress. Wait for it to finish before running another staging operation.', 'wp-module-staging' )
+				);
+			}
 		}
 
 		$config = $this->getConfig();
@@ -1403,7 +1607,13 @@ class Staging {
 			return $response;
 		}
 
-		wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
+		// Do not wipe the log after a stepped content-copy bookend. These verbs are synchronous (so they
+		// reach this non-deploy path), but finalize writes the forensic trail -- "-recovered" rollbacks,
+		// kept-aside warnings -- that a support engineer needs after a failed/partial swap. The other
+		// verbs run standalone, so clearing the log for them keeps it scoped to the latest operation.
+		if ( 0 !== strpos( $command_name, 'deploy_content_' ) ) {
+			wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
+		}
 
 		return $response;
 	}

@@ -9,7 +9,8 @@
 #     copied. This is what keeps a deploy from needing a second full copy of a large uploads tree.
 #   - finalize_new_content_dirs promotes "$DIR-new" over production with two instant renames (move
 #     production aside, promote new), never deleting live production before the swap. On promotion
-#     failure it restores production from the aside, and it leaves no "-new"/"-old" leftovers.
+#     failure it restores production from the aside. finalize consumes every "-new" (promoted) but
+#     deliberately KEEPS the "-old" asides as disposable backups; the next deploy's setup sweeps them.
 #
 # The staging script runs server-side via PHP exec() and is not exercised by the PHP (wpunit) or
 # Playwright suites, so these bash tests are its only automated coverage. They do real filesystem
@@ -84,7 +85,7 @@ assert_diff_file "changed file is not hardlinked to the old production version" 
   "$PROD/wp-content/themes/style.css" "$PROD/wp-content/themes-new/style.css"
 assert_absent "production-only (obsolete) file is excluded from -new" "$PROD/wp-content/uploads-new/old.txt"
 
-echo "== finalize_new_content_dirs promotes atomically and leaves no leftovers =="
+echo "== finalize_new_content_dirs promotes atomically (instant swap; asides kept for the next setup) =="
 
 finalize_new_content_dirs "$PROD"
 
@@ -92,50 +93,64 @@ assert_eq "production has the unchanged file" "shared" "$(cat "$PROD/wp-content/
 assert_eq "production gained the staging-only file" "brand new" "$(cat "$PROD/wp-content/uploads/new.txt" 2>/dev/null)"
 assert_eq "production took the changed file" "v2-longer" "$(cat "$PROD/wp-content/themes/style.css" 2>/dev/null)"
 assert_absent "obsolete file is gone from production" "$PROD/wp-content/uploads/old.txt"
-assert_absent "no uploads-new leftover" "$PROD/wp-content/uploads-new"
-assert_absent "no uploads-old leftover" "$PROD/wp-content/uploads-old"
-assert_absent "no themes-new leftover" "$PROD/wp-content/themes-new"
-assert_absent "no themes-old leftover" "$PROD/wp-content/themes-old"
+assert_absent "no uploads-new leftover (promoted)" "$PROD/wp-content/uploads-new"
+assert_absent "no themes-new leftover (promoted)" "$PROD/wp-content/themes-new"
+# finalize is now only the instant swap: the "-old" asides are deliberately left as disposable,
+# hardlink-heavy safety backups for the next deploy's setup (cleanup_failed_new_content_dirs) to sweep,
+# so finalize cannot run long enough to be orphaned mid-sweep and report a successful swap as failed.
+assert_present "uploads-old aside is kept (swept by the next setup, not by finalize)" "$PROD/wp-content/uploads-old"
+assert_present "themes-old aside is kept (swept by the next setup, not by finalize)" "$PROD/wp-content/themes-old"
 
-echo "== finalize_new_content_dirs preserves production when promotion fails (rollback) =="
+echo "== finalize preserves production when a promotion cannot complete (rollback) =="
 
-# Production has live content; no prepared "-new" exists, so the promotion rename must fail and
-# trigger the rollback. This is the regression guard for the old destroy-then-rename behaviour,
-# which would have deleted production before discovering it could not complete.
+# Trigger a genuine finalize failure deterministically: a stale uploads-old whose directory is
+# read-only, so the normalize step's `rm -rf` cannot unlink the file inside and must abort. Production
+# (uploads/keep.txt) must be left intact. (A missing -new is no longer a failure; it is skipped.)
+# Root bypasses permission bits, so skip there.
 R2="$(mktemp -d)"; P2="$R2/prod"
-mkdir -p "$P2/wp-content/uploads"
+mkdir -p "$P2/wp-content/uploads" "$P2/wp-content/uploads-new" "$P2/wp-content/uploads-old"
 echo "LIVE DATA" > "$P2/wp-content/uploads/keep.txt"
-
-ROLLBACK_HIT=0
-finalize_new_content_dirs "$P2" 'ROLLBACK_HIT=1'
-
-assert_eq "error/rollback path was taken" "1" "$ROLLBACK_HIT"
-assert_present "production uploads directory still exists after failed promotion" "$P2/wp-content/uploads"
-assert_eq "production content is intact (not lost) after failed promotion" "LIVE DATA" "$(cat "$P2/wp-content/uploads/keep.txt" 2>/dev/null)"
-assert_absent "no uploads-old aside left stranded" "$P2/wp-content/uploads-old"
+echo "STAGED"    > "$P2/wp-content/uploads-new/f"
+echo "BLOCK"     > "$P2/wp-content/uploads-old/f"
+chmod 0500 "$P2/wp-content/uploads-old"
+if [ "$(id -u)" = "0" ]; then
+	chmod 0755 "$P2/wp-content/uploads-old"
+	ok "rollback test skipped (running as root; cannot block rm)"
+else
+	ROLLBACK_HIT=0
+	finalize_new_content_dirs "$P2" 'ROLLBACK_HIT=1'
+	chmod 0755 "$P2/wp-content/uploads-old" 2>/dev/null
+	assert_eq "error/rollback path was taken" "1" "$ROLLBACK_HIT"
+	assert_eq "production content is intact (not lost) after failed finalize" "LIVE DATA" "$(cat "$P2/wp-content/uploads/keep.txt" 2>/dev/null)"
+	assert_present "production uploads directory still exists" "$P2/wp-content/uploads"
+fi
 
 echo "== finalize is all-or-nothing across dirs: one failing dir rolls the others back =="
 
-# uploads and themes have valid prepared trees; plugins has none, so its promotion fails. Because
-# asides are only deleted after every dir promotes, uploads and themes must roll back to their
-# ORIGINAL production content, not be left half-deployed with the new content.
+# uploads and themes promote cleanly; plugins then fails (its read-only plugins-old cannot be cleared).
+# Because asides are only deleted after every dir promotes, uploads and themes must roll back to their
+# ORIGINAL production content, not be left half-deployed. Root bypasses perms, so skip there.
 R4="$(mktemp -d)"; P4="$R4/prod"
 mkdir -p "$P4/wp-content/uploads" "$P4/wp-content/uploads-new" \
          "$P4/wp-content/themes"  "$P4/wp-content/themes-new" \
-         "$P4/wp-content/plugins"
+         "$P4/wp-content/plugins"  "$P4/wp-content/plugins-new" "$P4/wp-content/plugins-old"
 echo "ORIG-UP" > "$P4/wp-content/uploads/f";  echo "NEW-UP" > "$P4/wp-content/uploads-new/f"
 echo "ORIG-TH" > "$P4/wp-content/themes/f";   echo "NEW-TH" > "$P4/wp-content/themes-new/f"
-echo "ORIG-PL" > "$P4/wp-content/plugins/f"   # no plugins-new -> plugins promotion fails
-
-XDIR_HIT=0
-finalize_new_content_dirs "$P4" 'XDIR_HIT=1'
-
-assert_eq "cross-dir failure took the error path" "1" "$XDIR_HIT"
-assert_eq "uploads rolled back to original content" "ORIG-UP" "$(cat "$P4/wp-content/uploads/f" 2>/dev/null)"
-assert_eq "themes rolled back to original content" "ORIG-TH" "$(cat "$P4/wp-content/themes/f" 2>/dev/null)"
-assert_eq "plugins restored to original content" "ORIG-PL" "$(cat "$P4/wp-content/plugins/f" 2>/dev/null)"
-assert_absent "no uploads-old left after rollback" "$P4/wp-content/uploads-old"
-assert_absent "no themes-old left after rollback" "$P4/wp-content/themes-old"
+echo "ORIG-PL" > "$P4/wp-content/plugins/f";  echo "NEW-PL" > "$P4/wp-content/plugins-new/f"
+echo "BLOCK"   > "$P4/wp-content/plugins-old/f"
+chmod 0500 "$P4/wp-content/plugins-old"
+if [ "$(id -u)" = "0" ]; then
+	chmod 0755 "$P4/wp-content/plugins-old"
+	ok "cross-dir rollback test skipped (running as root; cannot block rm)"
+else
+	XDIR_HIT=0
+	finalize_new_content_dirs "$P4" 'XDIR_HIT=1'
+	chmod 0755 "$P4/wp-content/plugins-old" 2>/dev/null
+	assert_eq "cross-dir failure took the error path" "1" "$XDIR_HIT"
+	assert_eq "uploads rolled back to original content" "ORIG-UP" "$(cat "$P4/wp-content/uploads/f" 2>/dev/null)"
+	assert_eq "themes rolled back to original content" "ORIG-TH" "$(cat "$P4/wp-content/themes/f" 2>/dev/null)"
+	assert_eq "plugins never promoted (still original)" "ORIG-PL" "$(cat "$P4/wp-content/plugins/f" 2>/dev/null)"
+fi
 
 echo "== finalize normalizes a stale -old left by an interrupted prior run =="
 
@@ -152,7 +167,9 @@ echo "LEFTOVER" > "$P5/wp-content/uploads-old/f"
 finalize_new_content_dirs "$P5"
 assert_eq "promoted staged content despite stale -old" "STAGED" "$(cat "$P5/wp-content/uploads/f" 2>/dev/null)"
 assert_absent "stale -old cleared, not nested" "$P5/wp-content/uploads/uploads-old"
-assert_absent "no uploads-old remains" "$P5/wp-content/uploads-old"
+# The stale LEFTOVER -old is dropped during normalization; the -old that remains is this run's aside of
+# the pre-deploy production (PROD), kept as a disposable backup for the next setup to sweep.
+assert_eq "remaining uploads-old is this run's production aside (not the stale leftover)" "PROD" "$(cat "$P5/wp-content/uploads-old/f" 2>/dev/null)"
 
 echo "== finalize restores production from a -old left when ORIG is missing (mid-swap interrupt) =="
 
@@ -167,10 +184,11 @@ echo "STAGED6" > "$P6/wp-content/uploads-new/f"
 echo "SOLE-PROD" > "$P6/wp-content/uploads-old/f"   # no uploads/ (ORIG) present
 finalize_new_content_dirs "$P6"
 assert_present "uploads production directory exists after restore+promote" "$P6/wp-content/uploads"
-# -old must not have been blindly rm'd while it was the only copy; after a successful deploy uploads
-# holds the staged content and no -old remains.
+# -old must never be blindly rm'd while it is the only copy. It is restored into place, then moved
+# aside again as this run's backup, so after the deploy production holds the staged content AND the
+# sole-production content survives in the -old aside (swept by the next setup, once ORIG is in place).
 assert_eq "uploads holds staged content after deploy" "STAGED6" "$(cat "$P6/wp-content/uploads/f" 2>/dev/null)"
-assert_absent "sole-production -old was consumed, not left stranded" "$P6/wp-content/uploads-old"
+assert_eq "sole-production content preserved in the -old aside, not deleted" "SOLE-PROD" "$(cat "$P6/wp-content/uploads-old/f" 2>/dev/null)"
 
 echo "== cleanup sweeps -new always, and -old only when it is not the sole production copy =="
 
@@ -194,8 +212,35 @@ assert_eq "cleanup left production themes untouched" "LIVE-TH" "$(cat "$P3/wp-co
 assert_eq "cleanup RESTORED sole-copy -old to production (did not delete it)" "SOLE-PL" "$(cat "$P3/wp-content/plugins/f" 2>/dev/null)"
 assert_absent "restored plugins-old no longer present" "$P3/wp-content/plugins-old"
 
+echo "== finalize re-run is idempotent: a dir already promoted (no -new) is skipped, not re-promoted =="
+
+# Simulate a finalize that was interrupted after promoting uploads but before themes/plugins: uploads
+# holds the new content and has NO uploads-new (the rename consumed it); themes/plugins still have -new.
+# A re-run must skip uploads (not error on its missing -new, not touch uploads-old), promote the rest,
+# and succeed.
+R7="$(mktemp -d)"; P7="$R7/prod"
+mkdir -p "$P7/wp-content/uploads" "$P7/wp-content/uploads-old" \
+         "$P7/wp-content/themes" "$P7/wp-content/themes-new" \
+         "$P7/wp-content/plugins" "$P7/wp-content/plugins-new"
+echo "NEW-UP"  > "$P7/wp-content/uploads/f"      # already promoted; no uploads-new
+echo "OLD-UP"  > "$P7/wp-content/uploads-old/f"  # disposable leftover aside
+echo "OLD-TH"  > "$P7/wp-content/themes/f";   echo "NEW-TH" > "$P7/wp-content/themes-new/f"
+echo "OLD-PL"  > "$P7/wp-content/plugins/f";  echo "NEW-PL" > "$P7/wp-content/plugins-new/f"
+
+RERUN_HIT=0
+finalize_new_content_dirs "$P7" 'RERUN_HIT=1'
+
+assert_eq "re-run did not hit the error path" "0" "$RERUN_HIT"
+assert_eq "already-promoted uploads untouched" "NEW-UP" "$(cat "$P7/wp-content/uploads/f" 2>/dev/null)"
+assert_eq "themes promoted on re-run" "NEW-TH" "$(cat "$P7/wp-content/themes/f" 2>/dev/null)"
+assert_eq "plugins promoted on re-run" "NEW-PL" "$(cat "$P7/wp-content/plugins/f" 2>/dev/null)"
+# finalize no longer sweeps asides, so the leftover uploads-old is left untouched (the next setup's
+# cleanup_failed_new_content_dirs reclaims it); the re-run must not error on it or lose it.
+assert_eq "disposable uploads-old left intact for the next setup to sweep" "OLD-UP" "$(cat "$P7/wp-content/uploads-old/f" 2>/dev/null)"
+assert_absent "no themes-new leftover after re-run" "$P7/wp-content/themes-new"
+
 trap - EXIT
-rm -rf "$ROOT" "$R2" "$R3" "$R4" "$R5" "$R6" "$LOG_FILE" 2>/dev/null
+rm -rf "$ROOT" "$R2" "$R3" "$R4" "$R5" "$R6" "$R7" "$LOG_FILE" 2>/dev/null
 
 echo
 echo "-----------------------------------------"

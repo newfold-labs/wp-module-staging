@@ -107,10 +107,12 @@ class CopyEngine {
 		}
 
 		$lock = fopen( $this->lock_path, 'cb' );
-		if ( false === $lock || ! flock( $lock, LOCK_EX | LOCK_NB ) ) {
-			if ( is_resource( $lock ) ) {
-				fclose( $lock );
-			}
+		if ( false === $lock ) {
+			// Cannot even open the lock file (permission/space). Fail rather than loop "running" forever.
+			return $this->result( 'error', __( 'Could not open the copy lock.', 'wp-module-staging' ) );
+		}
+		if ( ! flock( $lock, LOCK_EX | LOCK_NB ) ) {
+			fclose( $lock );
 			// Another burst is in flight; report where we are without touching anything.
 			$this->checkpoint->load();
 			return $this->result( 'running' );
@@ -131,25 +133,43 @@ class CopyEngine {
 	 */
 	private function runBurst() {
 		$cp = $this->checkpoint;
-		$cp->load();
 
-		// Seed a fresh job: queue the content roots that exist, start a clean manifest.
-		if ( CopyCheckpoint::PHASE_ENUMERATE === $cp->get( 'phase' ) && ! $this->manifest->exists() ) {
+		// A fresh job, OR a cursor that could not be read (missing, corrupt, or truncated by a crash):
+		// start clean. We reseed the worklist, SAVE THE CURSOR FIRST, and only then truncate any stale
+		// manifest. Ordering matters: if the manifest existed but the cursor did not, proceeding would
+		// walk an empty worklist, mark the walk "complete", and copy a partial tree over production.
+		if ( ! $cp->load() ) {
 			$pending = array();
 			foreach ( (array) $this->config['roots'] as $root ) {
 				if ( is_dir( $this->config['source_root'] . '/' . $root ) ) {
 					$pending[] = $root;
 				}
 			}
-			$cp->set( array( 'pending_dirs' => $pending ) );
-			file_put_contents( $this->manifest->path(), '' );
+			$cp->set(
+				array(
+					'job_id'        => uniqid( 'copy_', true ),
+					'phase'         => CopyCheckpoint::PHASE_ENUMERATE,
+					'pending_dirs'  => $pending,
+					'walk_complete' => false,
+				)
+			);
+			if ( ! $cp->save() ) {
+				return $this->result( 'error', __( 'Could not write the copy cursor.', 'wp-module-staging' ) );
+			}
+			if ( false === file_put_contents( $this->manifest->path(), '' ) ) {
+				return $this->result( 'error', __( 'Could not create the copy manifest.', 'wp-module-staging' ) );
+			}
 		}
 
 		$deadline = microtime( true ) + (float) $this->config['budget_seconds'];
 
 		if ( CopyCheckpoint::PHASE_ENUMERATE === $cp->get( 'phase' ) ) {
-			$done = $this->manifest->walk( $this->config['source_root'], $cp, $deadline );
-			if ( $done ) {
+			$walk = $this->manifest->walk( $this->config['source_root'], $cp, $deadline );
+			if ( CopyManifest::WALK_ERROR === $walk ) {
+				$cp->save();
+				return $this->result( 'error', __( 'Could not enumerate the files to copy.', 'wp-module-staging' ) );
+			}
+			if ( CopyManifest::WALK_DONE === $walk ) {
 				$cp->set(
 					array(
 						'phase'           => CopyCheckpoint::PHASE_COPY,
@@ -157,13 +177,25 @@ class CopyEngine {
 					)
 				);
 			}
-			$cp->save();
-			return $this->result( CopyCheckpoint::PHASE_DONE === $cp->get( 'phase' ) ? 'success' : 'running' );
+			// A failed save (full disk / over quota) must fail the job, not report progress that did not
+			// persist: on the next burst the cursor would reload stale and could mis-sequence the phases.
+			if ( ! $cp->save() ) {
+				return $this->result( 'error', __( 'Could not write the copy cursor.', 'wp-module-staging' ) );
+			}
+			return $this->result( 'running' );
 		}
 
 		if ( CopyCheckpoint::PHASE_COPY === $cp->get( 'phase' ) ) {
+			// Defend the C1 invariant: never copy from a manifest whose walk did not finish.
+			if ( ! $cp->get( 'walk_complete' ) ) {
+				return $this->result( 'error', __( 'Copy manifest is incomplete; cannot continue.', 'wp-module-staging' ) );
+			}
 			$status = $this->runCopyPhase( $cp, $deadline );
-			$cp->save();
+			// Persist the copy cursor before reporting; a failed save would otherwise lose the advance and
+			// let the next burst re-copy from a stale offset (or, at DONE, fail to record completion).
+			if ( ! $cp->save() ) {
+				return $this->result( 'error', __( 'Could not write the copy cursor.', 'wp-module-staging' ) );
+			}
 			return $status;
 		}
 
@@ -197,6 +229,17 @@ class CopyEngine {
 			$line_start = ftell( $handle );
 			$line       = fgets( $handle );
 			if ( false === $line ) {
+				// fgets() returns false at EOF AND on a read error (e.g. NFS EIO). Only a genuine EOF
+				// means the manifest is fully consumed; treating a mid-file read error as "done" would
+				// promote a partial tree and delete the un-copied files from production. Require feof(),
+				// and that we actually reached the end of the manifest, before declaring the copy done.
+				clearstatcache();
+				$size = @filesize( $this->manifest->path() );
+				if ( ! feof( $handle ) || ( false !== $size && $line_start < $size ) ) {
+					fclose( $handle );
+					$cp->set( array( 'manifest_offset' => $line_start ) );
+					return $this->result( 'error', __( 'Could not read the whole copy manifest; cannot continue safely.', 'wp-module-staging' ) );
+				}
 				$cp->set( array( 'phase' => CopyCheckpoint::PHASE_DONE ) );
 				$offset = $line_start;
 				break;
@@ -204,8 +247,17 @@ class CopyEngine {
 			$line_end = ftell( $handle );
 			$entry    = CopyManifest::parseLine( $line );
 			if ( null === $entry ) {
-				$offset = $line_end;
-				continue;
+				if ( '' === trim( $line ) ) {
+					// A blank / whitespace-only line (e.g. a trailing newline) is benign: skip it.
+					$offset = $line_end;
+					continue;
+				}
+				// A non-empty line we cannot parse is a file we would never copy -- and the finalize swap
+				// would then DELETE it from production. A re-parse cannot fix a corrupt manifest, so fail
+				// CLOSED immediately rather than retry or silently drop the entry.
+				fclose( $handle );
+				$cp->set( array( 'manifest_offset' => $line_start ) );
+				return $this->result( 'error', __( 'The copy manifest is corrupt; cannot continue safely.', 'wp-module-staging' ) );
 			}
 
 			$rel  = $entry['path'];
@@ -213,12 +265,13 @@ class CopyEngine {
 			$dest = $this->config['dest_root'] . '/' . $this->withSuffix( $rel );
 			$cand = null !== $this->config['link_dest_root'] ? $this->config['link_dest_root'] . '/' . $rel : null;
 			$foff = ( $rel === $current_file ) ? $file_offset : 0;
-			$res  = FileCopier::copyOne( $src, $dest, $entry['size'], $entry['mtime'], $cand, $foff, $deadline );
+			$res  = FileCopier::copyOne( $src, $dest, $entry['size'], $entry['mtime'], $cand, $foff, $deadline, $this->config['source_root'] );
 
 			if ( FileCopier::RESULT_PARTIAL === $res ) {
 				$current_file = $rel;
 				$file_offset  = $foff;
-				$bytes_done  += $foff; // Bytes written so far for this file.
+				// bytes_done counts only COMPLETED files; the in-flight offset is added at display time
+				// (CopyCheckpoint::progress), so it is not double-counted across resumes of this file.
 				$offset       = $line_start; // Re-read this line next burst.
 				break;
 			}
@@ -246,9 +299,10 @@ class CopyEngine {
 				break; // Try again on the next burst.
 			}
 
-			// DONE or SKIP: advance past this entry.
+			// DONE or SKIP: advance past this entry. A DONE file is fully copied now (whether or not it
+			// resumed mid-file), so count its whole size once.
 			if ( FileCopier::RESULT_DONE === $res ) {
-				$bytes_done += ( $rel === $current_file ) ? ( $entry['size'] - $file_offset ) : $entry['size'];
+				$bytes_done += (int) $entry['size'];
 			}
 			++$files_done;
 			$current_file = '';

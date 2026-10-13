@@ -42,13 +42,23 @@ class FileCopier {
 	 * @param int         $size       Expected size from the manifest.
 	 * @param int         $mtime      Expected mtime from the manifest.
 	 * @param string|null $link_cand  Absolute hardlink candidate (current production copy), or null.
-	 * @param int         $offset     In/out: bytes already written; updated as copying proceeds.
-	 * @param float       $deadline   microtime(true) to stop at.
+	 * @param int         $offset      In/out: bytes already written; updated as copying proceeds.
+	 * @param float       $deadline    microtime(true) to stop at.
+	 * @param string      $source_root Absolute content root the copy reads from. Used to tell a single
+	 *                                 file genuinely vanishing (safe to skip) from the whole tree
+	 *                                 disappearing (catastrophic: fail closed).
 	 * @return string One of the RESULT_* constants.
 	 */
-	public static function copyOne( $src, $dest, $size, $mtime, $link_cand, &$offset, $deadline ) {
-		if ( ! is_file( $src ) ) {
-			return self::RESULT_SKIP; // Vanished between walk and copy; not an error.
+	public static function copyOne( $src, $dest, $size, $mtime, $link_cand, &$offset, $deadline, $source_root ) {
+		if ( ! file_exists( $src ) ) {
+			// The source is gone. Distinguish a single file genuinely removed between walk and copy (safe
+			// to skip) from the whole subtree or content root having vanished -- e.g. a concurrent clone
+			// `rm -rf`-ing staging mid-copy, or an EACCES/ESTALE that hides a tree still on disk. SKIPping
+			// a file that is really still there makes the finalize swap DELETE it from production, so skip
+			// only when the immediate parent dir AND the content root both still exist; else fail CLOSED.
+			$parent_ok = is_dir( dirname( $src ) );
+			$root_ok   = is_dir( $source_root );
+			return ( $parent_ok && $root_ok ) ? self::RESULT_SKIP : self::RESULT_ERROR;
 		}
 
 		$dest_dir = dirname( $dest );
@@ -73,7 +83,41 @@ class FileCopier {
 		// 2. Resumable byte copy.
 		$in = fopen( $src, 'rb' );
 		if ( false === $in ) {
+			// Enumerated but now unreadable. Tolerate the legacy htaccess exception (unreadable
+			// .htaccess.* backups); otherwise fail CLOSED rather than silently omit the file.
+			return self::isIgnorable( $src ) ? self::RESULT_SKIP : self::RESULT_ERROR;
+		}
+		// Snapshot integrity: the manifest recorded this file's size + mtime at enumeration. If either
+		// has changed, the file was rewritten/appended/truncated since, so copying exactly the manifest
+		// `$size` would ship a frankenfile (a prefix of new content that passes the size check, or a
+		// short read). Re-snapshot to the CURRENT size + mtime and copy THAT instead: that ships a
+		// self-consistent version of the file (its state right now) and lets the deploy COMPLETE, rather
+		// than failing every retry while a live file (regenerated CSS, an active log) keeps changing.
+		// Restart from offset 0 so no stale partial sized to the old snapshot is kept. A static large
+		// file keeps the same size + mtime across bursts, so a legitimate multi-burst resume is
+		// untouched; only a concurrently-modified file is re-snapshotted.
+		$sstat = fstat( $in );
+		if ( false === $sstat ) {
+			fclose( $in );
 			return self::RESULT_ERROR;
+		}
+		if ( (int) $sstat['size'] !== (int) $size || (int) $sstat['mtime'] !== (int) $mtime ) {
+			$size   = (int) $sstat['size'];
+			$mtime  = (int) $sstat['mtime'];
+			$offset = 0;
+		}
+		// At offset 0, remove any existing destination first. If $dest is a hardlink to the production
+		// inode (a re-processed entry, or a stale -new), writing through it would truncate and corrupt
+		// live production; unlinking breaks the link so we write a fresh, independent file.
+		if ( 0 === $offset && ( is_file( $dest ) || is_link( $dest ) ) ) {
+			@unlink( $dest );
+			clearstatcache( true, $dest );
+			if ( is_file( $dest ) || is_link( $dest ) ) {
+				// The unlink failed and the dest is still there. If it is a hardlink to production, the
+				// byte copy below would write THROUGH it and corrupt live production. Fail CLOSED.
+				fclose( $in );
+				return self::RESULT_ERROR;
+			}
 		}
 		// 'cb' = create/keep, do not truncate. Cut any partial tail past the checkpointed offset, then
 		// position both handles at it, so resume is exact and a dead request leaves no stray bytes.
@@ -129,5 +173,16 @@ class FileCopier {
 			return self::RESULT_ERROR;
 		}
 		return self::RESULT_DONE;
+	}
+
+	/**
+	 * Whether an unreadable source file may be skipped instead of failing the job. Matches the legacy
+	 * worker's IGNORE_PATTERNS=("htaccess.") tolerance for unreadable .htaccess.* backup files.
+	 *
+	 * @param string $path Absolute source path.
+	 * @return bool
+	 */
+	private static function isIgnorable( $path ) {
+		return false !== strpos( basename( $path ), 'htaccess.' );
 	}
 }

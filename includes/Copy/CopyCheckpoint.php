@@ -65,10 +65,27 @@ class CopyCheckpoint {
 	 */
 	private static function defaults() {
 		return array(
+			// A unique id for this job, stamped by the engine when it seeds a fresh cursor. Carried for
+			// diagnostics/log correlation. A stale cursor cannot be mistaken for the current job: the
+			// controller's setup phase calls CopyEngine::cleanup() before each run (see
+			// ContentCopyController::runSetup), so the cursor is always deleted and reseeded, never
+			// resumed across jobs.
+			'job_id'          => '',
 			'phase'           => self::PHASE_ENUMERATE,
 			// Enumerate phase: directories still to walk (relative to the source root). Seeded by the
 			// engine with the content roots (uploads, themes, plugins).
 			'pending_dirs'    => array(),
+			// Enumerate phase: the directory currently being walked (relative to the source root, or null
+			// when none is mid-walk) and the NAME of the last entry already processed in it (or null for
+			// "start from the beginning"). A single huge directory resumes after that name instead of
+			// being re-walked (and re-appended to the manifest) every burst. Resuming by name, not index,
+			// tolerates the directory's contents changing between bursts: nothing <= the last done name is
+			// re-processed, and no existing entry that sorts after it is skipped.
+			'walk_dir'        => null,
+			'walk_last'       => null,
+			// True only once the walk has finished. The copy phase must never start on a manifest whose
+			// walk did not complete (a crash mid-walk would otherwise look "done" with an empty worklist).
+			'walk_complete'   => false,
 			// Copy phase: byte offset into the manifest file of the next line to process.
 			'manifest_offset' => 0,
 			// Copy phase: the entry currently in flight and how many of its bytes are already on disk,
@@ -101,9 +118,60 @@ class CopyCheckpoint {
 		if ( ! is_array( $decoded ) ) {
 			return false;
 		}
-		// Merge over defaults so an older/partial cursor still has every key.
-		$this->state = array_merge( self::defaults(), $decoded );
+		// Merge over defaults so an older/partial cursor still has every key, then decode the paths.
+		$this->state = self::decodePaths( array_merge( self::defaults(), $decoded ) );
 		return true;
+	}
+
+	/**
+	 * Encode the path-bearing fields of a state array to base64 for safe JSON storage.
+	 *
+	 * @param array $state State with raw paths.
+	 * @return array State with encoded paths.
+	 */
+	private static function encodePaths( array $state ) {
+		if ( isset( $state['current_file'] ) ) {
+			$state['current_file'] = base64_encode( (string) $state['current_file'] );
+		}
+		// walk_dir / walk_last are null when no directory is mid-walk; only encode an actual path/name.
+		if ( isset( $state['walk_dir'] ) && null !== $state['walk_dir'] ) {
+			$state['walk_dir'] = base64_encode( (string) $state['walk_dir'] );
+		}
+		if ( isset( $state['walk_last'] ) && null !== $state['walk_last'] ) {
+			$state['walk_last'] = base64_encode( (string) $state['walk_last'] );
+		}
+		if ( isset( $state['pending_dirs'] ) && is_array( $state['pending_dirs'] ) ) {
+			$state['pending_dirs'] = array_map( 'base64_encode', $state['pending_dirs'] );
+		}
+		return $state;
+	}
+
+	/**
+	 * Reverse encodePaths(): decode the path-bearing fields back to raw bytes.
+	 *
+	 * @param array $state State with encoded paths.
+	 * @return array State with raw paths.
+	 */
+	private static function decodePaths( array $state ) {
+		if ( isset( $state['current_file'] ) ) {
+			$state['current_file'] = (string) base64_decode( (string) $state['current_file'] );
+		}
+		// A null walk_dir / walk_last (nothing mid-walk) round-trips as null, not an empty decoded string.
+		if ( isset( $state['walk_dir'] ) && null !== $state['walk_dir'] ) {
+			$state['walk_dir'] = (string) base64_decode( (string) $state['walk_dir'] );
+		}
+		if ( isset( $state['walk_last'] ) && null !== $state['walk_last'] ) {
+			$state['walk_last'] = (string) base64_decode( (string) $state['walk_last'] );
+		}
+		if ( isset( $state['pending_dirs'] ) && is_array( $state['pending_dirs'] ) ) {
+			$state['pending_dirs'] = array_map(
+				function ( $v ) {
+					return (string) base64_decode( (string) $v );
+				},
+				$state['pending_dirs']
+			);
+		}
+		return $state;
 	}
 
 	/**
@@ -117,12 +185,16 @@ class CopyCheckpoint {
 		if ( ! is_dir( $dir ) && ! mkdir( $dir, 0700, true ) && ! is_dir( $dir ) ) {
 			return false;
 		}
-		$json = wp_json_encode( $this->state );
+		$json = wp_json_encode( self::encodePaths( $this->state ) );
 		if ( false === $json ) {
 			return false;
 		}
-		$tmp = $this->path . '.tmp-' . getmypid();
-		if ( false === file_put_contents( $tmp, $json, LOCK_EX ) ) {
+		$tmp     = $this->path . '.tmp-' . getmypid();
+		$written = file_put_contents( $tmp, $json, LOCK_EX );
+		// A short write (full disk / over quota) must NOT be promoted: a truncated cursor would be
+		// unreadable on resume, and the engine would then restart and potentially mis-count as done.
+		if ( false === $written || $written < strlen( $json ) ) {
+			@unlink( $tmp );
 			return false;
 		}
 		if ( ! rename( $tmp, $this->path ) ) {
@@ -179,14 +251,17 @@ class CopyCheckpoint {
 	 */
 	public function progress() {
 		$bytes_total = (int) $this->state['bytes_total'];
+		// bytes_done counts completed files; add the in-flight file's offset so the bar advances during
+		// a large file without being double-counted when that file finishes.
+		$bytes_done  = (int) $this->state['bytes_done'] + (int) $this->state['file_offset'];
 		$percent     = $bytes_total > 0
-			? min( 100, (int) floor( ( (int) $this->state['bytes_done'] / $bytes_total ) * 100 ) )
+			? min( 100, (int) floor( ( $bytes_done / $bytes_total ) * 100 ) )
 			: ( self::PHASE_DONE === $this->state['phase'] ? 100 : 0 );
 		return array(
 			'phase'       => $this->state['phase'],
 			'files_done'  => (int) $this->state['files_done'],
 			'files_total' => (int) $this->state['files_total'],
-			'bytes_done'  => (int) $this->state['bytes_done'],
+			'bytes_done'  => $bytes_done,
 			'bytes_total' => $bytes_total,
 			'percent'     => $percent,
 		);
