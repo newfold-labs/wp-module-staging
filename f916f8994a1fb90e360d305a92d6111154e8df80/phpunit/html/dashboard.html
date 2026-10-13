@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /home/runner/work/wp-module-staging/wp-module-staging</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="_css/bootstrap.min.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/nv.d3.min.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/style.css?v=9.2.32" rel="stylesheet" type="text/css">
+  <link href="_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="index.html">/home/runner/work/wp-module-staging/wp-module-staging</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Constants.php.html#10">NewfoldLabs\WP\Module\Staging\Constants</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#20">NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#25">NewfoldLabs\WP\Module\Staging\Copy\CopyEngine</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#20">NewfoldLabs\WP\Module\Staging\Copy\CopyManifest</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/FileCopier.php.html#25">NewfoldLabs\WP\Module\Staging\Copy\FileCopier</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#7">NewfoldLabs\WP\Module\Staging\StagingCLI</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#51">NewfoldLabs\WP\Module\Staging\StagingCommandLock</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#15">NewfoldLabs\WP\Module\Staging\StagingFeature</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#10">NewfoldLabs\WP\Module\Staging\StagingMenu</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#8">NewfoldLabs\WP\Module\Staging\StagingHealthCheck</a></td><td class="text-right">44%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#11">NewfoldLabs\WP\Module\Staging\StagingPath</a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#11">NewfoldLabs\WP\Module\Staging\Staging</a></td><td class="text-right">57%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#27">NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController</a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#11">NewfoldLabs\WP\Module\Staging\StagingApi</a></td><td class="text-right">81%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Staging.php.html#11">NewfoldLabs\WP\Module\Staging\Staging</a></td><td class="text-right">4278</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#7">NewfoldLabs\WP\Module\Staging\StagingCLI</a></td><td class="text-right">4160</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#25">NewfoldLabs\WP\Module\Staging\Copy\CopyEngine</a></td><td class="text-right">2070</td></tr>
+       <tr><td><a href="includes/Copy/FileCopier.php.html#25">NewfoldLabs\WP\Module\Staging\Copy\FileCopier</a></td><td class="text-right">1806</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#20">NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint</a></td><td class="text-right">1640</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#20">NewfoldLabs\WP\Module\Staging\Copy\CopyManifest</a></td><td class="text-right">1560</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#51">NewfoldLabs\WP\Module\Staging\StagingCommandLock</a></td><td class="text-right">1482</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#8">NewfoldLabs\WP\Module\Staging\StagingHealthCheck</a></td><td class="text-right">668</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#11">NewfoldLabs\WP\Module\Staging\StagingPath</a></td><td class="text-right">439</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#27">NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController</a></td><td class="text-right">157</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#10">NewfoldLabs\WP\Module\Staging\StagingMenu</a></td><td class="text-right">132</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#11">NewfoldLabs\WP\Module\Staging\StagingApi</a></td><td class="text-right">17</td></tr>
+       <tr><td><a href="includes/Constants.php.html#10">NewfoldLabs\WP\Module\Staging\Constants</a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#15">NewfoldLabs\WP\Module\Staging\StagingFeature</a></td><td class="text-right">6</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Constants.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\Constants::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#185"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#195"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::bold_heading">bold_heading</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#168"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::table">table</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#129"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::get_admin_user_id">get_admin_user_id</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#93"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::render">render</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#318"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::switchTo">switchTo</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#281"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#231"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::getContentCopyStatus">getContentCopyStatus</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#218"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::advanceContentCopy">advanceContentCopy</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#207"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::getDeployStatus">getDeployStatus</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#196"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::deployToProduction">deployToProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#157"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::createStaging">createStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#215"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::info">info</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1776"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_staging_repair_notice">render_staging_repair_notice</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1755"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::should_run_health_check_on_this_request">should_run_health_check_on_this_request</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1735"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::run_staging_health_check">run_staging_health_check</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1724"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::clean_log">clean_log</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1686"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_log_admin_page">render_log_admin_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1671"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::add_log_admin_page">add_log_admin_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1341"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::switchTo">switchTo</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1322"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#608"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::unscheduleContentCopyCron">unscheduleContentCopyCron</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#597"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::scheduleContentCopyCron">scheduleContentCopyCron</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#582"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::maybeScheduleContentCopyCron">maybeScheduleContentCopyCron</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#205"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::success">success</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#224"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::warning">warning</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#479"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getContentCopyStatus">getContentCopyStatus</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#33"><abbr title="NewfoldLabs\WP\Module\Staging\StagingFeature::initialize">initialize</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#251"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::select_staging_directory">select_staging_directory</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#219"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::discover_staging_directories">discover_staging_directories</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#97"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::handle_staging_redirect">handle_staging_redirect</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#85"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::tools_staging">tools_staging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#68"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_management_page">add_management_page</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_staging_toolbar_items">add_staging_toolbar_items</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#30"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_nfd_subnav">add_nfd_subnav</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#14"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::init">init</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#307"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::update_environment">update_environment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#243"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::merge_config_with_expected">merge_config_with_expected</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#82"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_staging_site">repair_staging_site</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#275"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::releaseIfOurs">releaseIfOurs</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#238"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::error">error</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#221"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::refresh">refresh</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#190"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::heldByOther">heldByOther</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#166"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::holds">holds</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#155"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::isValidToken">isValidToken</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#128"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::parse">parse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#110"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::read">read</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#97"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::path">path</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#88"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#300"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::confirm">confirm</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#282"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::log_to_json">log_to_json</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#273"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::new_line">new_line</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#254"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::colorize_log">colorize_log</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#564"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runContentCopyCron">runContentCopyCron</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#332"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_production_site">build_config_for_production_site</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#213"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::runCopyPhase">runCopyPhase</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#298"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getCreationDate">getCreationDate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#289"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getStagingUrl">getStagingUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#266"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionUrl">getProductionUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#104"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::advance">advance</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#205"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getInstance">getInstance</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#192"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::loadTextDomain">loadTextDomain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::register_staging_assets">register_staging_assets</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#141"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::initialize_staging_app">initialize_staging_app</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#134"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::runBurst">runBurst</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::confirm_jetpack_safe_mode">confirm_jetpack_safe_mode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/FileCopier.php.html#185"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\FileCopier::isIgnorable">isIgnorable</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#316"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionScreenshotUrl">getProductionScreenshotUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/FileCopier.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\FileCopier::copyOne">copyOne</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#431"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::deployToProduction">deployToProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#255"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::parseLine">parseLine</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#236"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::openAt">openAt</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#100"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::walk">walk</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#68"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::exists">exists</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#59"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::path">path</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#50"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#384"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::cleanup">cleanup</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#376"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::isDone">isDone</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#307"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getEnvironment">getEnvironment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#325"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getStagingScreenshotUrl">getStagingScreenshotUrl</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#341"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::withSuffix">withSuffix</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#336"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isEnvironment">isEnvironment</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#341"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::isInProgress">isInProgress</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#410"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::createStaging">createStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#401"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::compatibilityCheck">compatibilityCheck</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#385"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#375"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::stagingExists">stagingExists</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#56"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#66"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::defaults">defaults</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#109"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::load">load</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#132"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::encodePaths">encodePaths</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#155"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::decodePaths">decodePaths</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#183"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::save">save</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#210"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#223"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::get">get</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#233"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::set">set</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#243"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::toArray">toArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#252"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::progress">progress</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#362"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isProduction">isProduction</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#345"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isStaging">isStaging</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#79"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#360"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::result">result</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1126"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::persist_auth_token">persist_auth_token</abbr></a></td><td class="text-right">27%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1379"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::randomToken">randomToken</abbr></a></td><td class="text-right">33%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#598"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::verbMessage">verbMessage</abbr></a></td><td class="text-right">40%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#222"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::advance">advance</abbr></a></td><td class="text-right">46%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#460"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::advanceContentCopy">advanceContentCopy</abbr></a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_staging_site">build_config_for_staging_site</abbr></a></td><td class="text-right">51%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#667"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::acquireDeployLock">acquireDeployLock</abbr></a></td><td class="text-right">52%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1018"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::spawnDetachedStagingScript">spawnDetachedStagingScript</abbr></a></td><td class="text-right">55%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#141"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_production_site">repair_production_site</abbr></a></td><td class="text-right">57%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#790"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::saveState">saveState</abbr></a></td><td class="text-right">63%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#521"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runContentDeployVerb">runContentDeployVerb</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#187"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_valid_staging_config">is_valid_staging_config</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_staging_abspath">is_staging_abspath</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#963"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::startAsyncDeploy">startAsyncDeploy</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#61"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::__construct">__construct</abbr></a></td><td class="text-right">68%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#894"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployCommandStatus">getDeployCommandStatus</abbr></a></td><td class="text-right">68%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#793"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseLogLineTimestamp">parseLogLineTimestamp</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#108"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::__construct">__construct</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#252"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionDir">getProductionDir</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1263"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseStagingScriptResponse">parseStagingScriptResponse</abbr></a></td><td class="text-right">77%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::fix_swapped_urls">fix_swapped_urls</abbr></a></td><td class="text-right">77%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1436"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runCommand">runCommand</abbr></a></td><td class="text-right">78%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#758"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::writeDeployResult">writeDeployResult</abbr></a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#730"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployInProgress">isDeployInProgress</abbr></a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#711"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::phaseStatus">phaseStatus</abbr></a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#495"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getContentCopyController">getContentCopyController</abbr></a></td><td class="text-right">83%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#335"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::log">log</abbr></a></td><td class="text-right">83%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1185"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getScriptEnvironment">getScriptEnvironment</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::config_has_swapped_urls">config_has_swapped_urls</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::maybe_repair">maybe_repair</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#712"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployLockHeld">isDeployLockHeld</abbr></a></td><td class="text-right">85%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#773"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::readDeployResult">readDeployResult</abbr></a></td><td class="text-right">87%</td></tr>
+       <tr><td><a href="includes/Staging.php.html#810"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployStatusFromLog">getDeployStatusFromLog</abbr></a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#264"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::getDeployTypeArgs">getDeployTypeArgs</abbr></a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#511"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::runCore">runCore</abbr></a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#84"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::parse_staging_from_url">parse_staging_from_url</abbr></a></td><td class="text-right">89%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="includes/Copy/FileCopier.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\FileCopier::copyOne">copyOne</abbr></a></td><td class="text-right">1722</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#100"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::walk">walk</abbr></a></td><td class="text-right">600</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::__invoke">__invoke</abbr></a></td><td class="text-right">506</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#213"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::runCopyPhase">runCopyPhase</abbr></a></td><td class="text-right">306</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#243"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::merge_config_with_expected">merge_config_with_expected</abbr></a></td><td class="text-right">210</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#82"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_staging_site">repair_staging_site</abbr></a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#134"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::runBurst">runBurst</abbr></a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1686"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_log_admin_page">render_log_admin_page</abbr></a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#128"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::parse">parse</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#221"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::refresh">refresh</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#300"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::confirm">confirm</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#93"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::render">render</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#155"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::decodePaths">decodePaths</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#183"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::save">save</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#132"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::encodePaths">encodePaths</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#255"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::parseLine">parseLine</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#141"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::repair_production_site">repair_production_site</abbr></a></td><td class="text-right">55</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#222"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::advance">advance</abbr></a></td><td class="text-right">49</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#275"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::releaseIfOurs">releaseIfOurs</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1755"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::should_run_health_check_on_this_request">should_run_health_check_on_this_request</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#104"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::advance">advance</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1436"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runCommand">runCommand</abbr></a></td><td class="text-right">39</td></tr>
+       <tr><td><a href="includes/Staging.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::register_staging_assets">register_staging_assets</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#129"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::get_admin_user_id">get_admin_user_id</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1735"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::run_staging_health_check">run_staging_health_check</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#254"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::colorize_log">colorize_log</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#251"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::select_staging_directory">select_staging_directory</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#219"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::discover_staging_directories">discover_staging_directories</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#109"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::load">load</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#332"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_production_site">build_config_for_production_site</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#190"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::heldByOther">heldByOther</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#582"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::maybeScheduleContentCopyCron">maybeScheduleContentCopyCron</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#345"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isStaging">isStaging</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#97"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::handle_staging_redirect">handle_staging_redirect</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#168"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::table">table</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1341"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::switchTo">switchTo</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="includes/Staging.php.html#894"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployCommandStatus">getDeployCommandStatus</abbr></a></td><td class="text-right">18</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1263"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseStagingScriptResponse">parseStagingScriptResponse</abbr></a></td><td class="text-right">13</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::build_config_for_staging_site">build_config_for_staging_site</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1776"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::render_staging_repair_notice">render_staging_repair_notice</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#238"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::error">error</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#282"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::log_to_json">log_to_json</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#110"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::read">read</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingMenu.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingMenu::add_staging_toolbar_items">add_staging_toolbar_items</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#166"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::holds">holds</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Constants.php.html#16"><abbr title="NewfoldLabs\WP\Module\Staging\Constants::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Staging.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::confirm_jetpack_safe_mode">confirm_jetpack_safe_mode</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#252"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::progress">progress</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#341"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::isInProgress">isInProgress</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#236"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::openAt">openAt</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#341"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::withSuffix">withSuffix</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="includes/Staging.php.html#810"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getDeployStatusFromLog">getDeployStatusFromLog</abbr></a></td><td class="text-right">11</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#187"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_valid_staging_config">is_valid_staging_config</abbr></a></td><td class="text-right">10</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#150"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::fix_swapped_urls">fix_swapped_urls</abbr></a></td><td class="text-right">8</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#790"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::saveState">saveState</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Staging.php.html#667"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::acquireDeployLock">acquireDeployLock</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#598"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::verbMessage">verbMessage</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Staging.php.html#730"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployInProgress">isDeployInProgress</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1018"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::spawnDetachedStagingScript">spawnDetachedStagingScript</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#84"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::parse_staging_from_url">parse_staging_from_url</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1126"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::persist_auth_token">persist_auth_token</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#130"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::config_has_swapped_urls">config_has_swapped_urls</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#266"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionUrl">getProductionUrl</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#210"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::delete">delete</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Copy/CopyCheckpoint.php.html#223"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyCheckpoint::get">get</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingFeature.php.html#33"><abbr title="NewfoldLabs\WP\Module\Staging\StagingFeature::initialize">initialize</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#360"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::result">result</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Copy/CopyEngine.php.html#384"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyEngine::cleanup">cleanup</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingCommandLock.php.html#155"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCommandLock::isValidToken">isValidToken</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Copy/CopyManifest.php.html#285"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\CopyManifest::delete">delete</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#362"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isProduction">isProduction</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#375"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::stagingExists">stagingExists</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingApi.php.html#157"><abbr title="NewfoldLabs\WP\Module\Staging\StagingApi::createStaging">createStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1322"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::destroyStaging">destroyStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#608"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::unscheduleContentCopyCron">unscheduleContentCopyCron</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1724"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::clean_log">clean_log</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#564"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runContentCopyCron">runContentCopyCron</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#597"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::scheduleContentCopyCron">scheduleContentCopyCron</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#479"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getContentCopyStatus">getContentCopyStatus</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#410"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::createStaging">createStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/StagingCLI.php.html#205"><abbr title="NewfoldLabs\WP\Module\Staging\StagingCLI::success">success</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#385"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::cloneProductionToStaging">cloneProductionToStaging</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1185"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getScriptEnvironment">getScriptEnvironment</abbr></a></td><td class="text-right">5</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#711"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::phaseStatus">phaseStatus</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#335"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::log">log</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="includes/Staging.php.html#773"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::readDeployResult">readDeployResult</abbr></a></td><td class="text-right">4</td></tr>
+       <tr><td><a href="includes/Staging.php.html#521"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::runContentDeployVerb">runContentDeployVerb</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Staging.php.html#1379"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::randomToken">randomToken</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Staging.php.html#793"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::parseLogLineTimestamp">parseLogLineTimestamp</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/StagingHealthCheck.php.html#52"><abbr title="NewfoldLabs\WP\Module\Staging\StagingHealthCheck::maybe_repair">maybe_repair</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Staging.php.html#712"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::isDeployLockHeld">isDeployLockHeld</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#511"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::runCore">runCore</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="includes/Staging.php.html#460"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::advanceContentCopy">advanceContentCopy</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/StagingPath.php.html#46"><abbr title="NewfoldLabs\WP\Module\Staging\StagingPath::is_staging_abspath">is_staging_abspath</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#963"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::startAsyncDeploy">startAsyncDeploy</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#252"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getProductionDir">getProductionDir</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Copy/ContentCopyController.php.html#108"><abbr title="NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController::__construct">__construct</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#758"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::writeDeployResult">writeDeployResult</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="includes/Staging.php.html#495"><abbr title="NewfoldLabs\WP\Module\Staging\Staging::getContentCopyController">getContentCopyController</abbr></a></td><td class="text-right">2</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 9.2.32</a> using <a href="https://secure.php.net/" target="_top">PHP 7.4.33</a> at Tue Oct 13 17:28:46 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="_js/jquery.min.js?v=9.2.32" type="text/javascript"></script>
+  <script src="_js/d3.min.js?v=9.2.32" type="text/javascript"></script>
+  <script src="_js/nv.d3.min.js?v=9.2.32" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([9,0,0,0,0,1,2,0,0,2,0,0], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([105,0,0,1,1,2,5,7,6,14,7,45], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[0,3,"<a href=\"includes\/Constants.php.html#10\">NewfoldLabs\\WP\\Module\\Staging\\Constants<\/a>"],[80.42553191489363,93,"<a href=\"includes\/Copy\/ContentCopyController.php.html#27\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController<\/a>"],[0,40,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#20\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint<\/a>"],[0,45,"<a href=\"includes\/Copy\/CopyEngine.php.html#25\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine<\/a>"],[0,39,"<a href=\"includes\/Copy\/CopyManifest.php.html#20\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest<\/a>"],[0,42,"<a href=\"includes\/Copy\/FileCopier.php.html#25\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\FileCopier<\/a>"],[57.54276827371695,230,"<a href=\"includes\/Staging.php.html#11\">NewfoldLabs\\WP\\Module\\Staging\\Staging<\/a>"],[81.48148148148148,16,"<a href=\"includes\/StagingApi.php.html#11\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi<\/a>"],[0,64,"<a href=\"includes\/StagingCLI.php.html#7\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI<\/a>"],[0,38,"<a href=\"includes\/StagingCommandLock.php.html#51\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock<\/a>"],[0,2,"<a href=\"includes\/StagingFeature.php.html#15\">NewfoldLabs\\WP\\Module\\Staging\\StagingFeature<\/a>"],[44.70588235294118,60,"<a href=\"includes\/StagingHealthCheck.php.html#8\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck<\/a>"],[0,11,"<a href=\"includes\/StagingMenu.php.html#10\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu<\/a>"],[50.349650349650354,56,"<a href=\"includes\/StagingPath.php.html#11\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[0,3,"<a href=\"includes\/Constants.php.html#16\">NewfoldLabs\\WP\\Module\\Staging\\Constants::__construct<\/a>"],[75,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#108\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::__construct<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#120\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::jobDir<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#129\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::statePath<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#138\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::engineConfig<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#156\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::engine<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#169\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::controllerLockPath<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#183\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::lock<\/a>"],[100,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#199\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::jobToken<\/a>"],[46.51162790697674,15,"<a href=\"includes\/Copy\/ContentCopyController.php.html#222\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::advance<\/a>"],[100,4,"<a href=\"includes\/Copy\/ContentCopyController.php.html#292\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::resetLocked<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#322\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::status<\/a>"],[0,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#341\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::isInProgress<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#370\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::isStale<\/a>"],[100,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#382\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::runSetup<\/a>"],[100,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#450\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::holdsLockOrFail<\/a>"],[100,6,"<a href=\"includes\/Copy\/ContentCopyController.php.html#474\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::runCopyBurst<\/a>"],[88.88888888888889,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#511\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::runCore<\/a>"],[90,3,"<a href=\"includes\/Copy\/ContentCopyController.php.html#537\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::runFinalize<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#571\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::callVerb<\/a>"],[100,4,"<a href=\"includes\/Copy\/ContentCopyController.php.html#582\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::verbFailed<\/a>"],[40,4,"<a href=\"includes\/Copy\/ContentCopyController.php.html#598\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::verbMessage<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#618\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::fail<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#648\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::writeRunning<\/a>"],[100,2,"<a href=\"includes\/Copy\/ContentCopyController.php.html#667\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::writeSuccess<\/a>"],[90,4,"<a href=\"includes\/Copy\/ContentCopyController.php.html#688\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::envelope<\/a>"],[80,4,"<a href=\"includes\/Copy\/ContentCopyController.php.html#711\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::phaseStatus<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#727\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::jobExists<\/a>"],[100,5,"<a href=\"includes\/Copy\/ContentCopyController.php.html#738\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::loadState<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#761\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::defaultState<\/a>"],[100,1,"<a href=\"includes\/Copy\/ContentCopyController.php.html#779\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::newLockToken<\/a>"],[63.63636363636363,6,"<a href=\"includes\/Copy\/ContentCopyController.php.html#790\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\ContentCopyController::saveState<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#56\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::__construct<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#66\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::defaults<\/a>"],[0,5,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#109\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::load<\/a>"],[0,8,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#132\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::encodePaths<\/a>"],[0,8,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#155\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::decodePaths<\/a>"],[0,8,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#183\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::save<\/a>"],[0,2,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#210\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::delete<\/a>"],[0,2,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#223\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::get<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#233\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::set<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#243\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::toArray<\/a>"],[0,3,"<a href=\"includes\/Copy\/CopyCheckpoint.php.html#252\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyCheckpoint::progress<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyEngine.php.html#79\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::__construct<\/a>"],[0,6,"<a href=\"includes\/Copy\/CopyEngine.php.html#104\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::advance<\/a>"],[0,13,"<a href=\"includes\/Copy\/CopyEngine.php.html#134\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::runBurst<\/a>"],[0,17,"<a href=\"includes\/Copy\/CopyEngine.php.html#213\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::runCopyPhase<\/a>"],[0,3,"<a href=\"includes\/Copy\/CopyEngine.php.html#341\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::withSuffix<\/a>"],[0,2,"<a href=\"includes\/Copy\/CopyEngine.php.html#360\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::result<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyEngine.php.html#376\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::isDone<\/a>"],[0,2,"<a href=\"includes\/Copy\/CopyEngine.php.html#384\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyEngine::cleanup<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyManifest.php.html#50\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::__construct<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyManifest.php.html#59\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::path<\/a>"],[0,1,"<a href=\"includes\/Copy\/CopyManifest.php.html#68\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::exists<\/a>"],[0,24,"<a href=\"includes\/Copy\/CopyManifest.php.html#100\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::walk<\/a>"],[0,3,"<a href=\"includes\/Copy\/CopyManifest.php.html#236\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::openAt<\/a>"],[0,7,"<a href=\"includes\/Copy\/CopyManifest.php.html#255\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::parseLine<\/a>"],[0,2,"<a href=\"includes\/Copy\/CopyManifest.php.html#285\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\CopyManifest::delete<\/a>"],[0,41,"<a href=\"includes\/Copy\/FileCopier.php.html#52\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\FileCopier::copyOne<\/a>"],[0,1,"<a href=\"includes\/Copy\/FileCopier.php.html#185\">NewfoldLabs\\WP\\Module\\Staging\\Copy\\FileCopier::isIgnorable<\/a>"],[68.29268292682927,1,"<a href=\"includes\/Staging.php.html#61\">NewfoldLabs\\WP\\Module\\Staging\\Staging::__construct<\/a>"],[0,3,"<a href=\"includes\/Staging.php.html#130\">NewfoldLabs\\WP\\Module\\Staging\\Staging::confirm_jetpack_safe_mode<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#141\">NewfoldLabs\\WP\\Module\\Staging\\Staging::initialize_staging_app<\/a>"],[0,5,"<a href=\"includes\/Staging.php.html#150\">NewfoldLabs\\WP\\Module\\Staging\\Staging::register_staging_assets<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#192\">NewfoldLabs\\WP\\Module\\Staging\\Staging::loadTextDomain<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#205\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getInstance<\/a>"],[100,3,"<a href=\"includes\/Staging.php.html#216\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getConfig<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#241\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getConfigValue<\/a>"],[75,2,"<a href=\"includes\/Staging.php.html#252\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionDir<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#266\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionUrl<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#280\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingDir<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#289\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#298\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getCreationDate<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#307\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getEnvironment<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#316\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getProductionScreenshotUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#325\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getStagingScreenshotUrl<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#336\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isEnvironment<\/a>"],[0,4,"<a href=\"includes\/Staging.php.html#345\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isStaging<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#362\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isProduction<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#375\">NewfoldLabs\\WP\\Module\\Staging\\Staging::stagingExists<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#385\">NewfoldLabs\\WP\\Module\\Staging\\Staging::cloneProductionToStaging<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#401\">NewfoldLabs\\WP\\Module\\Staging\\Staging::compatibilityCheck<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#410\">NewfoldLabs\\WP\\Module\\Staging\\Staging::createStaging<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#431\">NewfoldLabs\\WP\\Module\\Staging\\Staging::deployToProduction<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#442\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployStatus<\/a>"],[50,2,"<a href=\"includes\/Staging.php.html#460\">NewfoldLabs\\WP\\Module\\Staging\\Staging::advanceContentCopy<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#479\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getContentCopyStatus<\/a>"],[83.33333333333334,2,"<a href=\"includes\/Staging.php.html#495\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getContentCopyController<\/a>"],[66.66666666666666,3,"<a href=\"includes\/Staging.php.html#521\">NewfoldLabs\\WP\\Module\\Staging\\Staging::runContentDeployVerb<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#555\">NewfoldLabs\\WP\\Module\\Staging\\Staging::recordDeployResult<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#564\">NewfoldLabs\\WP\\Module\\Staging\\Staging::runContentCopyCron<\/a>"],[0,4,"<a href=\"includes\/Staging.php.html#582\">NewfoldLabs\\WP\\Module\\Staging\\Staging::maybeScheduleContentCopyCron<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#597\">NewfoldLabs\\WP\\Module\\Staging\\Staging::scheduleContentCopyCron<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#608\">NewfoldLabs\\WP\\Module\\Staging\\Staging::unscheduleContentCopyCron<\/a>"],[100,4,"<a href=\"includes\/Staging.php.html#622\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployCommandForType<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#640\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployCommand<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#649\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployResultPath<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#658\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployLockPath<\/a>"],[52.94117647058824,5,"<a href=\"includes\/Staging.php.html#667\">NewfoldLabs\\WP\\Module\\Staging\\Staging::acquireDeployLock<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#700\">NewfoldLabs\\WP\\Module\\Staging\\Staging::releaseDeployLock<\/a>"],[85.71428571428571,3,"<a href=\"includes\/Staging.php.html#712\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployLockHeld<\/a>"],[80,7,"<a href=\"includes\/Staging.php.html#730\">NewfoldLabs\\WP\\Module\\Staging\\Staging::isDeployInProgress<\/a>"],[80,2,"<a href=\"includes\/Staging.php.html#758\">NewfoldLabs\\WP\\Module\\Staging\\Staging::writeDeployResult<\/a>"],[87.5,4,"<a href=\"includes\/Staging.php.html#773\">NewfoldLabs\\WP\\Module\\Staging\\Staging::readDeployResult<\/a>"],[75,3,"<a href=\"includes\/Staging.php.html#793\">NewfoldLabs\\WP\\Module\\Staging\\Staging::parseLogLineTimestamp<\/a>"],[88.88888888888889,11,"<a href=\"includes\/Staging.php.html#810\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployStatusFromLog<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#860\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeploySuccessLogStep<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#877\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeploySuccessMessage<\/a>"],[68.75,13,"<a href=\"includes\/Staging.php.html#894\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getDeployCommandStatus<\/a>"],[66.66666666666666,2,"<a href=\"includes\/Staging.php.html#963\">NewfoldLabs\\WP\\Module\\Staging\\Staging::startAsyncDeploy<\/a>"],[55.00000000000001,5,"<a href=\"includes\/Staging.php.html#1018\">NewfoldLabs\\WP\\Module\\Staging\\Staging::spawnDetachedStagingScript<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#1059\">NewfoldLabs\\WP\\Module\\Staging\\Staging::executeStagingScript<\/a>"],[100,2,"<a href=\"includes\/Staging.php.html#1091\">NewfoldLabs\\WP\\Module\\Staging\\Staging::deleteAuthToken<\/a>"],[27.77777777777778,3,"<a href=\"includes\/Staging.php.html#1126\">NewfoldLabs\\WP\\Module\\Staging\\Staging::persist_auth_token<\/a>"],[85.71428571428571,5,"<a href=\"includes\/Staging.php.html#1185\">NewfoldLabs\\WP\\Module\\Staging\\Staging::getScriptEnvironment<\/a>"],[92.85714285714286,6,"<a href=\"includes\/Staging.php.html#1213\">NewfoldLabs\\WP\\Module\\Staging\\Staging::logAuthTokenState<\/a>"],[100,1,"<a href=\"includes\/Staging.php.html#1243\">NewfoldLabs\\WP\\Module\\Staging\\Staging::auth_token_row<\/a>"],[77.27272727272727,12,"<a href=\"includes\/Staging.php.html#1263\">NewfoldLabs\\WP\\Module\\Staging\\Staging::parseStagingScriptResponse<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#1322\">NewfoldLabs\\WP\\Module\\Staging\\Staging::destroyStaging<\/a>"],[0,4,"<a href=\"includes\/Staging.php.html#1341\">NewfoldLabs\\WP\\Module\\Staging\\Staging::switchTo<\/a>"],[33.33333333333333,2,"<a href=\"includes\/Staging.php.html#1379\">NewfoldLabs\\WP\\Module\\Staging\\Staging::randomToken<\/a>"],[100,3,"<a href=\"includes\/Staging.php.html#1409\">NewfoldLabs\\WP\\Module\\Staging\\Staging::resync_object_cache<\/a>"],[78.04878048780488,30,"<a href=\"includes\/Staging.php.html#1436\">NewfoldLabs\\WP\\Module\\Staging\\Staging::runCommand<\/a>"],[0,1,"<a href=\"includes\/Staging.php.html#1671\">NewfoldLabs\\WP\\Module\\Staging\\Staging::add_log_admin_page<\/a>"],[0,10,"<a href=\"includes\/Staging.php.html#1686\">NewfoldLabs\\WP\\Module\\Staging\\Staging::render_log_admin_page<\/a>"],[0,2,"<a href=\"includes\/Staging.php.html#1724\">NewfoldLabs\\WP\\Module\\Staging\\Staging::clean_log<\/a>"],[0,5,"<a href=\"includes\/Staging.php.html#1735\">NewfoldLabs\\WP\\Module\\Staging\\Staging::run_staging_health_check<\/a>"],[0,6,"<a href=\"includes\/Staging.php.html#1755\">NewfoldLabs\\WP\\Module\\Staging\\Staging::should_run_health_check_on_this_request<\/a>"],[0,3,"<a href=\"includes\/Staging.php.html#1776\">NewfoldLabs\\WP\\Module\\Staging\\Staging::render_staging_repair_notice<\/a>"],[100,1,"<a href=\"includes\/StagingApi.php.html#32\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::__construct<\/a>"],[98.93617021276596,1,"<a href=\"includes\/StagingApi.php.html#40\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::register_routes<\/a>"],[100,1,"<a href=\"includes\/StagingApi.php.html#148\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::checkPermission<\/a>"],[0,2,"<a href=\"includes\/StagingApi.php.html#157\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::createStaging<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#185\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::cloneProductionToStaging<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#196\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::deployToProduction<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#207\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getDeployStatus<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#218\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::advanceContentCopy<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#231\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getContentCopyStatus<\/a>"],[92.85714285714286,1,"<a href=\"includes\/StagingApi.php.html#240\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getCopyTypeArgs<\/a>"],[88.88888888888889,1,"<a href=\"includes\/StagingApi.php.html#264\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getDeployTypeArgs<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#281\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::destroyStaging<\/a>"],[93.75,2,"<a href=\"includes\/StagingApi.php.html#290\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::getStagingDetails<\/a>"],[0,1,"<a href=\"includes\/StagingApi.php.html#318\">NewfoldLabs\\WP\\Module\\Staging\\StagingApi::switchTo<\/a>"],[0,22,"<a href=\"includes\/StagingCLI.php.html#16\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::__invoke<\/a>"],[0,8,"<a href=\"includes\/StagingCLI.php.html#93\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::render<\/a>"],[0,5,"<a href=\"includes\/StagingCLI.php.html#129\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::get_admin_user_id<\/a>"],[0,4,"<a href=\"includes\/StagingCLI.php.html#168\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::table<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#195\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::bold_heading<\/a>"],[0,2,"<a href=\"includes\/StagingCLI.php.html#205\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::success<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#215\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::info<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#224\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::warning<\/a>"],[0,3,"<a href=\"includes\/StagingCLI.php.html#238\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::error<\/a>"],[0,5,"<a href=\"includes\/StagingCLI.php.html#254\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::colorize_log<\/a>"],[0,1,"<a href=\"includes\/StagingCLI.php.html#273\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::new_line<\/a>"],[0,3,"<a href=\"includes\/StagingCLI.php.html#282\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::log_to_json<\/a>"],[0,8,"<a href=\"includes\/StagingCLI.php.html#300\">NewfoldLabs\\WP\\Module\\Staging\\StagingCLI::confirm<\/a>"],[0,1,"<a href=\"includes\/StagingCommandLock.php.html#88\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::__construct<\/a>"],[0,1,"<a href=\"includes\/StagingCommandLock.php.html#97\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::path<\/a>"],[0,3,"<a href=\"includes\/StagingCommandLock.php.html#110\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::read<\/a>"],[0,9,"<a href=\"includes\/StagingCommandLock.php.html#128\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::parse<\/a>"],[0,2,"<a href=\"includes\/StagingCommandLock.php.html#155\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::isValidToken<\/a>"],[0,3,"<a href=\"includes\/StagingCommandLock.php.html#166\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::holds<\/a>"],[0,4,"<a href=\"includes\/StagingCommandLock.php.html#190\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::heldByOther<\/a>"],[0,9,"<a href=\"includes\/StagingCommandLock.php.html#221\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::refresh<\/a>"],[0,6,"<a href=\"includes\/StagingCommandLock.php.html#275\">NewfoldLabs\\WP\\Module\\Staging\\StagingCommandLock::releaseIfOurs<\/a>"],[0,2,"<a href=\"includes\/StagingFeature.php.html#33\">NewfoldLabs\\WP\\Module\\Staging\\StagingFeature::initialize<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#43\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::__construct<\/a>"],[85.71428571428571,3,"<a href=\"includes\/StagingHealthCheck.php.html#52\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::maybe_repair<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#73\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::get_notice_transient_key<\/a>"],[0,13,"<a href=\"includes\/StagingHealthCheck.php.html#82\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::repair_staging_site<\/a>"],[57.35294117647059,21,"<a href=\"includes\/StagingHealthCheck.php.html#141\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::repair_production_site<\/a>"],[0,14,"<a href=\"includes\/StagingHealthCheck.php.html#243\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::merge_config_with_expected<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#284\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::save_config<\/a>"],[0,1,"<a href=\"includes\/StagingHealthCheck.php.html#307\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::update_environment<\/a>"],[100,1,"<a href=\"includes\/StagingHealthCheck.php.html#323\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::schedule_admin_notice<\/a>"],[83.33333333333334,4,"<a href=\"includes\/StagingHealthCheck.php.html#335\">NewfoldLabs\\WP\\Module\\Staging\\StagingHealthCheck::log<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#14\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::init<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#30\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_nfd_subnav<\/a>"],[0,3,"<a href=\"includes\/StagingMenu.php.html#46\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_staging_toolbar_items<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#68\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::add_management_page<\/a>"],[0,1,"<a href=\"includes\/StagingMenu.php.html#85\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::tools_staging<\/a>"],[0,4,"<a href=\"includes\/StagingMenu.php.html#97\">NewfoldLabs\\WP\\Module\\Staging\\StagingMenu::handle_staging_redirect<\/a>"],[66.66666666666666,2,"<a href=\"includes\/StagingPath.php.html#46\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::is_staging_abspath<\/a>"],[90.9090909090909,2,"<a href=\"includes\/StagingPath.php.html#60\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::parse_staging_from_abspath<\/a>"],[89.47368421052632,7,"<a href=\"includes\/StagingPath.php.html#84\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::parse_staging_from_url<\/a>"],[100,1,"<a href=\"includes\/StagingPath.php.html#120\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::normalize_trailing_slash<\/a>"],[85.71428571428571,6,"<a href=\"includes\/StagingPath.php.html#130\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::config_has_swapped_urls<\/a>"],[77.77777777777779,8,"<a href=\"includes\/StagingPath.php.html#150\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::fix_swapped_urls<\/a>"],[66.66666666666666,8,"<a href=\"includes\/StagingPath.php.html#187\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::is_valid_staging_config<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#219\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::discover_staging_directories<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#251\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::select_staging_directory<\/a>"],[51.85185185185185,7,"<a href=\"includes\/StagingPath.php.html#285\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::build_config_for_staging_site<\/a>"],[0,5,"<a href=\"includes\/StagingPath.php.html#332\">NewfoldLabs\\WP\\Module\\Staging\\StagingPath::build_config_for_production_site<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>
