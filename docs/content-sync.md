@@ -83,6 +83,10 @@ copy in. On large or busy sites that had two problems:
 - **Empty staging replaces production.** A deploy copies staging content over production, so if the
   staging `<dir>` is empty (user cleared it, or a partial clone) the corresponding production dir is
   emptied too. This is deploy semantics, not a bug, but it is unrecoverable once the aside is deleted.
+- **Hardlinks need one filesystem.** `--link-dest` can only hardlink when the link-dest, the staging
+  source, and the destination are on the same filesystem. They are here (all under the account's home),
+  so this holds; if that ever stops being true, rsync silently falls back to copying and the deploy
+  still works, just without the delta saving.
 
 ## Why duration matters: the shared-host process reaper
 
