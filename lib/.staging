@@ -547,9 +547,11 @@ move_content_dirs() {
     mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create $DIR folder."; }
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
       log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
-      log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
+      log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -rt --exclude=.git $SRC/ $DEST"
+      # -t preserves modification times so a later deploy's --link-dest can recognise unchanged
+      # files and hardlink them instead of recopying (see prepare_new_content_dirs).
       set +e
-      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
+      RSYNC_OUTPUT=$(rsync -rt --exclude=.git "$SRC/" "$DEST" 2>&1)
       RSYNC_EXIT=$?
       set -e
       log "DEBUG" "move_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
@@ -1720,17 +1722,29 @@ cleanup_failed_new_content_dirs() {
   local TO="$1"
   log "INFO" "cleanup_failed_new_content_dirs" "START: Cleaning up failed new content dirs in $TO"
   for DIR in uploads themes plugins; do
+    local ORIG="$TO/wp-content/$DIR"
     local NEW="$TO/wp-content/$DIR-new"
+    local OLD="$TO/wp-content/$DIR-old"
+
+    # "-new" is always a disposable, rebuildable staging copy; safe to remove.
     if [ -d "$NEW" ]; then
-      log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Attempting to remove $NEW"
-      rm -rf "$NEW"
-      if [ $? -eq 0 ]; then
-        log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removed $NEW successfully"
+      log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removing $NEW"
+      rm -rf "$NEW" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $NEW"
+    fi
+
+    # "-old" is NOT always disposable. If a prior run died mid-swap (production moved aside but not yet
+    # promoted), "$OLD" is the ONLY surviving production copy. This cleanup runs on the resumed deploy
+    # BEFORE finalize gets a chance to restore it (prepare and its failure-cleanup run first), so it
+    # must apply finalize's own rule: only delete "$OLD" when live production ("$ORIG") is present; if
+    # production is missing, restore "$OLD" into place rather than destroy the sole copy.
+    if [ -d "$OLD" ]; then
+      if [ -d "$ORIG" ]; then
+        log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removing disposable aside $OLD (production in place)"
+        rm -rf "$OLD" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $OLD"
       else
-        log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $NEW"
+        log "WARN" "cleanup_failed_new_content_dirs:$DIR" "$ORIG missing; restoring sole production copy from $OLD instead of deleting"
+        mv -T "$OLD" "$ORIG" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to restore $OLD to $ORIG"
       fi
-    else
-      log "DEBUG" "cleanup_failed_new_content_dirs:$DIR" "No $NEW to remove"
     fi
   done
   log "INFO" "cleanup_failed_new_content_dirs" "END: Cleanup of failed new content dirs in $TO"
@@ -1781,9 +1795,24 @@ prepare_new_content_dirs() {
 
     # Copy if source has content
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+      # --link-dest points at the current production dir ($ORIG). Files identical to production are
+      # hardlinked into $DEST instead of being copied, so the staging area costs only the delta in
+      # bytes rather than a second full copy of the tree. -t is required for rsync's quick check
+      # (size + mtime) to recognise unchanged files; without it every file looks changed and is
+      # recopied. The hardlinks are transient: finalize deletes the old production copy right after
+      # the swap, which just drops the extra link.
+      #
+      # Caveat (standard rsync quick-check semantics): a staging file whose size AND mtime both still
+      # match production but whose content differs would be treated as unchanged and hardlinked to
+      # production's bytes, shipping stale content. In normal use an edited staging file gets a fresh
+      # mtime, so this only arises if an mtime-preserving rewrite (e.g. a restore tool) makes a file
+      # differ in content while keeping the same size and mtime. --checksum would close it but must
+      # read every byte of the tree, which defeats the point and risks the reaper; we accept the
+      # quick-check as every rsync-based deploy does. See docs/content-sync.md.
+      local ORIG="$TO/wp-content/$DIR"
       log "INFO" "prepare_new_content_dirs:$DIR" "Copying to $DEST"
-      log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
-      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
+      log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -rt --exclude=.git --link-dest=\"$ORIG\" \"$SRC/\" \"$DEST\""
+      RSYNC_OUTPUT=$(rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" 2>&1)
       RSYNC_EXIT=$?
       log "DEBUG" "prepare_new_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
 
@@ -1840,23 +1869,127 @@ prepare_new_content_dirs() {
 }
 
 # --- Utility: Finalize new content dirs (with logging) ---
+#
+# Promotes each prepared "$DIR-new" over the live production "$DIR" using renames, never by deleting
+# live production first. The old sequence (`rm -rf "$ORIG"; mv "$NEW" "$ORIG"`) had two defects on
+# large/busy sites: (1) if the rm failed partway (e.g. a plugin writing into uploads while rm runs,
+# so a follow-up rmdir hits "Directory not empty"), production content was left destroyed with no way
+# back; and (2) the slow rm of a multi-GB tree happened before the swap, lengthening the window and
+# doing O(total size) work.
+#
+# Design:
+#   - Production is moved aside with an instant rename, the new tree is promoted with a second instant
+#     rename, and only then (once ALL dirs are promoted) are the asides deleted. Delaying the deletes
+#     to the end keeps every promoted dir recoverable from its "$DIR-old" if a later dir fails.
+#   - All renames onto a live path use `mv -T` (no-target-directory). Plain `mv` of a directory onto
+#     an existing directory NESTS the source inside it and returns success; that would hide production
+#     and make the "successful" swap delete the wrong copy. `-T` turns that case into a failure that
+#     triggers rollback instead. The deploy worker only ever runs on Linux (cPanel), where coreutils
+#     `mv` supports `-T`.
+#   - If any promotion fails, every already-promoted dir is rolled back from its aside, so a deploy is
+#     all-or-nothing, not left half-swapped.
+#   - A sole production copy is never deleted to reclaim a name: a disposable aside is only removed
+#     when production is confirmed in place, and if production cannot be restored it is kept under a
+#     "$DIR-recovered-<ts>" name that no cleanup path sweeps.
 finalize_new_content_dirs() {
   local TO="$1"; local ON_ERROR="$2"
   log "INFO" "finalize_new_content_dirs" "START: Finalizing new content dirs in $TO"
-  for DIR in uploads themes plugins; do
-    local ORIG="$TO/wp-content/$DIR"
-    local NEW="$TO/wp-content/$DIR-new"
-    log "INFO" "finalize_new_content_dirs:$DIR" "Preparing to remove $ORIG"
-    if [ -d "$ORIG" ]; then
-      rm -rf "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to remove $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove $DIR directory during finalize."; }
-      log "INFO" "finalize_new_content_dirs:$DIR" "Removed old $ORIG"
-    else
-      log "INFO" "finalize_new_content_dirs:$DIR" "No existing $ORIG to remove"
+
+  local -a FINAL_DIRS=(uploads themes plugins)
+  local -a PROMOTED=()
+
+  # Reverse every completed promotion: move the promoted staging copy back to "-new" and restore the
+  # old production from "-old". All renames, so no sole copy is destroyed.
+  _finalize_rollback() {
+    local d o n l
+    for d in "${PROMOTED[@]}"; do
+      o="$TO/wp-content/$d"; n="$TO/wp-content/$d-new"; l="$TO/wp-content/$d-old"
+      log "INFO" "finalize_new_content_dirs:$d" "Rolling back promoted $d"
+      [ -e "$n" ] || mv -T "$o" "$n" 2>/dev/null || true
+      mv -T "$l" "$o" 2>/dev/null || log "ERROR" "finalize_new_content_dirs:$d" "Rollback incomplete; production for $d may be at $l"
+    done
+  }
+
+  local DIR ORIG NEW OLD ASIDE
+  for DIR in "${FINAL_DIRS[@]}"; do
+    ORIG="$TO/wp-content/$DIR"
+    NEW="$TO/wp-content/$DIR-new"
+    OLD="$TO/wp-content/$DIR-old"
+
+    # Normalize a leftover aside from an interrupted prior run so the "-old" name is free. If
+    # production is in place, the leftover is a disposable post-swap copy; if production is missing,
+    # the leftover IS production (interrupted mid-swap) and must be restored, not deleted.
+    if [ -e "$OLD" ]; then
+      if [ -d "$ORIG" ]; then
+        log "INFO" "finalize_new_content_dirs:$DIR" "Dropping disposable stale aside $OLD"
+        if ! rm -rf "$OLD"; then
+          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not clear stale $OLD; aborting rather than risk nesting"
+          _finalize_rollback
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to clear stale $DIR aside during finalize."
+          return 1
+        fi
+      else
+        log "WARN" "finalize_new_content_dirs:$DIR" "Restoring production from interrupted run at $OLD"
+        if ! mv -T "$OLD" "$ORIG"; then
+          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not restore $OLD to $ORIG"
+          _finalize_rollback
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to restore $DIR from interrupted run."
+          return 1
+        fi
+      fi
     fi
-    log "INFO" "finalize_new_content_dirs:$DIR" "Renaming $NEW to $ORIG"
-    mv "$NEW" "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to move $NEW to $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to finalize $DIR-new folder."; }
-    log "INFO" "finalize_new_content_dirs:$DIR" "Moved $NEW to $ORIG"
+
+    # Move current production aside (instant). -T refuses to nest if "-old" unexpectedly still exists.
+    ASIDE=0
+    if [ -d "$ORIG" ]; then
+      log "INFO" "finalize_new_content_dirs:$DIR" "Moving current $ORIG aside to $OLD"
+      if ! mv -T "$ORIG" "$OLD"; then
+        log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to move $ORIG aside"
+        _finalize_rollback
+        [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to set aside $DIR directory during finalize."
+        return 1
+      fi
+      ASIDE=1
+    else
+      log "INFO" "finalize_new_content_dirs:$DIR" "No existing $ORIG to set aside"
+    fi
+
+    # Promote the prepared tree (instant). -T FAILS instead of nesting if production was recreated
+    # concurrently in the window since the aside, which correctly triggers rollback below.
+    log "INFO" "finalize_new_content_dirs:$DIR" "Promoting $NEW to $ORIG"
+    if ! mv -T "$NEW" "$ORIG"; then
+      log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to promote $NEW to $ORIG"
+      if [ "$ASIDE" -eq 1 ]; then
+        if ! mv -T "$OLD" "$ORIG"; then
+          # Cannot restore in place (e.g. production was recreated). Keep the only copy under a name no
+          # cleanup path sweeps, rather than risk it being auto-deleted later.
+          local RECOVERED
+          RECOVERED="$TO/wp-content/$DIR-recovered-$(date +%s)-$$"
+          if mv -T "$OLD" "$RECOVERED" 2>/dev/null; then
+            log "ERROR" "finalize_new_content_dirs:$DIR" "Rollback could not restore in place; production preserved at $RECOVERED"
+          else
+            log "ERROR" "finalize_new_content_dirs:$DIR" "Rollback failed; production for $DIR remains at $OLD"
+          fi
+        fi
+      fi
+      _finalize_rollback
+      [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to finalize $DIR-new folder."
+      return 1
+    fi
+    PROMOTED+=("$DIR")
+    log "INFO" "finalize_new_content_dirs:$DIR" "Promoted $NEW to $ORIG"
     log "DEBUG" "finalize_new_content_dirs:$DIR" "Permissions after move: $(ls -ld "$ORIG")"
+  done
+
+  # All dirs promoted; production is live. Drop the asides now. This is the only slow step and it is
+  # non-fatal: with --link-dest the unchanged files are hardlinks so this mostly drops extra links,
+  # and an interruption here only leaves a reclaimable "$DIR-old" for the next run to sweep.
+  for DIR in "${FINAL_DIRS[@]}"; do
+    OLD="$TO/wp-content/$DIR-old"
+    if [ -d "$OLD" ]; then
+      log "INFO" "finalize_new_content_dirs:$DIR" "Removing aside $OLD"
+      rm -rf "$OLD" || log "ERROR" "finalize_new_content_dirs:$DIR" "Could not remove aside $OLD (non-fatal; will be swept later)"
+    fi
   done
   log "INFO" "finalize_new_content_dirs" "END: Finalized new content dirs in $TO"
 }
