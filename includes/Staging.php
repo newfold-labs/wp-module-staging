@@ -511,11 +511,15 @@ class Staging {
 	 * handshake, cache resync, NFD_STAGING_ENV, and shell-escaping. These verbs are bounded and
 	 * synchronous (not isDeployCommand()), so runCommand runs them via executeStagingScript.
 	 *
-	 * @param string $verb One of `deploy_content_setup`, `deploy_content_core`, `deploy_content_finalize`.
+	 * @param string $verb       One of `deploy_content_setup`, `deploy_content_core`,
+	 *                           `deploy_content_finalize`.
+	 * @param string $lock_token The job's staging-lock token, passed to the script as a command
+	 *                           argument so all three verbs share one hold on the staging mutex. See
+	 *                           lock_check in lib/.staging and StagingCommandLock.
 	 *
 	 * @return array|\WP_Error
 	 */
-	public function runContentDeployVerb( $verb ) {
+	public function runContentDeployVerb( $verb, $lock_token = '' ) {
 		if ( ! in_array( $verb, array( 'deploy_content_setup', 'deploy_content_core', 'deploy_content_finalize' ), true ) ) {
 			return new \WP_Error(
 				'invalid_command',
@@ -523,7 +527,40 @@ class Staging {
 			);
 		}
 
-		return $this->runCommand( $verb );
+		/*
+		 * Checked here as well as in the script: a malformed token would forge extra fields in the
+		 * colon-delimited lock value, and the script refuses the verb outright without one, which
+		 * would surface as an opaque failure mid-deploy.
+		 */
+		$lock = new StagingCommandLock( $this->getProductionDir() );
+		if ( ! $lock->isValidToken( $lock_token ) ) {
+			return new \WP_Error(
+				'invalid_lock_token',
+				__( 'Missing or invalid staging lock token.', 'wp-module-staging' )
+			);
+		}
+
+		return $this->runCommand( $verb, array( $lock_token ) );
+	}
+
+	/**
+	 * A random 32-character alphanumeric token, from a generator that never calls into WordPress.
+	 *
+	 * Deliberately NOT wp_generate_password(), which ends in
+	 * `apply_filters( 'random_password', ... )`. That filter is hooked in the wild -- Jetpack among
+	 * others -- and a hook can both change the value and do work of its own, including outbound HTTP.
+	 * A filtered value carrying symbols would fail the `[A-Za-z0-9]` shape both the lock value and the
+	 * shell argument require, so every staging operation on such a site would fail for a reason
+	 * nothing explains; and minting a local identifier has no business reaching out to anything.
+	 *
+	 * @return string
+	 */
+	public static function randomToken() {
+		try {
+			return bin2hex( random_bytes( 16 ) );
+		} catch ( \Throwable $t ) {
+			return substr( hash( 'sha256', uniqid( (string) getmypid(), true ) . microtime() ), 0, 32 );
+		}
 	}
 
 	/**
@@ -1465,7 +1502,9 @@ class Staging {
 
 		}
 
-		$token = wp_generate_password( 32, false );
+		// Not wp_generate_password: see Staging::randomToken for why a `random_password` filter has no
+		// business in a single-use local identifier.
+		$token = self::randomToken();
 
 		/*
 		 * Handed to lib/.staging, which runs WP-CLI with the object-cache drop-in skipped so a

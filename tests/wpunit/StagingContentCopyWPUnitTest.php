@@ -25,6 +25,17 @@ require_once __DIR__ . '/StagingExecMock.php';
 class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 
 	/**
+	 * A pid that cannot belong to a running process, above the pid_max ceiling of both Linux
+	 * (4194304) and macOS (99998).
+	 *
+	 * simulate_bash_lock records this rather than getmypid(): a real verb has EXITED by the time
+	 * exec() returns, so the lock a later phase finds always carries a departed pid. A live one is
+	 * the single state lock_check refuses to reclaim, so recording it would make the fixture model
+	 * something bash never produces.
+	 */
+	const DEPARTED_VERB_PID = 99999999;
+
+	/**
 	 * Staging instance under test.
 	 *
 	 * @var Staging
@@ -112,26 +123,23 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		$finalize_saw_new_tree = null;
 
 		StagingWPUnitTest::$exec_responses = array(
-			array(
-				'output'   => array( '{"status":"success","message":"Content deploy setup complete."}' ),
-				'status'   => 0,
-				'callback' => function () use ( &$setup_saw_new_tree, $uploads_new_file ) {
+			$this->verb_response(
+				'Content deploy setup complete.',
+				function () use ( &$setup_saw_new_tree, $uploads_new_file ) {
 					$setup_saw_new_tree = file_exists( $uploads_new_file );
-				},
+				}
 			),
-			array(
-				'output'   => array( '{"status":"success","message":"Content deploy core download complete."}' ),
-				'status'   => 0,
-				'callback' => function () use ( &$core_saw_new_tree, $uploads_new_file ) {
+			$this->verb_response(
+				'Content deploy core download complete.',
+				function () use ( &$core_saw_new_tree, $uploads_new_file ) {
 					$core_saw_new_tree = file_exists( $uploads_new_file );
-				},
+				}
 			),
-			array(
-				'output'   => array( '{"status":"success","message":"Files deployed successfully."}' ),
-				'status'   => 0,
-				'callback' => function () use ( &$finalize_saw_new_tree, $uploads_new_file ) {
+			$this->verb_response(
+				'Files deployed successfully.',
+				function () use ( &$finalize_saw_new_tree, $uploads_new_file ) {
 					$finalize_saw_new_tree = file_exists( $uploads_new_file );
-				},
+				}
 			),
 		);
 
@@ -184,18 +192,9 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		$this->set_up_fixture_tree();
 
 		StagingWPUnitTest::$exec_responses = array(
-			array(
-				'output' => array( '{"status":"success","message":"Content deploy setup complete."}' ),
-				'status' => 0,
-			),
-			array(
-				'output' => array( '{"status":"success","message":"Content deploy core download complete."}' ),
-				'status' => 0,
-			),
-			array(
-				'output' => array( '{"status":"success","message":"Files deployed successfully."}' ),
-				'status' => 0,
-			),
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy core download complete.' ),
+			$this->verb_response( 'Files deployed successfully.' ),
 		);
 
 		$controller = new ContentCopyController( $this->staging );
@@ -330,4 +329,112 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 		rmdir( $dir );
 	}
+	/**
+	 * Absolute path to the staging command lock, where lib/.staging and StagingCommandLock both
+	 * expect it.
+	 *
+	 * @return string
+	 */
+	private function lock_path() {
+		return $this->temp_production_dir . '/nfd-private/nfd-staging-command.lock';
+	}
+
+	/**
+	 * Read the lock's fields, or null when no lock exists.
+	 *
+	 * @return array|null { timestamp: int, token: string, pid: int }
+	 */
+	private function read_lock() {
+		if ( ! is_file( $this->lock_path() ) ) {
+			return null;
+		}
+
+		$fields = explode( ':', (string) file_get_contents( $this->lock_path() ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+		return array(
+			'timestamp' => isset( $fields[1] ) ? (int) $fields[1] : 0,
+			'token'     => isset( $fields[2] ) ? $fields[2] : '',
+			'pid'       => isset( $fields[3] ) ? (int) $fields[3] : 0,
+		);
+	}
+
+	/**
+	 * Write the lock exactly as another staging operation would.
+	 *
+	 * @param string $token Token to write.
+	 * @param int    $age   Seconds ago the lock was last refreshed.
+	 * @param int    $pid   Pid to record as the holder.
+	 *
+	 * @return void
+	 */
+	private function plant_lock( $token, $age = 0, $pid = 0 ) {
+		wp_mkdir_p( dirname( $this->lock_path() ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $this->lock_path(), 'active:' . ( time() - $age ) . ':' . $token . ':' . $pid );
+	}
+
+	/**
+	 * The lock token a verb was invoked with. It is appended last by runCommand, and every argument
+	 * goes through escapeshellarg, so the final single-quoted value is the token.
+	 *
+	 * @param string $command Full shell command the exec() shadow captured.
+	 *
+	 * @return string
+	 */
+	private function token_from_command( $command ) {
+		if ( ! preg_match_all( "/'([^']*)'/", (string) $command, $matches ) ) {
+			return '';
+		}
+
+		return (string) end( $matches[1] );
+	}
+
+	/**
+	 * Stand in for what lib/.staging's lock_check does with the staging mutex, so the mocked verbs
+	 * leave the lock in the state the real ones would: setup takes it under the job's token and holds
+	 * it (STAGING_LOCK_KEEP), core reclaims and refreshes the same lock, finalize releases it as the
+	 * last step of the job.
+	 *
+	 * The pid it records is deliberately one that cannot be running. A real verb records its own pid
+	 * and has EXITED by the time exec() returns, so the lock a later phase finds carries a DEAD pid.
+	 * Recording this process's pid instead would leave a live one, which is the one state lock_check
+	 * refuses to reclaim -- so the fixture would be modelling the case real bash never produces.
+	 *
+	 * @param string $command Full shell command the exec() shadow captured.
+	 *
+	 * @return void
+	 */
+	private function simulate_bash_lock( $command ) {
+		if ( false !== strpos( $command, 'deploy_content_finalize' ) ) {
+			if ( is_file( $this->lock_path() ) ) {
+				wp_delete_file( $this->lock_path() );
+			}
+
+			return;
+		}
+
+		$this->plant_lock( $this->token_from_command( $command ), 0, self::DEPARTED_VERB_PID );
+	}
+
+	/**
+	 * A successful mocked bash verb that also maintains the staging lock the way the real one does.
+	 *
+	 * @param string        $message JSON message the verb prints.
+	 * @param callable|null $extra   Optional extra assertion callback, given the command string.
+	 *
+	 * @return array
+	 */
+	private function verb_response( $message, $extra = null ) {
+		return array(
+			'output'   => array( '{"status":"success","message":"' . $message . '"}' ),
+			'status'   => 0,
+			'callback' => function ( $command ) use ( $extra ) {
+				$this->simulate_bash_lock( $command );
+				if ( is_callable( $extra ) ) {
+					$extra( $command );
+				}
+			},
+		);
+	}
+
 }

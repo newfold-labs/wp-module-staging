@@ -8,6 +8,7 @@
 namespace NewfoldLabs\WP\Module\Staging\Copy;
 
 use NewfoldLabs\WP\Module\Staging\Staging;
+use NewfoldLabs\WP\Module\Staging\StagingCommandLock;
 
 /**
  * Drives one deploy-files content copy through four phases -- setup -> copy -> finalize -> done -- doing
@@ -91,6 +92,13 @@ class ContentCopyController {
 	private $engine;
 
 	/**
+	 * Lazily constructed staging-lock accessor.
+	 *
+	 * @var StagingCommandLock|null
+	 */
+	private $lock;
+
+	/**
 	 * Construct a controller bound to a Staging instance.
 	 *
 	 * @param Staging       $staging     Staging instance (resolves dirs, runs verbs, writes result).
@@ -151,6 +159,41 @@ class ContentCopyController {
 		}
 
 		return $this->engine;
+	}
+
+	/**
+	 * Lazily build (and reuse) a handle on the staging command mutex.
+	 *
+	 * Not the same lock as controllerLockPath(), which only serializes two concurrent advance() calls
+	 * of THIS job. This one is the site-wide mutex shared with lib/.staging, and it is what keeps a
+	 * clone, create, destroy or legacy deploy from running against the same trees while this job is
+	 * mid-copy.
+	 *
+	 * @return StagingCommandLock
+	 */
+	private function lock() {
+		if ( null === $this->lock ) {
+			$this->lock = new StagingCommandLock( $this->staging->getProductionDir() );
+		}
+
+		return $this->lock;
+	}
+
+	/**
+	 * This job's staging-lock token: the identity its three bash bookends present to lib/.staging's
+	 * lock_check so all of them, and the PHP copy bursts between them, share one hold on the mutex.
+	 *
+	 * @param array $state Current state.
+	 *
+	 * @return string
+	 */
+	private function jobToken( array $state ) {
+		// String-checked rather than cast: phase-state.json is read back with json_decode, so a
+		// truncated or hand-edited file can put an array or object here, and casting that would raise
+		// an "Array to string conversion" notice -- printed into the REST response body, where it
+		// breaks the JSON the poll loop parses. An unusable token reads as no token, which fails
+		// closed (every path that needs one refuses without it).
+		return isset( $state['lock_token'] ) && is_string( $state['lock_token'] ) ? $state['lock_token'] : '';
 	}
 
 	/**
@@ -328,7 +371,7 @@ class ContentCopyController {
 
 		$this->writeRunning( $state );
 
-		$response = $this->callVerb( 'deploy_content_setup' );
+		$response = $this->callVerb( 'deploy_content_setup', $state );
 		if ( $this->verbFailed( $response ) ) {
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Content deploy setup failed.', 'wp-module-staging' ) ) );
 		}
@@ -341,6 +384,56 @@ class ContentCopyController {
 	}
 
 	/**
+	 * Confirm this job still holds the staging mutex, and build the failure envelope if it does not.
+	 *
+	 * Every phase that is about to act on the trees has to ask, not just the copy. lib/.staging's
+	 * lock_check cannot answer it for us: presented with no lock file at all it simply acquires one,
+	 * so a verb could not tell "we have held this all along" from "we lost it, and whatever took it
+	 * has since finished and released". The difference matters. The failure that motivates this: the
+	 * last copy burst moves the job to the core phase, the poll driver then stalls for longer than
+	 * the lock TTL but less than the job's stale window (a suspended laptop, a starved cron), a clone
+	 * takes the lock, rewrites staging from production, finishes and releases -- and the core and
+	 * finalize phases would then promote a `-new` tree built from the pre-clone staging content over
+	 * production, because the clone only ever touched staging and left the `-new` tree standing.
+	 *
+	 * Either operation answers it, because both only succeed on a lock that exists and still carries
+	 * this job's token -- false while a thief holds it and false after a thief has released it.
+	 *
+	 * WHICH ONE MATTERS. $refresh also WRITES, and the value it writes records pid 0, meaning "no
+	 * single process owns this right now". Only the copy phase may say that: it is the one phase with
+	 * nothing of the job's running between calls, and the refresh is also what keeps the lock from
+	 * ageing out across a long copy. The phases that invoke a bash verb must NOT write, because the
+	 * pid already in the lock may belong to a verb of this same job that is still running -- a
+	 * finalize whose PHP request was killed by the FPM timeout while the bash process carried on
+	 * swapping directories. That pid is the only thing standing between the next poll and a SECOND
+	 * concurrent finalize: lock_check refuses to reclaim a lock whose recorded process is alive, and
+	 * zeroing it here would tell it there is nobody to wait for, mid-swap. So core and finalize check
+	 * read-only and leave the pid alone; the verb's own lock_check refreshes the timestamp a moment
+	 * later anyway.
+	 *
+	 * @param array $state   Current state.
+	 * @param array $failure Set to the failure envelope when this returns false.
+	 * @param bool  $refresh Whether to also push the lock's timestamp forward (copy phase only).
+	 *
+	 * @return bool
+	 */
+	private function holdsLockOrFail( $state, &$failure, $refresh ) {
+		$token = $this->jobToken( $state );
+		$held  = $refresh ? $this->lock()->refresh( $token ) : $this->lock()->holds( $token );
+
+		if ( $held ) {
+			return true;
+		}
+
+		$failure = $this->fail(
+			$state,
+			__( 'The deploy lost its lock to another staging operation and was stopped before changing production. Start the deploy again.', 'wp-module-staging' )
+		);
+
+		return false;
+	}
+
+	/**
 	 * Phase 2: run one CopyEngine burst. Still reports running when the copy completes, because the
 	 * core-download and finalize bookends have not run yet, so the poll driver keeps calling advance().
 	 *
@@ -349,6 +442,14 @@ class ContentCopyController {
 	 * @return array
 	 */
 	private function runCopyBurst( $state ) {
+		// Every burst re-asserts the mutex, which is also what keeps it alive: nothing of ours runs
+		// between bursts, so without a refresh here the lock setup took would age past its TTL
+		// mid-copy and lib/.staging would hand the mutex to the next operation that asked -- which
+		// would then mutate the very trees this job is enumerating and writing into.
+		if ( ! $this->holdsLockOrFail( $state, $failure, true ) ) {
+			return $failure;
+		}
+
 		$result            = $this->engine()->advance();
 		$state['progress'] = isset( $result['progress'] ) ? $result['progress'] : array();
 
@@ -376,7 +477,13 @@ class ContentCopyController {
 	 * @return array
 	 */
 	private function runCore( $state ) {
-		$response = $this->callVerb( 'deploy_content_core' );
+		// Read-only: this phase invokes a bash verb, so it must not overwrite the pid in the
+		// lock. See holdsLockOrFail.
+		if ( ! $this->holdsLockOrFail( $state, $failure, false ) ) {
+			return $failure;
+		}
+
+		$response = $this->callVerb( 'deploy_content_core', $state );
 		if ( $this->verbFailed( $response ) ) {
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Preparing the WordPress core for deploy failed.', 'wp-module-staging' ) ) );
 		}
@@ -396,7 +503,13 @@ class ContentCopyController {
 	 * @return array
 	 */
 	private function runFinalize( $state ) {
-		$response = $this->callVerb( 'deploy_content_finalize' );
+		// Read-only: this phase invokes a bash verb, so it must not overwrite the pid in the
+		// lock. See holdsLockOrFail.
+		if ( ! $this->holdsLockOrFail( $state, $failure, false ) ) {
+			return $failure;
+		}
+
+		$response = $this->callVerb( 'deploy_content_finalize', $state );
 		if ( $this->verbFailed( $response ) ) {
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Finalizing the content deploy failed.', 'wp-module-staging' ) ) );
 		}
@@ -417,8 +530,8 @@ class ContentCopyController {
 	 *
 	 * @return array|\WP_Error
 	 */
-	private function callVerb( $verb ) {
-		return call_user_func( $this->verb_runner, $verb );
+	private function callVerb( $verb, array $state ) {
+		return call_user_func( $this->verb_runner, $verb, $this->jobToken( $state ) );
 	}
 
 	/**
@@ -607,7 +720,20 @@ class ContentCopyController {
 			'started_at' => time(),
 			'progress'   => array(),
 			'message'    => '',
+			'lock_token' => self::newLockToken(),
 		);
+	}
+
+	/**
+	 * Mint a staging-lock token: 32 hex characters, from a generator that never calls into
+	 * WordPress. The token has to be alphanumeric because it travels as a shell argument and as a
+	 * field in a colon-delimited lock value; see Staging::randomToken for why wp_generate_password
+	 * is the wrong tool for it.
+	 *
+	 * @return string
+	 */
+	private static function newLockToken() {
+		return Staging::randomToken();
 	}
 
 	/**
