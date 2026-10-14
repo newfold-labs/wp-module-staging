@@ -436,5 +436,4 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 			},
 		);
 	}
-
 }

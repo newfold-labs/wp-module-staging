@@ -524,9 +524,10 @@ class ContentCopyController {
 	}
 
 	/**
-	 * Invoke a bash verb through the configured runner.
+	 * Invoke a bash verb through the configured runner, handing it this job's lock token.
 	 *
-	 * @param string $verb Verb name.
+	 * @param string $verb  Verb name.
+	 * @param array  $state Current state, which carries this job's lock token.
 	 *
 	 * @return array|\WP_Error
 	 */
