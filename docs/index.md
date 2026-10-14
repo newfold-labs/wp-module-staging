@@ -17,7 +17,7 @@ Documentation for wp-module-staging, for **humans** and **AI agents**. Start her
 | [getting-started.md](getting-started.md) | Prerequisites, install, and tests. |
 | [integration.md](integration.md) | How the module registers and how hosts use it. |
 | [database-copy.md](database-copy.md) | How create/clone/deploy copy the database, and the env vars that tune it. |
-| [content-sync.md](content-sync.md) | How create/clone/deploy move wp-content, and why the deploy swap is delta-based and atomic. |
+| [content-sync.md](content-sync.md) | How create/clone/deploy move wp-content: the chunked resumable copy, the atomic delta swap, and the staging mutex. |
 | [health-check.md](health-check.md) | Automatic repair of staging metadata and filesystem state. |
 | [development.md](development.md) | Lint, test, and workflow. |
 | [release.md](release.md) | Release process: use the Newfold Prepare Release workflow. |
