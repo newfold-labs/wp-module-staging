@@ -633,6 +633,99 @@ else
   skip "exactly one of two same-token verbs reclaims the lock"
 fi
 
+echo "== lock_watch_child keeps a lock alive and attributed while a child runs =="
+
+# A clone's rsync can outlive its reaped parent by up to an hour, during which the lock reads as
+# abandoned: instantly reclaimable by its own token (the recorded bash pid is dead) and stealable once
+# it ages past the TTL, while the rsync still fills a tree. The watcher rewrites the lock with a fresh
+# timestamp and the CHILD's pid for as long as the child runs, then stops by itself.
+new_fixture
+lock_check "watchedjobtoken"
+assert_eq "the job owns the lock" "1" "$STAGING_LOCK_OWNED"
+live_pid
+WATCHED_CHILD=$LIVE_PID
+LOCK_WATCH_INTERVAL=1
+plant_lock 1000 "watchedjobtoken" "$$"   # backdated, so a refresh is observable
+lock_watch_child "$WATCHED_CHILD"
+sleep 2
+WATCHED_AGE=$(( $(date +%s) - $(lock_ts) ))
+if [ "$WATCHED_AGE" -lt 100 ]; then
+  ok "the watcher keeps the lock fresh while the child runs"
+else
+  no "the watcher keeps the lock fresh while the child runs" "lock age is ${WATCHED_AGE}s"
+fi
+assert_eq "and attributes it to the child doing the work" "$WATCHED_CHILD" "$(lock_pid)"
+
+# The child's death ends the watcher within a tick, with no further writes.
+kill "$WATCHED_CHILD" 2>/dev/null
+wait "$WATCHED_CHILD" 2>/dev/null
+sleep 2.5
+plant_lock 1000 "watchedjobtoken" "$DEAD_PID"
+sleep 2
+assert_eq "after the child dies the watcher writes nothing more" "$DEAD_PID" "$(lock_pid)"
+UNWATCHED_AGE=$(( $(date +%s) - $(lock_ts) ))
+if [ "$UNWATCHED_AGE" -ge 900 ]; then
+  ok "and the backdated timestamp stays put"
+else
+  no "and the backdated timestamp stays put" "lock age is ${UNWATCHED_AGE}s"
+fi
+
+# lock_reattribute_to_self puts the script's pid back once the child is reaped, so the rest of the
+# run keeps the holder-is-alive protection instead of a lock naming a dead child.
+plant_lock 10 "watchedjobtoken" "424242"
+lock_reattribute_to_self
+assert_eq "a reaped child's lock is re-attributed to the script" "$$" "$(lock_pid)"
+assert_eq "keeping the job's token" "watchedjobtoken" "$(lock_token)"
+# ...but never touches a lock that is not ours...
+plant_lock 10 "somebodyelsestoken" "424242"
+lock_reattribute_to_self
+assert_eq "a foreign lock is not re-attributed" "somebodyelsestoken" "$(lock_token)"
+assert_eq "and keeps its recorded holder" "424242" "$(lock_pid)"
+# ...or one too close to the TTL for a write by path (the same margin every unguarded write keeps).
+plant_lock "$((LOCK_TTL - 5))" "watchedjobtoken" "424242"
+lock_reattribute_to_self
+assert_eq "a near-boundary lock is left for the guard paths" "424242" "$(lock_pid)"
+unset LOCK_WATCH_INTERVAL
+
+echo "== the watcher never writes over a lock that stopped being ours =="
+
+# The watcher's whole job is writing by path, so it re-checks ownership before every write and exits
+# the moment the lock carries another token -- it must never prolong somebody else's lock.
+new_fixture
+lock_check "watchedjobtoken"
+live_pid
+WATCHED_CHILD=$LIVE_PID
+LOCK_WATCH_INTERVAL=1
+plant_lock 5 "somebodyelsestoken" "$DEAD_PID"   # the lock changed hands before the watcher started
+lock_watch_child "$WATCHED_CHILD"
+sleep 2
+assert_eq "the foreign lock keeps its token" "somebodyelsestoken" "$(lock_token)"
+assert_eq "and its recorded holder" "$DEAD_PID" "$(lock_pid)"
+kill "$WATCHED_CHILD" 2>/dev/null
+wait "$WATCHED_CHILD" 2>/dev/null
+unset LOCK_WATCH_INTERVAL
+
+# Without ownership nothing is watched at all: the gate mirrors release_staging_lock's.
+new_fixture
+live_pid
+WATCHED_CHILD=$LIVE_PID
+STAGING_LOCK_TOKEN="watchedjobtoken"
+STAGING_LOCK_OWNED=0
+LOCK_WATCH_INTERVAL=1
+plant_lock 1000 "watchedjobtoken" "$DEAD_PID"
+lock_watch_child "$WATCHED_CHILD"
+sleep 2
+assert_eq "a non-owner spawns no watcher" "$DEAD_PID" "$(lock_pid)"
+NONOWNER_AGE=$(( $(date +%s) - $(lock_ts) ))
+if [ "$NONOWNER_AGE" -ge 900 ]; then
+  ok "and the lock is not refreshed"
+else
+  no "and the lock is not refreshed" "lock age is ${NONOWNER_AGE}s"
+fi
+kill "$WATCHED_CHILD" 2>/dev/null
+wait "$WATCHED_CHILD" 2>/dev/null
+unset LOCK_WATCH_INTERVAL
+
 echo "== only the shell that took the lock may free it =="
 
 # A subshell inherits STAGING_LOCK_OWNED and the token, and `$$` does not change inside one, so

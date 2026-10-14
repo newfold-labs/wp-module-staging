@@ -193,6 +193,16 @@ a filesystem operation, so it should not need a database to be readable.
 - **Only the shell that took the lock frees it**, and only a lock still carrying its own token. A
   blocked caller, a subshell, and a holder whose lock was taken from it past the hard ceiling all
   leave it alone.
+- **The unbounded rsyncs keep the lock alive and attributed while they run.** The liveness probes test
+  the recorded pid, but the recorded pid was the bash script's, and the processes doing site-size
+  work are its *children*: a reaped parent's rsync survives up to an hour, during which the lock read
+  as abandoned while the rsync still filled a tree. A clone's full copy and the legacy deploy's delta
+  now run under a detached watcher (`lock_watch_child`) that rewrites the lock every minute with a
+  fresh timestamp and the *child's* pid, and stops by itself when the child exits or the lock stops
+  being ours; the script re-attributes the lock to itself once the child is reaped. Other long
+  children (core download, the sweeps, `deploy_db`'s dump/import) still record only the bash pid —
+  their exposure is bounded by the lock's TTL and liveness rules and is no worse than the shipping
+  code's.
 - The old `nfd_staging_lock` transient is still published and honoured, purely so an operation running
   an **older copy** of `lib/.staging` on the staging install still blocks. It is a compatibility
   broadcast, never read for a decision — and it is weak: the older copy deletes the transient

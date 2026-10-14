@@ -749,9 +749,83 @@ PARKED_16="$(find "$P16/wp-content" -maxdepth 1 -name 'uploads-recovered-*' -typ
 assert_eq "production was preserved under a parked name" "THE ONLY COPY" "$(cat "$PARKED_16/f" 2>/dev/null)"
 assert_absent "nothing was left at the -old name for a later sweep to puzzle over" "$P16/wp-content/uploads-old"
 
+echo "== move_content_dirs keeps the mutex alive and attributed while its rsync runs =="
+
+# The full-copy rsync here is the child that outlives a reaped parent (a clone of a large site runs
+# for hours), so move_content_dirs hands its pid to lock_watch_child: while it runs, the lock must
+# stay fresh (no TTL steal) and name the rsync (no same-token reclaim beside it), and once it is
+# reaped the lock must name the script again. The rsync is shadowed with a sleep so the window is
+# wide enough to observe; the lock starts backdated so a refresh is unmissable.
+R21="$(mktemp -d)"; P21="$R21/prod"; S21="$R21/stg"
+mkdir -p "$P21/wp-content" "$P21/nfd-private" \
+         "$S21/wp-content/uploads" "$S21/wp-content/themes" "$S21/wp-content/plugins"
+echo "payload" > "$S21/wp-content/uploads/f"
+LOCK_FILE="$P21/nfd-private/nfd-staging-command.lock"
+LOCK_GUARD_FILE="$LOCK_FILE.guard"
+STAGING_LOCK_TOKEN="clonetoken"
+STAGING_LOCK_OWNED=1
+LOCK_WATCH_INTERVAL=1
+printf 'active:%s:%s:%s' "$(( $(date +%s) - 1000 ))" "clonetoken" "$$" > "$LOCK_FILE"
+rsync() { sleep 3; return 0; }
+move_content_dirs "$S21" "$P21" "" >/dev/null 2>&1 &
+MCD_PID=$!
+sleep 2
+WATCHED_TS="$(awk -F':' '{print $2}' "$LOCK_FILE")"
+WATCHED_PID="$(awk -F':' '{print $4}' "$LOCK_FILE")"
+WATCHED_AGE=$(( $(date +%s) - WATCHED_TS ))
+if [ "$WATCHED_AGE" -lt 100 ]; then
+  ok "the lock is kept fresh while the rsync runs"
+else
+  no "the lock is kept fresh while the rsync runs" "lock age is ${WATCHED_AGE}s"
+fi
+assert_ne "and is attributed to the rsync child, not the script" "$$" "$WATCHED_PID"
+case "$WATCHED_PID" in
+  ''|0|*[!0-9]*) no "the recorded holder is a real pid" "got [$WATCHED_PID]" ;;
+  *) ok "the recorded holder is a real pid" ;;
+esac
+wait "$MCD_PID"
+assert_eq "move_content_dirs completed" "0" "$?"
+assert_eq "once the rsync is reaped the lock names the script again" "$$" "$(awk -F':' '{print $4}' "$LOCK_FILE")"
+unset -f rsync
+STAGING_LOCK_OWNED=0
+
+echo "== prepare_new_content_dirs keeps the mutex alive and attributed while its rsync runs =="
+
+# Same property for the legacy deploy's delta rsync, which scales with the site's change set.
+R22="$(mktemp -d)"; P22="$R22/prod"; S22="$R22/stg"
+mkdir -p "$P22/wp-content/uploads" "$P22/nfd-private" \
+         "$S22/wp-content/uploads" "$S22/wp-content/themes" "$S22/wp-content/plugins"
+echo "live" > "$P22/wp-content/uploads/f"
+echo "staged" > "$S22/wp-content/uploads/f"
+LOCK_FILE="$P22/nfd-private/nfd-staging-command.lock"
+LOCK_GUARD_FILE="$LOCK_FILE.guard"
+STAGING_LOCK_TOKEN="deploytoken"
+STAGING_LOCK_OWNED=1
+LOCK_WATCH_INTERVAL=1
+printf 'active:%s:%s:%s' "$(( $(date +%s) - 1000 ))" "deploytoken" "$$" > "$LOCK_FILE"
+rsync() { sleep 3; return 0; }
+prepare_new_content_dirs "$S22" "$P22" >/dev/null 2>&1 &
+PREP_PID=$!
+sleep 2
+WATCHED_TS="$(awk -F':' '{print $2}' "$LOCK_FILE")"
+WATCHED_PID="$(awk -F':' '{print $4}' "$LOCK_FILE")"
+WATCHED_AGE=$(( $(date +%s) - WATCHED_TS ))
+if [ "$WATCHED_AGE" -lt 100 ]; then
+  ok "the lock is kept fresh while the delta rsync runs"
+else
+  no "the lock is kept fresh while the delta rsync runs" "lock age is ${WATCHED_AGE}s"
+fi
+assert_ne "and is attributed to the rsync child, not the script" "$$" "$WATCHED_PID"
+wait "$PREP_PID"
+assert_eq "prepare_new_content_dirs completed" "0" "$?"
+assert_eq "once the rsync is reaped the lock names the script again" "$$" "$(awk -F':' '{print $4}' "$LOCK_FILE")"
+unset -f rsync
+STAGING_LOCK_OWNED=0
+unset LOCK_WATCH_INTERVAL
+
 trap - EXIT
 rm -rf "$ROOT" "$R2" "$R3" "$R4" "$R5" "$R6" "$R7" "$R8" "$R9" "$R10" "$R11" "$R12" "$R13" \
-       "$R14" "$R15" "$R16" "$R17" "$R18" "$R19" "$R20" "$LOG_FILE" 2>/dev/null
+       "$R14" "$R15" "$R16" "$R17" "$R18" "$R19" "$R20" "$R21" "$R22" "$LOG_FILE" 2>/dev/null
 
 echo
 echo "-----------------------------------------"

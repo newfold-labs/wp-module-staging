@@ -282,6 +282,66 @@ lock_mark_owned() {
   STAGING_LOCK_OWNER_PID=$BASHPID
 }
 
+# Keep the mutex alive, and ATTRIBUTED, while a long-lived CHILD of this script runs.
+#
+# The lock records this script's pid, and every liveness probe (lock_holder_alive here, pidIsRunning
+# on the PHP side) tests only that pid. But the processes that do the site-size-scaled work are
+# CHILDREN -- a clone's rsync can run for hours -- and a child outlives its parent: when the hourly
+# lsphp_reaper SIGKILLs a PID-1-reparented bash, its rsync (not PID-1-parented at that moment)
+# carries on until the next reaper tick, up to an hour. From that moment the lock misdescribes the
+# job: its own token is instantly reclaimable (the recorded pid is dead), and a foreign operation may
+# steal it once it ages past the TTL. A stepped deploy could then walk a staging tree the orphaned
+# rsync is still filling, promote the partial result, and discard the "-old" backup.
+#
+# So for the child's lifetime a detached watcher rewrites the lock every LOCK_WATCH_INTERVAL seconds
+# with a fresh timestamp and the CHILD's pid. Freshness keeps every TTL-based steal away while the
+# work is genuinely running, whoever its parent is; recording the child makes the liveness probes
+# track the process actually touching the trees, so even a same-token reclaim waits for it. The
+# watcher survives this script (background, never waited on) and exits on its own within a second of
+# the child's exit -- or immediately once the lock stops carrying our token, so it can never prolong
+# somebody else's lock. Call lock_reattribute_to_self after reaping the child, or the lock is left
+# naming a dead pid while this script works on.
+#
+# The write is by path, under the same margin reasoning as lock_refresh: it only lands on a lock that
+# is OURS and that the watcher's own previous write keeps far inside the TTL, so no steal is
+# entitled to interleave. stdout/stderr go to /dev/null (a background child holding the request's
+# pipe stops PHP's exec() from seeing EOF until the watcher exits) and fd 9 is closed (it would
+# otherwise inherit, and keep holding, the lock guard's flock if one were ever held here).
+lock_watch_child() {
+  local child="${1:-}"
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
+  [ -n "${STAGING_LOCK_TOKEN:-}" ] || return 0
+  case "$child" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+  (
+    while kill -0 "$child" 2>/dev/null; do
+      lock_is_ours || exit 0
+      printf 'active:%s:%s:%s' "$(date +%s)" "$STAGING_LOCK_TOKEN" "$child" > "$LOCK_FILE" 2>/dev/null || true
+      # Sleep in one-second ticks so the watcher notices the child's exit promptly, instead of
+      # holding its last refresh (and its process-table entry) for a whole interval.
+      local slept=0
+      while [ "$slept" -lt "${LOCK_WATCH_INTERVAL:-60}" ]; do
+        sleep 1
+        slept=$((slept + 1))
+        kill -0 "$child" 2>/dev/null || exit 0
+      done
+    done
+  ) >/dev/null 2>&1 9>&- &
+}
+
+# Put this script's own pid back on a lock a watcher above attributed to a now-reaped child, so the
+# rest of the run keeps the holder-is-alive protection (a lock naming a dead pid is reclaimable by a
+# same-token verb immediately and stealable the moment it ages out). Only a lock that is still ours
+# and comfortably fresh -- which a watched lock is, by construction -- is touched; anything else is
+# somebody else's business or the guard's.
+lock_reattribute_to_self() {
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
+  lock_is_ours || return 0
+  lock_age_within "$((LOCK_TTL - LOCK_RECLAIM_MARGIN))" || return 0
+  lock_refresh
+}
+
 # Whether the lock on disk carries this process's token.
 lock_is_ours() {
   [ -n "${STAGING_LOCK_TOKEN:-}" ] || return 1
@@ -1172,10 +1232,23 @@ move_content_dirs() {
       log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -rt --exclude=.git $SRC/ $DEST"
       # -t preserves modification times so a later deploy's --link-dest can recognise unchanged
       # files and hardlink them instead of recopying (see prepare_new_content_dirs).
+      #
+      # Backgrounded (output to a file, exit code through `wait`) rather than run in a command
+      # substitution, so the rsync's pid exists to be watched: this copy scales with the site and is
+      # the child that outlives a reaped parent, so the mutex has to stay alive and attributed to it
+      # for as long as it runs. See lock_watch_child.
+      local RSYNC_TMP
+      RSYNC_TMP=$(mktemp)
       set +e
-      RSYNC_OUTPUT=$(rsync -rt --exclude=.git "$SRC/" "$DEST" 2>&1)
+      rsync -rt --exclude=.git "$SRC/" "$DEST" > "$RSYNC_TMP" 2>&1 &
+      RSYNC_PID=$!
+      lock_watch_child "$RSYNC_PID"
+      wait "$RSYNC_PID"
       RSYNC_EXIT=$?
       set -e
+      lock_reattribute_to_self
+      RSYNC_OUTPUT=$(cat "$RSYNC_TMP" 2>/dev/null || true)
+      rm -f "$RSYNC_TMP"
       log "DEBUG" "move_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
       if [ -n "$RSYNC_OUTPUT" ]; then
         log "ERROR" "move_content_dirs:$DIR" "Output rsync:"
@@ -2444,14 +2517,26 @@ prepare_new_content_dirs() {
       # Captured through `||` rather than a bare `$?`. Everything below reads RSYNC_EXIT to decide
       # what the failure MEANS -- a permission denial on an ignorable .htaccess backup is tolerated,
       # anything else sweeps and fails the deploy -- so losing the chance to read it loses the whole
-      # diagnosis. This function already runs with errexit off (see the `set +e` at its top), so the
-      # bare form worked; this one keeps working if that ever changes, and costs nothing.
-      #
-      # NOT the `set +e` / `set -e` pair move_content_dirs uses. That pair does not restore the
+      # diagnosis. This function already runs with errexit off (see the `set +e` at its top), so a
+      # bare `$?` worked; the `||` form keeps working if that ever changes, and costs nothing.
+      # (NOT the `set +e` / `set -e` pair move_content_dirs uses: that pair does not restore the
       # previous state, it asserts one, so calling such a function from anywhere errexit was off
-      # turns it ON for everything afterwards.
+      # turns it ON for everything afterwards.)
+      #
+      # Backgrounded (output to a file, exit code through `wait`) rather than run in a command
+      # substitution, so the rsync's pid exists to be watched: this delta scales with the site's
+      # change set and is a child that outlives a reaped parent, so the mutex has to stay alive and
+      # attributed to it for as long as it runs. See lock_watch_child.
+      local RSYNC_TMP
+      RSYNC_TMP=$(mktemp)
       RSYNC_EXIT=0
-      RSYNC_OUTPUT=$(rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" 2>&1) || RSYNC_EXIT=$?
+      rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" > "$RSYNC_TMP" 2>&1 &
+      RSYNC_PID=$!
+      lock_watch_child "$RSYNC_PID"
+      wait "$RSYNC_PID" || RSYNC_EXIT=$?
+      lock_reattribute_to_self
+      RSYNC_OUTPUT=$(cat "$RSYNC_TMP" 2>/dev/null || true)
+      rm -f "$RSYNC_TMP"
       log "DEBUG" "prepare_new_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
 
       if [ -n "$RSYNC_OUTPUT" ]; then
