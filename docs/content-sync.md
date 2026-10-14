@@ -195,7 +195,15 @@ a filesystem operation, so it should not need a database to be readable.
   leave it alone.
 - The old `nfd_staging_lock` transient is still published and honoured, purely so an operation running
   an **older copy** of `lib/.staging` on the staging install still blocks. It is a compatibility
-  broadcast, never read for a decision.
+  broadcast, never read for a decision — and it is weak: the older copy deletes the transient
+  unconditionally on every exit of its own, and nothing republishes ours during the long copy phase.
+- **A version handshake refuses a cross-version deploy outright.** Production and staging each run
+  their own copy of the plugin, so their lock protocols can differ. Before every command that copies
+  content between the installs (`clone`, the deploys, the stepped job's setup verb), the worker reads
+  the brand plugin's installed version on both installs and refuses on a mismatch, telling the user to
+  update the older side. Refuse-and-tell on purpose: updating a plugin from inside a staging command
+  is a bigger side effect than the command itself. An unreadable version proceeds on the broadcast
+  alone (a peer that cannot answer `wp plugin get` cannot run staging commands either).
 
 `includes/StagingCommandLock.php` is the PHP half, reading and refreshing the same file. Both halves
 are covered by tests: `tests/bash/test-staging-lock.sh` and `StagingContentCopyWPUnitTest`.
@@ -219,10 +227,14 @@ are covered by tests: `tests/bash/test-staging-lock.sh` and `StagingContentCopyW
   deliberately outside every swept namespace, so they occupy disk until a human removes them. They are
   written only on paths that are already going wrong, so they should be rare, but there is no automatic
   reclaim and a site that hits one repeatedly will accumulate them.
-- **The compat transient has a TTL.** A copy or a single directory's `rsync` that outlasts 1800s stops
-  being visible to an operation running an older copy of the plugin on the staging install. That is no
-  worse than the previous code was against itself; closing cross-version concurrency properly needs its
-  own change.
+- **An un-upgraded peer is still only covered best-effort.** The version handshake (see The mutex)
+  closes cross-version concurrency in the steady state, but only once BOTH installs run a version that
+  has it: a peer still running an older plugin copy performs no handshake when it initiates, knows
+  nothing about the lock file, and deletes the compat transient unconditionally on every exit of its
+  own — so a copy or a single directory's `rsync` that outlasts the transient's 1800s TTL, or any
+  old-copy exit, stops being visible to that peer. Structurally unfixable from this side: shipped code
+  cannot be made to cooperate retroactively. The window closes by itself once auto-updates bring both
+  sides to a handshake-aware version.
 
 ## Why duration matters: the shared-host process reaper
 

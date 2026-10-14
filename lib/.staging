@@ -674,6 +674,84 @@ legacy_lock_withdraw() {
   return 0
 }
 
+# --- Cross-version handshake ---
+#
+# Production and staging are two WordPress installs on one account, EACH running its own copy of the
+# brand plugin -- and therefore its own copy of this script and of the lock protocol above. A deploy
+# or clone is driven from one side but mutates BOTH trees, so when the two sides run different plugin
+# versions they can disagree about how the mutex works and fail to exclude each other. The concrete
+# failure: a clone driven by an older copy (file-lock-unaware, and its exit deletes the compat
+# transient unconditionally) rebuilds staging's content dirs while this copy's stepped deploy is
+# reading them; the copy engine SKIPs files whose parent vanished rather than failing, so the deploy
+# completes, promotes the partial tree over production, and discards the "-old" backup.
+#
+# So before any command that mutates the trees, compare the installed brand-plugin version on the two
+# installs and refuse on a mismatch. Deliberately refuse-and-tell rather than auto-update: updating a
+# plugin from inside a staging command is a far bigger side effect than the command the user asked
+# for, and plugin update paths are not safe to run headless from here.
+#
+# HARD LIMIT, by design: a handshake only protects once BOTH sides run a version that has it. A peer
+# still running an older copy performs no check when IT initiates -- nothing shipped here can make
+# old code cooperate. For that peer the compat transient broadcast (legacy_lock_announce, TTL-bounded)
+# stays the accepted best effort. This closes cross-version concurrency in the steady state (both
+# sides at or above this version, the common case once auto-updates settle) and consciously leaves
+# the un-upgraded-peer window as the residual it already is on every shipping version.
+#
+# Reading a version is best effort. A peer whose WordPress cannot even answer `wp plugin get` cannot
+# run staging commands against us either, so an unreadable version LOGS and proceeds on the broadcast
+# alone rather than bricking every deploy over a cosmetically broken peer.
+
+# Print the installed brand plugin's version for the install at $1, or fail. WP-CLI stdout can carry
+# boot noise around the real answer (see legacy_lock_held), so only a line shaped like a version
+# counts, and noise-only output reads as "could not tell".
+installed_plugin_version() {
+  local wp_path="$1" out line
+  [ -n "${PLUGIN_SLUG:-}" ] || return 1
+  out=$(wp plugin get "$PLUGIN_SLUG" --field=version --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  [ -n "$out" ] || return 1
+  while IFS= read -r line; do
+    case "$line" in
+      *[!0-9A-Za-z._+-]*) continue ;;   # spaces or other junk: boot noise, not a version
+    esac
+    case "$line" in
+      [0-9]*) printf '%s' "$line"; return 0 ;;
+    esac
+  done <<EOF
+$out
+EOF
+  return 1
+}
+
+# Refuse a tree-mutating command when production and staging run different versions of the brand
+# plugin. See the block comment above for why, and for the hard limit on what this can protect.
+version_handshake() {
+  if [ -z "${PLUGIN_SLUG:-}" ]; then
+    log "WARN" "version_handshake" "No plugin slug supplied; skipping the cross-version check." || true
+    return 0
+  fi
+  # No staging install yet (nothing mutates both trees until one exists), nothing to disagree with.
+  [ -d "$STAGING_DIR" ] || return 0
+
+  local prod_ver stg_ver
+  if ! prod_ver=$(installed_plugin_version "$PRODUCTION_DIR"); then
+    log "WARN" "version_handshake" "Could not read the production plugin version; proceeding on the compat broadcast alone." || true
+    return 0
+  fi
+  if ! stg_ver=$(installed_plugin_version "$STAGING_DIR"); then
+    log "WARN" "version_handshake" "Could not read the staging plugin version; proceeding on the compat broadcast alone." || true
+    return 0
+  fi
+
+  if [ "$prod_ver" != "$stg_ver" ]; then
+    log "ERROR" "version_handshake" "Plugin version mismatch: production runs $prod_ver, staging runs $stg_ver." || true
+    error "The production site runs version $prod_ver of the $PLUGIN_NAME plugin and the staging site runs $stg_ver. Update the older one so both sites match, then try again." 'version_handshake:mismatch'
+    return 1
+  fi
+
+  log "INFO" "version_handshake" "Production and staging both run plugin version $prod_ver." || true
+  return 0
+}
+
 # --- Async deploy result ---
 #
 # Staging::getDeployCommandStatus() polls nfd-staging-deploy-result.json for the outcome of a
@@ -3639,6 +3717,18 @@ esac
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   compatibility_check "$1"
   auth_action $2
+
+  # Every command that copies content between the installs needs both of them to agree on the lock
+  # protocol BEFORE it takes the mutex; see version_handshake. The stepped job is checked once, at its
+  # setup verb -- core and finalize are later steps of the same hold, so re-checking them would only
+  # add ways for an in-flight job to fail. create builds the staging install (no peer to disagree with
+  # yet), destroy deletes it (a mismatch message telling the user to update a site they are removing
+  # helps nobody), and the SSO commands read only.
+  case "$1" in
+    clone|deploy_files|deploy_db|deploy_files_db|deploy_content_setup)
+      version_handshake
+      ;;
+  esac
 
   # The stepped content-deploy verbs are three steps of ONE job, so they share one hold on the mutex
   # by presenting the same per-job token (ContentCopyController generates it and passes it as the

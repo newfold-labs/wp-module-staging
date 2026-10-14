@@ -743,6 +743,93 @@ LEGACY_VALUE="active:0notanumber"
 legacy_lock_held
 assert_eq "a corrupt lock value still blocks" "0" "$?"
 
+echo "== the version handshake refuses a cross-version deploy =="
+
+# Production and staging each run their own copy of the plugin, so their lock protocols can differ;
+# version_handshake refuses the tree-mutating commands on a mismatch. Against a stubbed `wp` that
+# answers per --path, like the legacy-channel tests above. PLUGIN_SLUG/PLUGIN_NAME come from the
+# positional args the suite sourced the script with ("slug"/"name").
+new_fixture
+STAGING_DIR="$ROOT/stg"
+mkdir -p "$STAGING_DIR"
+WP_PROD_VER=""
+WP_STG_VER=""
+wp() {
+  local a wp_path=""
+  for a in "$@"; do
+    case "$a" in --path=*) wp_path="${a#--path=}" ;; esac
+  done
+  if [ "$wp_path" = "$PRODUCTION_DIR" ]; then
+    printf '%s' "$WP_PROD_VER"
+  else
+    printf '%s' "$WP_STG_VER"
+  fi
+}
+
+WP_PROD_VER="3.19.1"
+WP_STG_VER="3.19.1"
+version_handshake
+assert_eq "matching versions proceed" "0" "$?"
+
+WP_PROD_VER="3.19.1"
+WP_STG_VER="3.18.0"
+version_handshake
+assert_eq "a version mismatch refuses the command" "1" "$?"
+assert_eq "and says which check refused" "version_handshake:mismatch" "$LAST_ERROR_STEP"
+case "$LAST_ERROR" in
+  *3.19.1*3.18.0*) ok "the refusal names both versions" ;;
+  *) no "the refusal names both versions" "got [$LAST_ERROR]" ;;
+esac
+case "$LAST_ERROR" in
+  *name*) ok "the refusal names the plugin" ;;
+  *) no "the refusal names the plugin" "got [$LAST_ERROR]" ;;
+esac
+
+# The version can be wrapped in boot noise (see legacy_lock_held); only a version-shaped line counts.
+WP_PROD_VER="PHP Deprecated: strlen(): passing null is deprecated in /x.php on line 1
+3.19.1"
+WP_STG_VER="3.19.1"
+version_handshake
+assert_eq "a version behind boot noise is still read" "0" "$?"
+
+# An unreadable side proceeds on the compat broadcast alone: a peer whose WordPress cannot answer
+# `wp plugin get` cannot run staging commands against us either, and refusing would brick every
+# deploy over a cosmetically broken peer.
+WP_PROD_VER="3.19.1"
+WP_STG_VER=""
+version_handshake
+assert_eq "an unreadable staging version proceeds" "0" "$?"
+
+WP_PROD_VER=""
+WP_STG_VER="3.19.1"
+version_handshake
+assert_eq "an unreadable production version proceeds" "0" "$?"
+
+WP_PROD_VER="PHP Warning: something broke"
+WP_STG_VER="3.19.1"
+version_handshake
+assert_eq "noise with no version in it reads as unreadable and proceeds" "0" "$?"
+
+# No staging install at all (a first create): nothing mutates both trees yet.
+rmdir "$STAGING_DIR"
+WP_PROD_VER="3.19.1"
+WP_STG_VER="0.0.0"
+version_handshake
+assert_eq "a missing staging install proceeds" "0" "$?"
+
+# No slug (an older or hand-run invocation): log and proceed rather than guess at a slug.
+mkdir -p "$STAGING_DIR"
+SAVED_PLUGIN_SLUG="$PLUGIN_SLUG"
+PLUGIN_SLUG=""
+WP_PROD_VER="3.19.1"
+WP_STG_VER="0.0.0"
+version_handshake
+assert_eq "a missing plugin slug proceeds" "0" "$?"
+PLUGIN_SLUG="$SAVED_PLUGIN_SLUG"
+
+unset -f wp
+STAGING_DIR="/nonexistent/stg"
+
 echo "== withdrawing from the compat channel only ever clears our own publication =="
 
 # A blind delete takes whatever is on the channel, including an older copy's live claim, and that copy
