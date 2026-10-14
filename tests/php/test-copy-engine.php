@@ -300,6 +300,80 @@ putf( "$gsrc/plugins/p/real.php", '<?php' );
 $r = drive( new CopyEngine( array( 'source_root' => $gsrc, 'dest_root' => $gdst, 'dest_suffix' => '', 'link_dest_root' => null, 'job_dir' => $gjob, 'budget_seconds' => 10 ) ) );
 eq( '.git excluded; real file copied', ( is_file( "$gdst/plugins/p/real.php" ) && ! is_dir( "$gdst/plugins/p/.git" ) ) ? 'ok' : 'bad', 'ok' );
 
+echo "== hardlink fast path ships the source as it is NOW, not as the walk recorded it ==\n";
+
+// FileCopier::copyOne is called directly here, with the stale size + mtime a manifest entry would
+// carry, because that is the contract under test and driving the engine cannot pin down WHEN a given
+// file is enumerated relative to an edit.
+//
+// The copy runs in bursts and can span hours, so a staging file may be edited between its
+// enumeration and its copy. The hardlink decision used to compare PRODUCTION against those walk-time
+// values: the edited source no longer matched them, but production still did, so production's own
+// inode was linked in and the edit was silently not shipped. The byte path re-snapshots for the same
+// reason; both paths must ship the same version of a file, or which one a deploy gets depends on
+// whether a hardlink happened to be possible.
+$hlroot = "$ROOT/hl";
+$hlsrc  = "$hlroot/wp-content";        // staging: the copy source
+$hlprod = "$hlroot/prod/wp-content";   // production: the link-dest and the destination's parent
+
+// At walk time both copies were identical: 'OLD', 3 bytes, mtime 1600000000.
+$stale_size  = 3;
+$stale_mtime = 1600000000;
+
+putf( "$hlprod/uploads/edited.txt", 'OLD' );
+touch( "$hlprod/uploads/edited.txt", $stale_mtime );
+// ...and then the file was edited in staging, after the walk had recorded it.
+putf( "$hlsrc/uploads/edited.txt", 'EDITED AFTER THE WALK' );
+touch( "$hlsrc/uploads/edited.txt", 1600000500 );
+
+$offset = 0;
+$res    = FileCopier::copyOne(
+	"$hlsrc/uploads/edited.txt",
+	"$hlprod/uploads-new/edited.txt",
+	$stale_size,
+	$stale_mtime,
+	"$hlprod/uploads/edited.txt",
+	$offset,
+	microtime( true ) + 30,
+	$hlsrc
+);
+eq( 'hardlink staleness: the copy reports done', $res, FileCopier::RESULT_DONE );
+eq(
+	'a source edited after the walk ships its CURRENT content',
+	(string) @file_get_contents( "$hlprod/uploads-new/edited.txt" ),
+	'EDITED AFTER THE WALK'
+);
+eq(
+	"and is NOT hardlinked to production's stale copy",
+	@fileinode( "$hlprod/uploads-new/edited.txt" ) === @fileinode( "$hlprod/uploads/edited.txt" ),
+	false
+);
+
+// A file that really is unchanged must still be hardlinked, or the fast path has just been disabled
+// and every deploy becomes a full byte copy -- which is the thing the delta exists to avoid.
+putf( "$hlprod/uploads/same.txt", 'SAME' );
+putf( "$hlsrc/uploads/same.txt", 'SAME' );
+touch( "$hlprod/uploads/same.txt", $stale_mtime );
+touch( "$hlsrc/uploads/same.txt", $stale_mtime );
+
+$offset = 0;
+$res    = FileCopier::copyOne(
+	"$hlsrc/uploads/same.txt",
+	"$hlprod/uploads-new/same.txt",
+	4,
+	$stale_mtime,
+	"$hlprod/uploads/same.txt",
+	$offset,
+	microtime( true ) + 30,
+	$hlsrc
+);
+eq( 'unchanged file: the copy reports done', $res, FileCopier::RESULT_DONE );
+eq(
+	'an unchanged file is still hardlinked (no byte copy)',
+	@fileinode( "$hlprod/uploads-new/same.txt" ) === @fileinode( "$hlprod/uploads/same.txt" ),
+	true
+);
+
 rmrf( $ROOT );
 echo "\n-----------------------------------------\n";
 printf( "copy-engine tests: %d passed, %d failed\n", $PASS, $FAIL );

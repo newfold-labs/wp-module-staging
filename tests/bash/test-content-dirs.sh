@@ -199,35 +199,42 @@ assert_absent "no themes-new leftover (promoted)" "$PROD/wp-content/themes-new"
 assert_present "uploads-old aside is kept (swept by the next setup, not by finalize)" "$PROD/wp-content/uploads-old"
 assert_present "themes-old aside is kept (swept by the next setup, not by finalize)" "$PROD/wp-content/themes-old"
 
-echo "== finalize preserves production when a promotion cannot complete (rollback) =="
+echo "== finalize aborts rather than promote when it cannot clear the -old name =="
 
-# Trigger a genuine finalize failure deterministically: a stale uploads-old whose directory is
-# read-only, so the normalize step's `rm -rf` cannot unlink the file inside and must abort. Production
-# (uploads/keep.txt) must be left intact. (A missing -new is no longer a failure; it is skipped.)
-# Root bypasses permission bits, so skip there.
+# A stale uploads-old is in the way and cannot be moved out of it. finalize must abort instead of
+# carrying on, because the alternative is `mv -T` onto an occupied name -- which fails anyway -- or,
+# without -T, nesting production inside it. Production (uploads/keep.txt) must be left intact.
+#
+# Injected through the mv shim, keyed to the operation itself. This test used to make the stale
+# directory read-only so an `rm -rf` inside it would fail, and when the code stopped deleting that
+# tree and started renaming it instead, the injection silently stopped happening: `mv` of a directory
+# needs no write permission INSIDE it. The suite still passed, on the happy path, asserting a rollback
+# that no longer occurred.
 R2="$(mktemp -d)"; P2="$R2/prod"
 mkdir -p "$P2/wp-content/uploads" "$P2/wp-content/uploads-new" "$P2/wp-content/uploads-old"
 echo "LIVE DATA" > "$P2/wp-content/uploads/keep.txt"
 echo "STAGED"    > "$P2/wp-content/uploads-new/f"
 echo "BLOCK"     > "$P2/wp-content/uploads-old/f"
-chmod 0500 "$P2/wp-content/uploads-old"
-if [ "$(id -u)" = "0" ]; then
-	chmod 0755 "$P2/wp-content/uploads-old"
-	ok "rollback test skipped (running as root; cannot block rm)"
-else
-	ROLLBACK_HIT=0
-	finalize_new_content_dirs "$P2" 'ROLLBACK_HIT=1'
-	chmod 0755 "$P2/wp-content/uploads-old" 2>/dev/null
-	assert_eq "error/rollback path was taken" "1" "$ROLLBACK_HIT"
-	assert_eq "production content is intact (not lost) after failed finalize" "LIVE DATA" "$(cat "$P2/wp-content/uploads/keep.txt" 2>/dev/null)"
-	assert_present "production uploads directory still exists" "$P2/wp-content/uploads"
-fi
+install_mv_shim
+MV_FAIL_SOURCES="$P2/wp-content/uploads-old"   # the park of the stale aside
+ROLLBACK_HIT=0
+finalize_new_content_dirs "$P2" 'ROLLBACK_HIT=1'
+remove_mv_shim
+assert_eq "error/rollback path was taken" "1" "$ROLLBACK_HIT"
+assert_eq "production content is intact (not lost) after failed finalize" "LIVE DATA" "$(cat "$P2/wp-content/uploads/keep.txt" 2>/dev/null)"
+assert_present "production uploads directory still exists" "$P2/wp-content/uploads"
+assert_eq "nothing was promoted" "STAGED" "$(cat "$P2/wp-content/uploads-new/f" 2>/dev/null)"
+assert_eq "and the stale aside is untouched, not half-moved" "BLOCK" "$(cat "$P2/wp-content/uploads-old/f" 2>/dev/null)"
 
 echo "== finalize is all-or-nothing across dirs: one failing dir rolls the others back =="
 
-# uploads and themes promote cleanly; plugins then fails (its read-only plugins-old cannot be cleared).
-# Because asides are only deleted after every dir promotes, uploads and themes must roll back to their
-# ORIGINAL production content, not be left half-deployed. Root bypasses perms, so skip there.
+# uploads and themes promote cleanly; plugins then fails, because the stale plugins-old in its way
+# cannot be moved. Since the asides are only discarded after every dir promotes, uploads and themes
+# must roll back to their ORIGINAL production content rather than be left half-deployed.
+#
+# Also injected through the shim now, for the reason given in the test above: the read-only directory
+# this used to rely on stopped blocking anything once the code renamed that tree instead of deleting
+# it, and the test went on passing while asserting a rollback that was not happening.
 R4="$(mktemp -d)"; P4="$R4/prod"
 mkdir -p "$P4/wp-content/uploads" "$P4/wp-content/uploads-new" \
          "$P4/wp-content/themes"  "$P4/wp-content/themes-new" \
@@ -236,25 +243,23 @@ echo "ORIG-UP" > "$P4/wp-content/uploads/f";  echo "NEW-UP" > "$P4/wp-content/up
 echo "ORIG-TH" > "$P4/wp-content/themes/f";   echo "NEW-TH" > "$P4/wp-content/themes-new/f"
 echo "ORIG-PL" > "$P4/wp-content/plugins/f";  echo "NEW-PL" > "$P4/wp-content/plugins-new/f"
 echo "BLOCK"   > "$P4/wp-content/plugins-old/f"
-chmod 0500 "$P4/wp-content/plugins-old"
-if [ "$(id -u)" = "0" ]; then
-	chmod 0755 "$P4/wp-content/plugins-old"
-	ok "cross-dir rollback test skipped (running as root; cannot block rm)"
-else
-	XDIR_HIT=0
-	finalize_new_content_dirs "$P4" 'XDIR_HIT=1'
-	chmod 0755 "$P4/wp-content/plugins-old" 2>/dev/null
-	assert_eq "cross-dir failure took the error path" "1" "$XDIR_HIT"
-	assert_eq "uploads rolled back to original content" "ORIG-UP" "$(cat "$P4/wp-content/uploads/f" 2>/dev/null)"
-	assert_eq "themes rolled back to original content" "ORIG-TH" "$(cat "$P4/wp-content/themes/f" 2>/dev/null)"
-	assert_eq "plugins never promoted (still original)" "ORIG-PL" "$(cat "$P4/wp-content/plugins/f" 2>/dev/null)"
-fi
+install_mv_shim
+MV_FAIL_SOURCES="$P4/wp-content/plugins-old"
+XDIR_HIT=0
+finalize_new_content_dirs "$P4" 'XDIR_HIT=1'
+remove_mv_shim
+assert_eq "cross-dir failure took the error path" "1" "$XDIR_HIT"
+assert_eq "uploads rolled back to original content" "ORIG-UP" "$(cat "$P4/wp-content/uploads/f" 2>/dev/null)"
+assert_eq "themes rolled back to original content" "ORIG-TH" "$(cat "$P4/wp-content/themes/f" 2>/dev/null)"
+assert_eq "plugins never promoted (still original)" "ORIG-PL" "$(cat "$P4/wp-content/plugins/f" 2>/dev/null)"
 
-echo "== finalize normalizes a stale -old left by an interrupted prior run =="
+echo "== finalize parks a stale -old left by an interrupted prior run, and still promotes =="
 
-# Production in place plus a leftover -old: the leftover is disposable and must be dropped, and the
-# deploy must still promote cleanly (regression guard for the mv-nesting bug: a stale -old must never
-# cause production to be moved INTO it).
+# Production in place plus a leftover -old. finalize needs the "-old" NAME, nothing more, so it gets
+# it with a rename: `[ -d "$ORIG" ]` is not evidence that production is safe (see the sweep tests
+# below), and this branch used to delete on that test, which put the unsound rule back 200 lines from
+# where it was removed. The deploy must still promote cleanly (regression guard for the mv-nesting
+# bug: a stale -old must never cause production to be moved INTO it).
 R5="$(mktemp -d)"; P5="$R5/prod"
 mkdir -p "$P5/wp-content/uploads" "$P5/wp-content/uploads-new" "$P5/wp-content/uploads-old" \
          "$P5/wp-content/themes" "$P5/wp-content/themes-new" \
@@ -264,10 +269,14 @@ echo "STAGED" > "$P5/wp-content/uploads-new/f"
 echo "LEFTOVER" > "$P5/wp-content/uploads-old/f"
 finalize_new_content_dirs "$P5"
 assert_eq "promoted staged content despite stale -old" "STAGED" "$(cat "$P5/wp-content/uploads/f" 2>/dev/null)"
-assert_absent "stale -old cleared, not nested" "$P5/wp-content/uploads/uploads-old"
-# The stale LEFTOVER -old is dropped during normalization; the -old that remains is this run's aside of
-# the pre-deploy production (PROD), kept as a disposable backup for the next setup to sweep.
+assert_absent "stale -old moved out of the way, not nested" "$P5/wp-content/uploads/uploads-old"
+# The -old that remains is this run's aside of the pre-deploy production (PROD), not the leftover.
 assert_eq "remaining uploads-old is this run's production aside (not the stale leftover)" "PROD" "$(cat "$P5/wp-content/uploads-old/f" 2>/dev/null)"
+# And the leftover itself is still on disk. It MIGHT have been production -- a finalize killed between
+# its two renames leaves exactly this shape, and a single media request then recreates the directory
+# that makes it look disposable. Nothing here can tell, so nothing here deletes.
+PARKED_P5="$(find "$P5/wp-content" -maxdepth 1 -name 'uploads-recovered-*' -type d | head -1)"
+assert_eq "the unattributable leftover was parked, not deleted" "LEFTOVER" "$(cat "$PARKED_P5/f" 2>/dev/null)"
 
 echo "== finalize restores production from a -old left when ORIG is missing (mid-swap interrupt) =="
 

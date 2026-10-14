@@ -441,22 +441,36 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	public function test_a_swap_finished_by_an_orphaned_verb_is_reported_as_success() {
 		$this->set_up_fixture_tree();
 
+		// Read at the instant the verb is invoked. The flag has to be on DISK by then, because the
+		// process that would otherwise save it is the one being killed; a flag set only in memory is
+		// still written by the success path afterwards, so asserting it at the end proves nothing.
+		$attempt_on_disk_when_verb_ran = null;
+
 		StagingWPUnitTest::$exec_responses = array(
 			$this->verb_response( 'Content deploy setup complete.' ),
 			$this->verb_response( 'Content deploy core download complete.' ),
-			$this->verb_response( 'Files deployed successfully.', array( $this, 'simulate_completed_swap' ) ),
+			$this->verb_response(
+				'Files deployed successfully.',
+				function () use ( &$attempt_on_disk_when_verb_ran ) {
+					$attempt_on_disk_when_verb_ran = $this->state_on_disk()['finalize_attempted'] ?? null;
+					$this->simulate_completed_swap();
+				}
+			),
 		);
 
 		$controller = new ContentCopyController( $this->staging );
 		$this->drive_to_completion( $controller );
 		$this->assertCount( 3, StagingWPUnitTest::$executed_commands );
+		$this->assertTrue(
+			$attempt_on_disk_when_verb_ran,
+			'The attempt must be recorded on disk before the verb runs, or a killed request leaves no evidence of it.'
+		);
 
 		// Rewind the record to the instant before PHASE_DONE was saved, leaving the disk as it is.
 		$state_path = $this->temp_production_dir . '/nfd-private/copy-deploy-files/phase-state.json';
 		$state       = json_decode( (string) file_get_contents( $state_path ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		$state['phase'] = ContentCopyController::PHASE_FINALIZE;
 		file_put_contents( $state_path, wp_json_encode( $state ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		$this->assertTrue( $state['finalize_attempted'], 'The attempt must be recorded before the verb runs.' );
 		$this->assertNull( $this->read_lock(), 'Precondition: the verb released the mutex.' );
 
 		$result = ( new ContentCopyController( $this->staging ) )->advance();
@@ -591,9 +605,20 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	public function test_restarting_a_job_releases_its_lock_before_forgetting_the_token() {
 		$this->set_up_fixture_tree();
 
+		// Read at the instant the restarted job's setup verb is invoked, which is the only moment the
+		// question is observable: by the time the verb returns it has planted a lock of its own either
+		// way. A real lock_check would be REFUSED here by a lock it could not release.
+		$lock_when_setup_ran = 'unset';
+
 		StagingWPUnitTest::$exec_responses = array(
 			$this->verb_response( 'Content deploy setup complete.' ),
-			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response(
+				'Content deploy setup complete.',
+				null,
+				function () use ( &$lock_when_setup_ran ) {
+					$lock_when_setup_ran = $this->read_lock();
+				}
+			),
 		);
 
 		$controller = new ContentCopyController( $this->staging );
@@ -603,6 +628,11 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		$this->plant_lock( $token, 0, 0 );   // as a copy burst's refresh leaves it
 
 		$controller->advance( true );
+
+		$this->assertNull(
+			$lock_when_setup_ran,
+			'The restart must release the old lock while it still knows the token; afterwards nothing can name it.'
+		);
 
 		$lock = $this->read_lock();
 		$this->assertNotNull( $lock, 'The restart runs setup, which takes a lock of its own.' );
@@ -954,6 +984,22 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	}
 
 	/**
+	 * The job's phase state as it currently is ON DISK, which is what survives a killed request.
+	 *
+	 * @return array
+	 */
+	private function state_on_disk() {
+		$path = $this->temp_production_dir . '/nfd-private/copy-deploy-files/phase-state.json';
+		if ( ! is_file( $path ) ) {
+			return array();
+		}
+
+		$decoded = json_decode( (string) file_get_contents( $path ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	/**
 	 * Do to the tree what a real deploy_content_finalize does: promote each `-new` over production,
 	 * and leave no `-new` behind. The mocked verbs otherwise only touch the lock, so without this the
 	 * `-new` trees would still be on disk and nothing could tell a completed swap from a pending one.
@@ -976,15 +1022,24 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	 * A successful mocked bash verb that also maintains the staging lock the way the real one does.
 	 *
 	 * @param string        $message JSON message the verb prints.
-	 * @param callable|null $extra   Optional extra assertion callback, given the command string.
+	 * @param callable|null $extra   Optional assertion callback, run AFTER the lock is maintained and
+	 *                               given the command string. Use for anything about the verb's
+	 *                               effects.
+	 * @param callable|null $before  Optional assertion callback, run BEFORE the lock is maintained.
+	 *                               Use for anything about the state the verb was HANDED, which the
+	 *                               `$extra` hook can no longer see: by then this fixture has already
+	 *                               planted the lock a real lock_check would have taken.
 	 *
 	 * @return array
 	 */
-	private function verb_response( $message, $extra = null ) {
+	private function verb_response( $message, $extra = null, $before = null ) {
 		return array(
 			'output'   => array( '{"status":"success","message":"' . $message . '"}' ),
 			'status'   => 0,
-			'callback' => function ( $command ) use ( $extra ) {
+			'callback' => function ( $command ) use ( $extra, $before ) {
+				if ( is_callable( $before ) ) {
+					$before( $command );
+				}
 				$this->simulate_bash_lock( $command );
 				if ( is_callable( $extra ) ) {
 					$extra( $command );

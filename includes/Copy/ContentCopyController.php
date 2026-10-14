@@ -523,7 +523,8 @@ class ContentCopyController {
 		 * A finalize this job already ran may have SUCCEEDED without this phase ever being told.
 		 *
 		 * deploy_content_finalize swaps, releases the mutex, and only THEN deletes the `-old` asides,
-		 * which is the one step whose cost scales with the site's file count. The whole point of that
+		 * which on a normal deploy is the only step whose cost scales with the site's file count (the
+		 * sweep in deploy_content_setup is the other, and only after an abandoned attempt). The point of that
 		 * ordering is that the request blocking on it is free to die: by then production is live and
 		 * correct. But the request dying is also what stops saveState(PHASE_DONE) below from running,
 		 * so the job is still recorded as `finalize`, and the next poll re-enters here.

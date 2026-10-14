@@ -67,9 +67,20 @@ class FileCopier {
 		}
 
 		// 1. Hardlink fast path.
+		//
+		// The comparison is production against the source AS IT IS NOW, not against the size + mtime
+		// the manifest recorded at enumeration. The copy phase can run for hours, so a staging file
+		// edited after the walk still matches the manifest -- and so did production, which meant the
+		// edit was hardlinked away and silently not shipped. The byte copy below re-snapshots for
+		// exactly this reason; the two paths have to agree about which version of the file a deploy
+		// ships, or the answer depends on whether a hardlink happened to be possible.
 		if ( null !== $link_cand && 0 === $offset && is_file( $link_cand ) && ! is_link( $link_cand ) ) {
+			clearstatcache( true, $src );
 			clearstatcache( true, $link_cand );
-			if ( filesize( $link_cand ) === $size && filemtime( $link_cand ) === $mtime ) {
+			$src_size  = filesize( $src );
+			$src_mtime = filemtime( $src );
+			if ( false !== $src_size && false !== $src_mtime
+				&& filesize( $link_cand ) === $src_size && filemtime( $link_cand ) === $src_mtime ) {
 				if ( is_file( $dest ) || is_link( $dest ) ) {
 					@unlink( $dest );
 				}

@@ -2444,9 +2444,20 @@ finalize_new_content_dirs() {
     # the leftover IS production (interrupted mid-swap) and must be restored, not deleted.
     if [ -e "$OLD" ]; then
       if [ -d "$ORIG" ]; then
-        log "INFO" "finalize_new_content_dirs:$DIR" "Dropping disposable stale aside $OLD"
-        if ! rm -rf "$OLD"; then
-          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not clear stale $OLD; aborting rather than risk nesting"
+        # PARKED, not deleted, and for exactly the reason cleanup_failed_new_content_dirs parks it:
+        # `[ -d "$ORIG" ]` is not evidence that production is safe. A finalize killed between its two
+        # renames leaves production AT "$OLD" with the "$ORIG" name free, and one live request is
+        # enough to recreate it -- wp_upload_dir() remakes uploads/YYYY/MM on any media request. A
+        # near-empty recreated directory satisfies this test exactly as well as the real tree does.
+        #
+        # This branch used to `rm -rf "$OLD"` on that test, which reintroduced delete-before-promote
+        # on the one state the sweep declares unattributable: the same unsound rule, 200 lines away
+        # from where it was removed. All this branch actually needs is the "$OLD" NAME, and a rename
+        # gets that without deciding which copy is production.
+        content_aside_name "$TO" "$DIR" recovered
+        log "WARN" "finalize_new_content_dirs:$DIR" "A stale $OLD is in the way and nothing says which copy is production; parking it at $NFD_ASIDE_PATH rather than deleting it"
+        if ! mv -T "$OLD" "$NFD_ASIDE_PATH"; then
+          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not move stale $OLD aside; aborting rather than risk nesting"
           _finalize_rollback
           [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to clear stale $DIR aside during finalize."
           return 1
@@ -2535,10 +2546,18 @@ finalize_new_content_dirs() {
 # Delete the "-old" asides a completed swap left behind. The slow half of the swap, kept separate
 # from it on purpose.
 #
-# This is the ONLY step in a content deploy whose cost scales with the site's file count: the copy is
+# On a normal deploy this is the only step whose cost scales with the site's file count: the copy is
 # chunked into bounded bursts by includes/Copy, the core download is a fixed ~50MB, and the promote
-# itself is three renames. So this is the one step that can outlive the PHP request that started it,
-# and the question is only what that costs.
+# itself is three renames. So this is the step that can outlive the PHP request that started it, and
+# the question is only what that costs.
+#
+# One other step shares the property and is NOT made safe this way: deploy_content_setup's call to
+# cleanup_failed_new_content_dirs removes any stale "-new", which is one unlink per file, holding the
+# mutex, inside the request. It is empty on a normal deploy and only has work to do after an attempt
+# was abandoned, so it is a retry-after-a-crash cost rather than a per-deploy one -- but a large
+# enough site can be killed there, which leaves the next retry the same work to do again. Chunking
+# that sweep is the open follow-up; it is not solvable by releasing the mutex, because setup needs the
+# trees gone before the copy may start.
 #
 # It costs nothing, because the CALLER releases the staging mutex before calling this. Production is
 # already live and correct and these trees are backups of content that is no longer anywhere else in

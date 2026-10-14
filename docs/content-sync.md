@@ -106,10 +106,16 @@ copy in. On large or busy sites that had two problems:
 
 ### Deleting the asides, and why it happens after the mutex is released
 
-Deleting the asides is the **one step in a content deploy whose cost scales with the site's file
+On a normal deploy, deleting the asides is the **only step whose cost scales with the site's file
 count**. The copy is chunked into bounded bursts, the core download is a fixed ~50MB, and the promote
-itself is three renames. So it is the one step that can outlive the PHP request, and `mv` is not an
+itself is three renames. So it is the step that can outlive the PHP request, and `mv` is not an
 option: the trees have to go.
+
+(One other step shares the property. The sweep in `deploy_content_setup` removes any stale `-new`,
+which is one unlink per file, holding the mutex, inside the request. It is empty on a normal deploy
+and only has work after an attempt was abandoned, so it is a retry cost rather than a per-deploy one.
+Releasing the mutex cannot help there, because setup needs those trees gone before the copy may
+start, so chunking that sweep is an open follow-up.)
 
 `deploy_content_finalize` therefore does three things in this order, and the order is the design:
 
