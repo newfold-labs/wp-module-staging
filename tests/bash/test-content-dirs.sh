@@ -128,12 +128,19 @@ install_mv_shim() {
     done
     if [ "$hit" -eq 1 ]; then
       MV_FAIL_SOURCES="$rest"
-      case " $MV_SQUAT_SOURCES " in
-        *" $source "*)
-          mkdir -p "$target/2026/10" 2>/dev/null || true
-          : > "$target/2026/10/x.jpg" 2>/dev/null || true
-          ;;
-      esac
+      # One-shot, like MV_FAIL_SOURCES: a live request recreating the directory is a single event in
+      # the race window. Left un-consumed, a second failure of the same source re-creates the
+      # squatter and silently occupies the name a rollback needs, which makes any test of the
+      # rollback pass or fail for the wrong reason.
+      rest=""; hit=0
+      for t in $MV_SQUAT_SOURCES; do
+        if [ "$hit" -eq 0 ] && [ "$t" = "$source" ]; then hit=1; else rest="$rest $t"; fi
+      done
+      if [ "$hit" -eq 1 ]; then
+        MV_SQUAT_SOURCES="$rest"
+        mkdir -p "$target/2026/10" 2>/dev/null || true
+        : > "$target/2026/10/x.jpg" 2>/dev/null || true
+      fi
       return 1
     fi
     command mv "$@" || rc=$?
@@ -647,6 +654,74 @@ assert_eq "whatever was at production's name is left exactly where it was" "" \
   "$(find "$P17/wp-content" -maxdepth 1 -name 'uploads-squatter-*' | head -1)"
 assert_present "and is still being served" "$P17/wp-content/uploads/2026/10/x.jpg"
 
+echo "== a squatter never blocks the rollback: production goes back to its own name =="
+
+# The squatter path exists to clear production's name when a live request recreated it, so the
+# promote can be retried. When that retry ALSO fails, the only thing that matters is that production
+# gets its name back.
+#
+# This used to put the squatter back first, "best effort", which moved a near-empty directory into
+# the exact name the rollback needs. `mv -T` then refused the occupied target, so the rollback
+# reported "could not restore in place", production was parked under "-recovered-", and the live site
+# was left serving the squatter: an empty media library, recoverable only by hand. Production is
+# never the thing that gets moved out of the way.
+R19="$(mktemp -d)"; P19="$R19/prod"
+mkdir -p "$P19/wp-content/uploads" "$P19/wp-content/uploads-new" \
+         "$P19/wp-content/themes" "$P19/wp-content/themes-new" \
+         "$P19/wp-content/plugins" "$P19/wp-content/plugins-new"
+echo "THE REAL MEDIA LIBRARY" > "$P19/wp-content/uploads/f"
+echo "STAGED" > "$P19/wp-content/uploads-new/f"
+for d in themes plugins; do
+  echo "ORIG-$d" > "$P19/wp-content/$d/f"
+  echo "STAGED-$d" > "$P19/wp-content/$d-new/f"
+done
+install_mv_shim
+# Fail the promote TWICE: once to enter the squatter path (leaving a squatter behind, as a live
+# request would), and once more so the retry inside it fails too.
+MV_FAIL_SOURCES="$P19/wp-content/uploads-new $P19/wp-content/uploads-new"
+MV_SQUAT_SOURCES="$P19/wp-content/uploads-new"
+SQROLL_HIT=0
+finalize_new_content_dirs "$P19" 'SQROLL_HIT=1'
+remove_mv_shim
+
+assert_eq "the failure is reported" "1" "$SQROLL_HIT"
+assert_eq "production is back at its own name, serving" "THE REAL MEDIA LIBRARY" "$(cat "$P19/wp-content/uploads/f" 2>/dev/null)"
+assert_eq "production was NOT parked" "" "$(find "$P19/wp-content" -maxdepth 1 -name 'uploads-recovered-*' | head -1)"
+assert_absent "and nothing was left at the -old name" "$P19/wp-content/uploads-old"
+# The squatter stays parked. Leaking a tree whose name nothing sweeps is the cost of this; it is not
+# production, and it is not deleted either, because nothing here can prove it is disposable.
+SQ19="$(find "$P19/wp-content" -maxdepth 1 -name 'uploads-squatter-*' -type d | head -1)"
+assert_present "the squatter is left parked for inspection" "$SQ19/2026/10/x.jpg"
+
+echo "== a failing rsync in prepare_new_content_dirs is diagnosed, not fatal =="
+
+# Every branch after the rsync reads its exit code to decide what the failure MEANS: a permission
+# denial on an ignorable .htaccess backup is tolerated, anything else sweeps and fails the deploy.
+# So the exit code has to survive to be read.
+#
+# Run under a real `set -e` because the harness turns errexit off, and this is the function where
+# that matters least and is easiest to get wrong: it opens with its own `set +e` and never restores
+# it, which is both why the bare `$?` was safe and why every caller of this function continues with
+# errexit off. That second part is a real hazard and is NOT fixed here -- it is noted in the PR.
+R20="$(mktemp -d)"; P20="$R20/prod"; S20="$R20/stg"
+mkdir -p "$P20/wp-content/uploads" "$S20/wp-content/uploads"
+echo "live" > "$P20/wp-content/uploads/f"
+echo "staged" > "$S20/wp-content/uploads/f"
+
+RSYNC_RC=""
+( set -e
+  rsync() { return 23; }   # 23 = partial transfer, the ordinary transient failure
+  prepare_new_content_dirs "$S20" "$P20"
+  printf '%s' "$?" > "$R20/rc"
+) >/dev/null 2>&1
+RSYNC_RC="$(cat "$R20/rc" 2>/dev/null)"
+
+assert_present "the script survived the failing rsync to diagnose it" "$R20/rc"
+assert_eq "and reported the failure to its caller" "1" "$RSYNC_RC"
+# The half-built tree is swept, so a retry starts clean rather than promoting a partial copy.
+assert_absent "the partial -new was cleaned up" "$P20/wp-content/uploads-new"
+assert_eq "and production is untouched" "live" "$(cat "$P20/wp-content/uploads/f" 2>/dev/null)"
+
 echo "== a rollback that cannot restore in place parks production instead of losing it =="
 
 # Both renames fail: the promote, and then the rollback's restore of "-old" back to production. The
@@ -676,7 +751,7 @@ assert_absent "nothing was left at the -old name for a later sweep to puzzle ove
 
 trap - EXIT
 rm -rf "$ROOT" "$R2" "$R3" "$R4" "$R5" "$R6" "$R7" "$R8" "$R9" "$R10" "$R11" "$R12" "$R13" \
-       "$R14" "$R15" "$R16" "$R17" "$R18" "$LOG_FILE" 2>/dev/null
+       "$R14" "$R15" "$R16" "$R17" "$R18" "$R19" "$R20" "$LOG_FILE" 2>/dev/null
 
 echo
 echo "-----------------------------------------"

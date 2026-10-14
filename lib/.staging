@@ -2321,8 +2321,17 @@ prepare_new_content_dirs() {
       local ORIG="$TO/wp-content/$DIR"
       log "INFO" "prepare_new_content_dirs:$DIR" "Copying to $DEST"
       log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -rt --exclude=.git --link-dest=\"$ORIG\" \"$SRC/\" \"$DEST\""
-      RSYNC_OUTPUT=$(rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" 2>&1)
-      RSYNC_EXIT=$?
+      # Captured through `||` rather than a bare `$?`. Everything below reads RSYNC_EXIT to decide
+      # what the failure MEANS -- a permission denial on an ignorable .htaccess backup is tolerated,
+      # anything else sweeps and fails the deploy -- so losing the chance to read it loses the whole
+      # diagnosis. This function already runs with errexit off (see the `set +e` at its top), so the
+      # bare form worked; this one keeps working if that ever changes, and costs nothing.
+      #
+      # NOT the `set +e` / `set -e` pair move_content_dirs uses. That pair does not restore the
+      # previous state, it asserts one, so calling such a function from anywhere errexit was off
+      # turns it ON for everything afterwards.
+      RSYNC_EXIT=0
+      RSYNC_OUTPUT=$(rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" 2>&1) || RSYNC_EXIT=$?
       log "DEBUG" "prepare_new_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
 
       if [ -n "$RSYNC_OUTPUT" ]; then
@@ -2512,8 +2521,18 @@ finalize_new_content_dirs() {
           PROMOTED+=("$DIR")
           continue
         fi
-        # Retry failed; put the squatter back (best effort) and fall through to recovery.
-        [ -d "$SQUATTER" ] && [ ! -e "$ORIG" ] && mv -T "$SQUATTER" "$ORIG" 2>/dev/null
+        # Retry failed. The squatter STAYS where it is, and this is the one decision in this block
+        # that matters: production comes first.
+        #
+        # Putting it back here (which this used to do) moved a near-empty directory into the name the
+        # rollback below needs. `mv -T "$OLD" "$ORIG"` then refuses an occupied target, so the
+        # rollback "could not restore in place", production got parked under "-recovered-", and the
+        # LIVE SITE was left serving the squatter -- a visibly empty media library, recoverable only
+        # by hand. Leaving the squatter parked costs a leaked tree whose name nothing sweeps, and the
+        # rollback finds "$ORIG" free and restores production into it.
+        #
+        # (It was also a bare `&&` list ending in `mv`, so a failure of that `mv` would have ended the
+        # whole finalize under `set -e`, skipping the rollback entirely.)
       fi
       log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to promote $NEW to $ORIG"
       if [ "$ASIDE" -eq 1 ]; then
