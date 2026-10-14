@@ -22,6 +22,12 @@
 #
 # Run: bash tests/bash/test-staging-lock.sh
 
+# Most of the variables this file sets are read by the SOURCED lib/.staging, not by this file. A
+# linter cannot follow a dynamic source, so it reports every fixture variable as unused; the
+# file-wide SC2034 exemption below is what keeps its output usable. (A comment whose first word is
+# the linter's own name is parsed as a directive, hence the roundabout phrasing.)
+# shellcheck disable=SC2034
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGING_SCRIPT="$SCRIPT_DIR/../../lib/.staging"
 
@@ -383,7 +389,7 @@ if [ "$HAVE_FLOCK" = "1" ]; then
     printf 'active:%s:%s:%s' "$(date +%s)" "winnerstoken" "$BASHPID" > "$LOCK_FILE"
   ) &
   GUARD_HOLDER=$!
-  LIVE_PIDS+=($GUARD_HOLDER)
+  LIVE_PIDS+=("$GUARD_HOLDER")
   until [ -e "$HELD_MARKER" ]; do sleep 0.05; done
 
   LOCK_GUARD_WAIT=10   # must outlast the holder, so the verdict comes from ordering, not a timeout

@@ -28,6 +28,11 @@
 #
 # Run: bash tests/bash/test-content-dirs.sh  (on Linux, as a non-root user)
 
+# PRODUCTION_DIR, STAGING_DIR and friends are read by the SOURCED lib/.staging, not by this file. A
+# linter cannot follow a dynamic source, so it reports every one of them as unused; hence the
+# file-wide SC2034 exemption below.
+# shellcheck disable=SC2034
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGING_SCRIPT="$SCRIPT_DIR/../../lib/.staging"
 
