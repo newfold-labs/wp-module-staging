@@ -11,12 +11,16 @@ use NewfoldLabs\WP\Module\Staging\Staging;
 use NewfoldLabs\WP\Module\Staging\StagingCommandLock;
 
 /**
- * Drives one deploy-files content copy through four phases -- setup -> copy -> finalize -> done -- doing
- * at most one bounded unit of work per advance() call, so a poll loop (the REST advance route or the
- * WP-cron fallback) can finish an arbitrarily large deploy without any single request running long.
+ * Drives one deploy-files content copy through five phases -- setup -> copy -> core -> finalize ->
+ * done -- doing at most one bounded unit of work per advance() call, so a poll loop (the REST advance
+ * route or the WP-cron fallback) can finish an arbitrarily large deploy without any single request
+ * running long.
  *
- * The two bash bookends run through Staging's existing command path (token handshake, env, escaping):
- *   - setup    -> `deploy_content_setup`    (WordPress core + php-ai-client; sweeps stale -new/-old)
+ * The three bash bookends run through Staging's existing command path (token handshake, env, escaping):
+ *   - setup    -> `deploy_content_setup`    (sweeps stale -new/-old; nothing else)
+ *   - core     -> `deploy_content_core`     (WordPress core download + php-ai-client, deliberately
+ *                                            after the copy so a long copy never leaves production
+ *                                            running new core against old content)
  *   - finalize -> `deploy_content_finalize` (atomic promote of the finished -new tree over production)
  *
  * Between them, CopyEngine builds the `-new` hardlink-delta tree in bursts. Phase and progress are

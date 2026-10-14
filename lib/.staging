@@ -3205,11 +3205,13 @@ deploy_content_setup() {
   # Fail if a stale "-new" or "-old" survived the sweep. cleanup_failed_new_content_dirs only LOGS an rm
   # failure, so verify here:
   #   - a stale "-new" would be copied on top of and shipped to production;
-  #   - a stale "-old" (the prior deploy's aside, which finalize now leaves for this setup to sweep) left
-  #     in place lets finalize's "already promoted" skip-branch mis-count it as a promoted dir, which can
-  #     corrupt a later-dir rollback. cleanup_failed_new_content_dirs removes "-old" when production is in
-  #     place and restores it (moving it to ORIG) when production is missing, so after a successful sweep
-  #     no "-old" should remain either way.
+  #   - a stale "-old" means a prior finalize died between its two renames (deploy_content_finalize
+  #     otherwise deletes the asides itself, in the same run, right after releasing the mutex, so an
+  #     "-old" does not normally outlive its run). Left in place it lets finalize's "already promoted"
+  #     skip-branch mis-count it as a promoted dir, which can corrupt a later-dir rollback.
+  #     cleanup_failed_new_content_dirs never guesses which copy is production: with production's name
+  #     free it RESTORES the aside to that name, and with both names occupied it PARKS the aside under
+  #     a "-recovered-" name no sweep touches. Either way a successful sweep leaves no "-old" behind.
   for d in uploads themes plugins; do
     [ ! -e "$PRODUCTION_DIR/wp-content/$d-new" ] || error "Unable to clear stale $d-new before content copy."
     [ ! -e "$PRODUCTION_DIR/wp-content/$d-old" ] || error "Unable to clear stale $d-old before content copy."
