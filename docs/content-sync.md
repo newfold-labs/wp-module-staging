@@ -182,6 +182,14 @@ a filesystem operation, so it should not need a database to be readable.
   the winner's *fresh* lock and create its own on top. On a host with no `flock` (macOS, so dev only)
   the lock is left alone rather than stolen: blocking costs availability, an unguarded steal costs
   correctness.
+- **Reclaiming the job's own lock goes through the same guard.** The reclaim is a read, a liveness
+  decision and a write, and two verbs of the *same* job can run it at once: FPM kills a request
+  mid-verb (freeing the controller's advisory flock while the bash verb is still booting WP-CLI), the
+  next poll sees a lock recording only the previous verb's dead pid and launches the verb again.
+  Unguarded, both read "holder gone" and both reclaimed the mutex. Under the guard the first writer
+  records its own live pid and the second is refused (`held_by_own_live_step`). When `flock` exists
+  but the guard cannot be taken the command is refused rather than reclaimed unguarded; only a host
+  with no `flock` at all still runs the reclaim unguarded, where steals cannot happen anyway.
 - **Only the shell that took the lock frees it**, and only a lock still carrying its own token. A
   blocked caller, a subshell, and a holder whose lock was taken from it past the hard ceiling all
   leave it alone.

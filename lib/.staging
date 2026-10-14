@@ -327,22 +327,64 @@ lock_holder_alive() {
   ps -p "$pid" >/dev/null 2>&1
 }
 
-# Reclaim a lock that is OURS and still fresh, without the guard. Three outcomes, because the caller
-# has to tell "not my business" from "refused":
+# Reclaim a lock that is OURS and still fresh. Three outcomes, because the caller has to tell "not
+# my business" from "refused":
 #   0  reclaimed.
-#   1  not ours to reclaim (no lock, somebody else's, or ours but too old). Hand it to the guard.
+#   1  not ours to reclaim (no lock, somebody else's, ours but too old, or the guard could not be
+#      taken on a host that has one). Hand it to the guard section.
 #   2  ours, but an earlier step of this job is still RUNNING. Already reported; fail the command.
 #
-# Guard-free because reclaiming our own fresh lock takes nothing from anybody. Requiring the guard
-# here was a hole, not just a cost: every bookend verb after setup is contended by its own lock, so
-# on a host whose guard cannot be opened `core` was refused every single time and no stepped deploy
-# could ever finish.
+# UNDER THE GUARD, because the reclaim is a read (cat), a decision (is the recorded pid alive?) and a
+# write (lock_refresh), and two verbs of the SAME job can run it at once: PHP launches a bookend
+# verb, FPM kills that request mid-verb -- which releases the controller's advisory flock while the
+# bash verb is still in its WP-CLI bootstraps, before its own lock_check -- and the next poll, seeing
+# a lock that records only the PREVIOUS verb's dead pid, launches the same verb again. Both carry the
+# job's token, both read "holder gone", and unguarded both reclaimed: two finalizes then interleaved
+# their renames, and a rollback's `mv -T` could race the other's `rm -rf` into emptying live
+# production uploads. The guard serializes the read-to-write window, so the first verb's
+# lock_refresh records its own live pid and the second is refused with held_by_own_live_step.
+#
+# When flock exists but the guard cannot be taken, this does NOT fall back to the unguarded
+# read-then-write: somebody is inside the arbitration section right now, which is exactly when the
+# race is live. Returning 1 hands the decision to lock_check's guarded section, which refuses
+# (guard_unavailable), the same answer that section already gives every other arbitration. The cost
+# is that a host whose guard file is permanently unopenable (root-owned mode 0600; lock_guard_enter's
+# read-only fallback already covers 0644) cannot run a STEPPED deploy -- it fails with a clear lock
+# error while create/clone/legacy deploy still work -- where it previously ran one with an unguarded
+# mutex. Only a host with no flock at all (macOS, so dev only) still reclaims unguarded below, the
+# same degradation every guarded path accepts there, where it costs correctness only against a
+# sibling verb of the same job and steals cannot happen at all.
+#
+# The token pre-check stays OUTSIDE the guard on purpose: deciding NOT to act on a possibly-stale
+# read is safe (the guarded section re-reads), and it keeps contention on a foreign lock -- the
+# common case for every non-stepped command -- off the guard entirely.
+lock_reclaim_own_fresh() {
+  lock_is_ours || return 1
+
+  local guarded=0 rc=0
+  if lock_guard_enter; then
+    guarded=1
+  elif lock_guard_available; then
+    return 1
+  fi
+
+  lock_reclaim_own_fresh_unguarded || rc=$?
+
+  if [ "$guarded" = "1" ]; then
+    lock_guard_leave
+  fi
+  return $rc
+}
+
+# The read-check-write itself. Only lock_reclaim_own_fresh above may call this; everyone else must
+# come through the guard it takes.
 #
 # A MARGIN below the TTL, not the TTL itself. At the boundary another operation is already entitled
 # to steal, and a steal is `rm -f` plus an exclusive create while this is a read plus a write BY
 # PATH: if the stealer's create landed in between, lock_refresh would truncate it and stamp our token
-# over it, and both would believe they held the mutex.
-lock_reclaim_own_fresh() {
+# over it, and both would believe they held the mutex. The guard closes that against guarded stealers
+# too, but the margin keeps the no-flock fallback honest and costs nothing.
+lock_reclaim_own_fresh_unguarded() {
   local data ts token pid now age
   data=$(cat "$LOCK_FILE" 2>/dev/null || true)
   [ -n "$data" ] || return 1

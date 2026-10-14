@@ -428,6 +428,15 @@ assert_eq "the refused caller does not own the lock" "0" "$STAGING_LOCK_OWNED"
 # Reclaiming this job's OWN lock needs no steal, so it still works on a host with no flock at all.
 lock_check "abandonedtoken"
 assert_eq "its own lock is still reclaimable on a host with no flock" "0" "$?"
+# ...and a FRESH own lock too, which is the no-flock fallback inside lock_reclaim_own_fresh itself
+# (the stale lock above is reclaimed by the contended path instead). Without this fallback a host
+# with no flock could never run a stepped deploy at all: every bookend verb after setup finds its
+# own lock in place and has to reclaim it.
+STAGING_LOCK_OWNED=0
+plant_lock 10 "abandonedtoken" "$DEAD_PID"
+lock_check "abandonedtoken"
+assert_eq "its own FRESH lock is still reclaimed on a host with no flock" "0" "$?"
+assert_eq "and records this process as its holder" "$$" "$(lock_pid)"
 eval "$REAL_GUARD_FNS"
 
 echo "== on a host WITH flock, failing to take the guard refuses rather than arbitrating without it =="
@@ -445,6 +454,18 @@ assert_eq "a guard that cannot be taken refuses the command" "1" "$?"
 assert_eq "and says why" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
 assert_eq "the existing lock is untouched" "abandonedtoken" "$(lock_token)"
 assert_eq "the refused caller does not own the lock" "0" "$STAGING_LOCK_OWNED"
+
+# Even its own FRESH lock is not reclaimed unguarded on such a host. The fast path used to, which
+# was a read-then-write race: two verbs of ONE job -- an orphaned bookend still in its WP-CLI
+# bootstraps and the relaunched twin the next poll started -- could both read the previous verb's
+# dead pid and both reclaim. Fresh-and-ours only short-circuits WITH the guard now; see the race
+# test further down for the two-process version of this.
+plant_lock 10 "ourjobtoken" "$DEAD_PID"
+lock_check "ourjobtoken"
+assert_eq "even its own fresh lock is not reclaimed when the guard cannot be taken" "1" "$?"
+assert_eq "and says why" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
+assert_eq "the fresh lock is untouched" "ourjobtoken" "$(lock_token)"
+assert_eq "its recorded holder is untouched" "$DEAD_PID" "$(lock_pid)"
 
 # Even its OWN lock is not reclaimed unguarded on such a host, once it is past the reclaim margin.
 plant_lock 2000 "ourjobtoken" "$DEAD_PID"
@@ -504,6 +525,113 @@ wait "${RACER_PIDS[@]}"
 WINNERS=$(find "$RACER_DIR" -name 'won.*' | wc -l | tr -d ' ')
 assert_eq "exactly one of 20 concurrent exclusive creates wins" "1" "$WINNERS"
 assert_present "and the lock file it created is there" "$LOCK_FILE"
+
+echo "== two verbs of one job cannot both reclaim the same lock =="
+
+# The interleaving FPM-kill-plus-repoll opens in production: a bookend verb is launched, its PHP
+# request is killed (freeing the controller's advisory flock) while the verb is still in its WP-CLI
+# bootstraps, and the next poll -- seeing a lock that records only the PREVIOUS verb's dead pid --
+# launches the same verb again. Both carry the job's token. The reclaim is a read, a liveness
+# decision and a write, and unguarded both processes could read "holder gone" and both take the
+# mutex; lock_reclaim_own_fresh now takes the kernel guard around that window, so the first writer
+# records its own live pid and the second is refused.
+#
+# Two REAL processes, so pids and liveness are real. Racer A is parked between its first read of the
+# lock file and everything after it (a one-shot `cat` shim, armed only for A); racer B runs
+# unimpeded; then A is released and replays its paused reclaim. Each racer that gets the lock drops
+# a win marker and stays alive until told to exit, because the other's refusal depends on a LIVE
+# recorded pid. Exactly one may win, under either ordering the barrier produces.
+if [ "$HAVE_FLOCK" = "1" ]; then
+  new_fixture
+  RACE_DIR="$ROOT/race"
+  mkdir -p "$RACE_DIR"
+  plant_lock 10 "racejobtoken" "$DEAD_PID"   # the previous verb's lock: fresh, holder gone
+
+  RACER_SCRIPT="$RACE_DIR/racer.sh"
+  cat > "$RACER_SCRIPT" <<'RACER'
+#!/usr/bin/env bash
+# One racer of the same-token reclaim race; see the calling test for the scenario. All NFD_* inputs
+# arrive in the environment.
+set -- compat_check tok "$NFD_PROD_DIR" /nonexistent/stg http://p.test http://s.test 0 id slug name
+# shellcheck disable=SC1090
+source "$NFD_STAGING_SCRIPT"
+set +e
+trap - EXIT
+cleanup() { :; }
+resync_cached_options() { :; }
+write_deploy_result() { :; }
+legacy_lock_held() { return 1; }
+legacy_lock_announce() { :; }
+legacy_lock_withdraw() { :; }
+error() { exit 1; }
+LOCK_GUARD_WAIT=20   # must outlast the barrier, so a verdict comes from ordering, not a timeout
+
+if [ -n "${NFD_PAUSE_AFTER_READ:-}" ]; then
+  # One-shot: park this process after its FIRST read of the lock file, mid-reclaim, until released.
+  # The pause runs inside whatever subshell the read happens in; the marker files cross processes.
+  cat() {
+    command cat "$@"
+    local st=$?
+    if [ "${1:-}" = "$LOCK_FILE" ] && [ ! -e "$NFD_PAUSE_CONSUMED" ]; then
+      : > "$NFD_PAUSE_CONSUMED"
+      : > "$NFD_READ_MARK"
+      while [ ! -e "$NFD_GO" ]; do sleep 0.05; done
+    fi
+    return $st
+  }
+fi
+
+lock_check "$NFD_RACE_TOKEN" || exit 1
+: > "$NFD_WIN_DIR/won.$NFD_RACER_NAME"
+# Stay alive until told: the other racer's refusal depends on this process still running.
+while [ ! -e "$NFD_EXIT_GO" ]; do sleep 0.05; done
+exit 0
+RACER
+
+  export NFD_PROD_DIR="$PRODUCTION_DIR"
+  export NFD_STAGING_SCRIPT="$STAGING_SCRIPT"
+  export NFD_RACE_TOKEN="racejobtoken"
+  export NFD_WIN_DIR="$RACE_DIR"
+  export NFD_EXIT_GO="$RACE_DIR/exit-go"
+  export NFD_PAUSE_CONSUMED="$RACE_DIR/pause-consumed"
+  export NFD_READ_MARK="$RACE_DIR/read-mark"
+  export NFD_GO="$RACE_DIR/go"
+
+  NFD_RACER_NAME=A NFD_PAUSE_AFTER_READ=1 bash "$RACER_SCRIPT" >/dev/null 2>&1 &
+  RACER_A=$!
+  TRIES=0
+  until [ -e "$NFD_READ_MARK" ] || [ "$TRIES" -ge 200 ]; do sleep 0.05; TRIES=$((TRIES + 1)); done
+  assert_present "racer A reached its read and parked" "$NFD_READ_MARK"
+
+  NFD_RACER_NAME=B bash "$RACER_SCRIPT" >/dev/null 2>&1 &
+  RACER_B=$!
+  sleep 1          # let B run into whichever gate applies before A is released
+  : > "$NFD_GO"
+
+  # Settled means: each racer has either dropped a win marker (and parked) or exited refused. A live
+  # racer with no marker of its own is still mid-flight.
+  race_settled() {
+    if kill -0 "$RACER_A" 2>/dev/null && [ ! -e "$RACE_DIR/won.A" ]; then return 1; fi
+    if kill -0 "$RACER_B" 2>/dev/null && [ ! -e "$RACE_DIR/won.B" ]; then return 1; fi
+    return 0
+  }
+  TRIES=0
+  until race_settled || [ "$TRIES" -ge 300 ]; do sleep 0.05; TRIES=$((TRIES + 1)); done
+
+  RECLAIM_WINNERS=$(find "$RACE_DIR" -name 'won.*' | wc -l | tr -d ' ')
+  assert_eq "exactly one of two same-token verbs reclaims the lock" "1" "$RECLAIM_WINNERS"
+  assert_eq "the lock still carries the job's token" "racejobtoken" "$(lock_token)"
+  if [ -e "$RACE_DIR/won.A" ]; then EXPECTED_WINNER_PID=$RACER_A; else EXPECTED_WINNER_PID=$RACER_B; fi
+  assert_eq "and records the winner's live pid, which is what refused the loser" "$EXPECTED_WINNER_PID" "$(lock_pid)"
+
+  : > "$NFD_EXIT_GO"
+  wait "$RACER_A" "$RACER_B" 2>/dev/null
+  unset NFD_PROD_DIR NFD_STAGING_SCRIPT NFD_RACE_TOKEN NFD_WIN_DIR NFD_EXIT_GO
+  unset NFD_PAUSE_CONSUMED NFD_READ_MARK NFD_GO
+  unset -f race_settled
+else
+  skip "exactly one of two same-token verbs reclaims the lock"
+fi
 
 echo "== only the shell that took the lock may free it =="
 
@@ -680,15 +808,14 @@ else
   SKIP=$((SKIP + 1)); printf '  skip - unopenable-guard tests need flock and a non-root user\n'
 fi
 
-echo "== reclaiming this job's own fresh lock needs no guard =="
+echo "== reclaiming this job's own fresh lock queues on the guard =="
 
-# Every bookend verb after setup is CONTENDED by construction: it finds a lock, and the lock is its
-# own. Requiring the guard for that was not just a cost, it was a hole. On a host whose guard file
-# cannot be opened, the refusal fires for every contended call, so setup would succeed on the
-# guard-free fast path, the copy phase would run, and `core` would be refused every single time --
-# no stepped deploy could ever finish there, while the doc claimed only abandoned-lock recovery was
-# affected. Reclaiming our own still-fresh lock takes nothing from anybody, so it does not arbitrate
-# and does not need the guard.
+# The fresh-own reclaim used to bypass a held guard entirely, which was the read-then-write race:
+# two verbs of one job could both read the previous verb's dead pid and both reclaim. It now QUEUES
+# on the guard (flock -w LOCK_GUARD_WAIT) like every other arbitration. In production the wait is
+# 30s and arbitration takes milliseconds, so a sibling verb simply serializes behind it; a guard
+# held past the wait refuses the command rather than falling back to the unguarded read-then-write,
+# because a guard held that long means arbitration is LIVE, which is exactly when the race is.
 if [ "$HAVE_FLOCK" = "1" ]; then
   new_fixture
   eval "$REAL_GUARD_FNS"
@@ -702,7 +829,9 @@ if [ "$HAVE_FLOCK" = "1" ]; then
   # `composer run test:shell`) from seeing EOF until the sleep expires -- adding its full duration to
   # every run, silently. `kill $!` does not help: with an `&&` list bash does not exec-optimize, so $!
   # is the subshell and the `sleep` is its child, which survives. Closing its stdout is what fixes it.
-  ( flock 9 && : > "$ROOT/guard-held" && sleep 20 >/dev/null 2>&1 ) >/dev/null 2>&1 9>>"$LOCK_GUARD_FILE" &
+  # The sleep also closes fd 9 (like live_pid does): it must not inherit the guard flock, or killing
+  # the subshell below would leave the guard held by an orphan sleep for its full duration.
+  ( flock 9 && : > "$ROOT/guard-held" && sleep 20 >/dev/null 2>&1 9>&- ) >/dev/null 2>&1 9>>"$LOCK_GUARD_FILE" &
   GUARD_HOLDER=$!
   LIVE_PIDS+=("$GUARD_HOLDER")
   GUARD_WAITED=0
@@ -713,10 +842,18 @@ if [ "$HAVE_FLOCK" = "1" ]; then
   assert_present "the background holder took the guard (test precondition)" "$ROOT/guard-held"
   plant_lock 60 "steppedjobtoken" "$DEAD_PID"
   lock_check "steppedjobtoken"
-  assert_eq "a later verb reclaims its own fresh lock with the guard unavailable" "0" "$?"
+  assert_eq "a guard held past the wait refuses the reclaim rather than bypassing the guard" "1" "$?"
+  assert_eq "and says why" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
+  assert_eq "the lock is untouched" "steppedjobtoken" "$(lock_token)"
+  assert_eq "its recorded holder is untouched" "$DEAD_PID" "$(lock_pid)"
+  assert_eq "the refused verb does not own the lock" "0" "$STAGING_LOCK_OWNED"
+  # Once the holder lets go, the same verb reclaims -- under the guard this time.
+  kill "$GUARD_HOLDER" 2>/dev/null
+  wait "$GUARD_HOLDER" 2>/dev/null
+  lock_check "steppedjobtoken"
+  assert_eq "once the guard frees, the verb reclaims its own fresh lock" "0" "$?"
   assert_eq "the job keeps its token" "steppedjobtoken" "$(lock_token)"
   assert_eq "and owns the lock" "1" "$STAGING_LOCK_OWNED"
-  kill "$GUARD_HOLDER" 2>/dev/null
 else
   SKIP=$((SKIP + 1)); printf '  skip - guard-contention test needs flock\n'
 fi
@@ -743,30 +880,32 @@ assert_eq "and says which refusal it was" "lock_check:held_by_own_live_step" "$L
 assert_eq "the running step keeps the lock" "steppedjobtoken" "$(lock_token)"
 assert_eq "and the caller does not own it" "0" "$STAGING_LOCK_OWNED"
 
-echo "== the guard-free own reclaim stands off from the TTL boundary =="
+echo "== the own reclaim stands off from the TTL boundary =="
 
 # At the TTL exactly, another operation is already entitled to steal, and a steal is `rm -f` plus an
-# exclusive create while this reclaim is a read plus a write BY PATH. A stealer's create landing
-# between the read and the write would be truncated by lock_refresh and stamped with our token, and
-# both would hold the mutex. So the guard-free path only takes a lock comfortably inside the TTL;
-# anything older is arbitration and goes through the guard.
+# exclusive create while this reclaim is a read plus a write BY PATH. The guard now serializes those
+# too, but the margin stays: it keeps the no-flock fallback honest (where nothing serializes) and it
+# routes the near-boundary case into the contended section, which re-examines under the guard.
 new_fixture
 eval "$REAL_GUARD_FNS"
 lock_guard_available() { return 0; }
 lock_guard_enter() { return 1; }
-# Inside the TTL but within the margin of it: too close to reclaim without the guard.
+# Inside the TTL but within the margin of it: never short-circuited, so with no guard to be had it
+# is refused as arbitration.
 plant_lock "$((LOCK_TTL - 5))" "steppedjobtoken" "$DEAD_PID"
 lock_check "steppedjobtoken"
-assert_eq "a lock within the margin is not reclaimed guard-free" "1" "$?"
+assert_eq "a lock within the margin is not reclaimed without the guard" "1" "$?"
 assert_eq "it is treated as arbitration instead" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
 
-# Comfortably inside the TTL, the same setup reclaims without ever needing the guard.
+# Being comfortably inside the TTL changes nothing when flock exists but the guard cannot be taken:
+# the read-then-write runs under the guard or not at all (the race test above is why).
 new_fixture
 lock_guard_available() { return 0; }
 lock_guard_enter() { return 1; }
 plant_lock "$((LOCK_TTL - LOCK_RECLAIM_MARGIN - 60))" "steppedjobtoken" "$DEAD_PID"
 lock_check "steppedjobtoken"
-assert_eq "a lock well inside the TTL is reclaimed guard-free" "0" "$?"
+assert_eq "a lock well inside the TTL is still not reclaimed when the guard cannot be taken" "1" "$?"
+assert_eq "and says why" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
 eval "$REAL_GUARD_FNS"
 
 echo "== a loser never touches the winner's lock file =="
