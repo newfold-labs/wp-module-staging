@@ -823,6 +823,75 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	}
 
 	/**
+	 * A restart withdraws THIS job's publication on the cross-version compat channel, so a retry after
+	 * a failed deploy is not refused by a token the dead job left behind.
+	 *
+	 * lib/.staging's setup announces the held mutex on a transient (its LEGACY_LOCK_NAME) so a peer
+	 * running an older script still sees it. If the job fails while holding the lock, that announcement
+	 * ages out only at LOCK_TTL, and a fresh deploy's lock_check reads it as a foreign holder and
+	 * refuses the retry the user just asked for. resetLocked clears our own prior publication. Written
+	 * and asserted by DB option, which is how lib/.staging stores and reads it (object cache skipped);
+	 * a delete_transient() could miss under a persistent object cache.
+	 *
+	 * @return void
+	 */
+	public function test_restart_withdraws_its_own_stale_compat_channel() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ), // the first job's setup
+			$this->verb_response( 'Content deploy setup complete.' ), // the restarted job's setup
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$controller->advance(); // setup: a job and its token now exist
+
+		$token  = $this->read_lock()['token'];
+		$option = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+
+		// The announcement a held mutex leaves, stored exactly as lib/.staging writes it: active:<ts>:<token>.
+		update_option( $option, 'active:' . time() . ':' . $token );
+		update_option( '_transient_timeout_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT, time() + 1800 );
+
+		$controller->advance( true ); // restart
+
+		$this->assertFalse(
+			get_option( $option ),
+			'The restart must withdraw its own prior compat-channel publication so the retry is not refused.'
+		);
+	}
+
+	/**
+	 * A restart must NOT withdraw a publication carrying another operation's token: clearing a live
+	 * clone's or destroy's mutex announcement would let this deploy run against trees it is still moving.
+	 *
+	 * @return void
+	 */
+	public function test_restart_leaves_a_foreign_compat_channel_alone() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy setup complete.' ),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$controller->advance(); // setup
+
+		$option = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+		$value  = 'active:' . time() . ':someoneelsesclonetoken';
+		update_option( $option, $value );
+
+		$controller->advance( true ); // restart
+
+		$this->assertSame(
+			$value,
+			get_option( $option ),
+			'A foreign operation\'s compat-channel publication must be left intact.'
+		);
+	}
+
+	/**
 	 * A lock that has simply VANISHED also stops the job, rather than being re-acquired.
 	 *
 	 * lib/.staging's lock_check cannot answer this one: presented with no lock file it just takes one,

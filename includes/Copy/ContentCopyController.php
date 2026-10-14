@@ -75,6 +75,12 @@ class ContentCopyController {
 	const DEPLOY_COMMAND = 'deploy_files';
 
 	/**
+	 * The cross-version compat channel lib/.staging publishes the held mutex on (its LEGACY_LOCK_NAME
+	 * transient). Kept in sync with that bash constant.
+	 */
+	const COMPAT_CHANNEL_TRANSIENT = 'nfd_staging_lock';
+
+	/**
 	 * Staging instance used to resolve paths, run bash verbs, and write the result file.
 	 *
 	 * @var Staging
@@ -308,12 +314,55 @@ class ContentCopyController {
 		 * ours may still be writing, such as an orphaned setup part-way through its sweep.
 		 */
 		if ( is_file( $this->statePath() ) ) {
-			$this->lock()->releaseIfOurs( $this->jobToken( $this->loadState( false ) ) );
+			$old_token = $this->jobToken( $this->loadState( false ) );
+			$this->lock()->releaseIfOurs( $old_token );
+			$this->withdrawCompatChannel( $old_token );
 		}
 
 		$this->engine()->cleanup();
 		if ( is_file( $this->statePath() ) ) {
 			wp_delete_file( $this->statePath() );
+		}
+	}
+
+	/**
+	 * Withdraw this job's publication from the cross-version compat channel (lib/.staging's
+	 * LEGACY_LOCK_NAME transient) so a restart or retry is not blocked by a token a failed job left
+	 * behind.
+	 *
+	 * A stepped deploy's setup announces `active:<ts>:<token>` on this transient, so a peer running an
+	 * older copy of the script (which cannot see the lock FILE) still sees the mutex held. If the job
+	 * then fails while holding the lock, nothing withdraws that announcement: the failing verb's
+	 * release path leaves the held lock in place, and the transient ages out only at LOCK_TTL. A fresh
+	 * deploy carries a new token, so lock_check's legacy_lock_held sees a foreign, still-fresh holder
+	 * and refuses every verb, blocking the retry the user just asked for for up to half an hour.
+	 * Clearing our own prior publication on restart closes that window.
+	 *
+	 * Cleared by DB option, not delete_transient(): lib/.staging sets this transient with the object
+	 * cache drop-in skipped, so it is always database backed, and legacy_lock_held reads it the same
+	 * way. A delete_transient() from a request with a persistent object cache would clear only the
+	 * cache copy and leave the row the script actually reads. Guarded by token so a concurrent
+	 * operation's publication is never touched.
+	 *
+	 * @param string $token This job's lock token (the one being discarded).
+	 *
+	 * @return void
+	 */
+	private function withdrawCompatChannel( $token ) {
+		if ( '' === $token ) {
+			return;
+		}
+
+		$value = get_option( '_transient_' . self::COMPAT_CHANNEL_TRANSIENT );
+		if ( ! is_string( $value ) ) {
+			return;
+		}
+
+		// active:<ts>:<token>
+		$parts = explode( ':', $value );
+		if ( count( $parts ) >= 3 && 'active' === $parts[0] && hash_equals( (string) $parts[2], $token ) ) {
+			delete_option( '_transient_' . self::COMPAT_CHANNEL_TRANSIENT );
+			delete_option( '_transient_timeout_' . self::COMPAT_CHANNEL_TRANSIENT );
 		}
 	}
 
