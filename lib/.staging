@@ -299,12 +299,13 @@ lock_mark_owned() {
 # with a fresh timestamp and the CHILD's pid. Freshness keeps every TTL-based steal away while the
 # work is genuinely running, whoever its parent is; recording the child makes the liveness probes
 # track the process actually touching the trees, so even a same-token reclaim waits for it. The
-# watcher survives this script (background, never waited on) and exits on its own within a second of
-# the child's exit, or at its next write tick once the lock stops carrying our token: it re-checks
-# ownership before EVERY write, so it never writes over -- and so never prolongs -- a lock that has
-# changed hands, though it may take up to an interval to notice and exit. Call
-# lock_reattribute_to_self after reaping the child, or the lock is left naming a dead pid while this
-# script works on.
+# watcher runs in the background; lock_reattribute_to_self (via lock_stop_watcher) kills and reaps it
+# before handing the lock back, so no tick can fire AFTER the hand-back and stamp the reaped child's
+# pid over this script's. As a second line of defence it re-checks ownership before EVERY write, so it
+# never writes over -- and so never prolongs -- a lock that has changed hands; left to itself it exits
+# within a second of the child's exit, or at its next tick once the lock stops carrying our token.
+# Call lock_reattribute_to_self after reaping the child (via wait); it stops the watcher and puts this
+# script's pid back on the lock.
 #
 # The write is by path, under the same margin reasoning as lock_refresh: it only lands on a lock that
 # is OURS and that the watcher's own previous write keeps far inside the TTL, so no steal is
@@ -332,14 +333,30 @@ lock_watch_child() {
       done
     done
   ) >/dev/null 2>&1 9>&- &
+  STAGING_LOCK_WATCHER_PID=$!
+}
+
+# Stop and reap the lock watcher started by lock_watch_child so it can make no further writes. The
+# watcher re-checks ownership but NOT the recorded pid, so a tick firing after lock_reattribute_to_self
+# would otherwise stamp the reaped child's pid back over this script's, leaving the lock naming a dead
+# process. kill+wait is exact: once wait returns the subshell is gone, so the lock_refresh that follows
+# lands last and stays.
+lock_stop_watcher() {
+  local w="${STAGING_LOCK_WATCHER_PID:-}"
+  [ -n "$w" ] || return 0
+  kill "$w" 2>/dev/null || true
+  wait "$w" 2>/dev/null || true
+  STAGING_LOCK_WATCHER_PID=''
 }
 
 # Put this script's own pid back on a lock a watcher above attributed to a now-reaped child, so the
 # rest of the run keeps the holder-is-alive protection (a lock naming a dead pid is reclaimable by a
-# same-token verb immediately and stealable the moment it ages out). Only a lock that is still ours
-# and comfortably fresh -- which a watched lock is, by construction -- is touched; anything else is
-# somebody else's business or the guard's.
+# same-token verb immediately and stealable the moment it ages out). Stops the watcher FIRST (so its
+# next tick cannot land after this refresh), then refreshes only a lock that is still ours and
+# comfortably fresh -- which a watched lock is, by construction; anything else is somebody else's
+# business or the guard's.
 lock_reattribute_to_self() {
+  lock_stop_watcher
   [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
   lock_is_ours || return 0
   lock_age_within "$((LOCK_TTL - LOCK_RECLAIM_MARGIN))" || return 0
@@ -410,8 +427,9 @@ lock_holder_alive() {
 #
 # When flock exists but the guard cannot be taken, this does NOT fall back to the unguarded
 # read-then-write: somebody is inside the arbitration section right now, which is exactly when the
-# race is live. Returning 1 hands the decision to lock_check's guarded section, which refuses
-# (guard_unavailable), the same answer that section already gives every other arbitration. The cost
+# race is live. Returning 1 hands the decision back to lock_check, which re-attempts the guard itself:
+# it proceeds under the guard if it can take it, and refuses (guard_unavailable) only if it still
+# cannot -- the same answer that section gives every other arbitration it cannot guard. The cost
 # is that a host whose guard file is permanently unopenable (root-owned mode 0600; lock_guard_enter's
 # read-only fallback already covers 0644) cannot run a STEPPED deploy -- it fails with a clear lock
 # error while create/clone/legacy deploy still work -- where it previously ran one with an unguarded
@@ -503,7 +521,8 @@ lock_check_contended() {
   esac
   LOCK_AGE=$((CURRENT_TIME - LOCK_TIMESTAMP))
 
-  # Our own job's lock, too old for the guard-free path above.
+  # Our own job's lock, too old for the margin-bounded fresh reclaim above (which is itself guarded);
+  # reclaim it here under the guard, bounded by the hard TTL.
   if [ -n "$LOCK_TOKEN" ] && [ "$LOCK_TOKEN" = "$STAGING_LOCK_TOKEN" ]; then
     if [ "$LOCK_PID" != "$$" ] && lock_holder_alive "$LOCK_PID" && [ "$LOCK_AGE" -le "$LOCK_HARD_TTL" ]; then
       log "INFO" "lock_check" "This job's own lock is still held by a running step (pid $LOCK_PID)."

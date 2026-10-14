@@ -116,6 +116,7 @@ new_fixture() {
   STAGING_LOCK_KEEP=0
   STAGING_LOCK_TOKEN=""
   STAGING_LOCK_OWNER_PID=""
+  STAGING_LOCK_WATCHER_PID=""
   LAST_ERROR=""
   LAST_ERROR_STEP=""
   LEGACY_HELD=0
@@ -685,6 +686,38 @@ assert_eq "and keeps its recorded holder" "424242" "$(lock_pid)"
 plant_lock "$((LOCK_TTL - 5))" "watchedjobtoken" "424242"
 lock_reattribute_to_self
 assert_eq "a near-boundary lock is left for the guard paths" "424242" "$(lock_pid)"
+unset LOCK_WATCH_INTERVAL
+
+echo "== lock_reattribute_to_self reaps the watcher so no late tick re-stamps a dead pid =="
+
+# Review finding: the watcher re-checks ownership (the token) but NOT the recorded pid, so a tick
+# firing AFTER the parent reaped the rsync and handed the lock back would stamp the now-dead child's
+# pid over the parent's, leaving the lock naming a dead process for the rest of the run (reclaimable by
+# a same-token verb at once, stealable the moment it ages out). With a LIVE watcher still ticking,
+# lock_reattribute_to_self must kill and reap it BEFORE refreshing, so the parent's pid is the last
+# write and stays. Without the reap, the surviving watcher re-stamps the child pid within one interval.
+new_fixture
+lock_check "watchedjobtoken"
+live_pid
+WATCHED_CHILD=$LIVE_PID          # stand-in for the rsync; kept alive so the watcher keeps ticking
+LOCK_WATCH_INTERVAL=1
+lock_watch_child "$WATCHED_CHILD"
+sleep 2                          # let the watcher claim the lock with the child's pid
+assert_eq "the watcher has attributed the lock to the child" "$WATCHED_CHILD" "$(lock_pid)"
+assert_ne "and recorded its own pid for later reaping" "" "$STAGING_LOCK_WATCHER_PID"
+WATCHER_PID=$STAGING_LOCK_WATCHER_PID
+lock_reattribute_to_self
+assert_eq "re-attribution records this process" "$$" "$(lock_pid)"
+if kill -0 "$WATCHER_PID" 2>/dev/null; then
+  no "the watcher is reaped by re-attribution" "watcher $WATCHER_PID still running"
+else
+  ok "the watcher is reaped by re-attribution"
+fi
+assert_eq "the watcher pid is cleared" "" "$STAGING_LOCK_WATCHER_PID"
+sleep 2                          # longer than a tick: a surviving watcher would re-stamp the child pid here
+assert_eq "no late watcher tick re-stamps the dead child's pid" "$$" "$(lock_pid)"
+kill "$WATCHED_CHILD" 2>/dev/null
+wait "$WATCHED_CHILD" 2>/dev/null
 unset LOCK_WATCH_INTERVAL
 
 echo "== the watcher never writes over a lock that stopped being ours =="
