@@ -387,6 +387,229 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	}
 
 	/**
+	 * A deploy with nothing to copy still runs its finalize verb.
+	 *
+	 * "No `-new` trees on disk" is how the controller recognises a swap that already happened, and a
+	 * staging site with no content directories produces that state from the very start. Reading it as
+	 * a completed swap would report success without ever invoking finalize -- and so without releasing
+	 * the staging mutex, leaving every later staging operation refused until the lock aged out. The
+	 * recorded attempt is what separates the two; this is the case that proves it is needed.
+	 *
+	 * @return void
+	 */
+	public function test_a_deploy_with_nothing_to_copy_still_runs_finalize() {
+		$this->set_up_fixture_tree();
+
+		// A staging site whose wp-content holds none of the three copied directories.
+		foreach ( array( 'uploads', 'themes', 'plugins' ) as $dir ) {
+			$this->recursive_rmdir( $this->temp_staging_dir . '/wp-content/' . $dir );
+		}
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy core download complete.' ),
+			$this->verb_response( 'Files deployed successfully.' ),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$result     = $this->drive_to_completion( $controller );
+
+		$this->assertSame( 'success', $result['status'] );
+		$this->assertCount( 3, StagingWPUnitTest::$executed_commands );
+		$this->assertStringContainsString( 'deploy_content_finalize', StagingWPUnitTest::$executed_commands[2] );
+		// The finalize verb is what releases the mutex, so this is the observable consequence.
+		$this->assertNull( $this->read_lock(), 'Skipping finalize would leave the site locked.' );
+	}
+
+	/**
+	 * A swap the job already completed is reported as the success it was, not as a lost lock.
+	 *
+	 * deploy_content_finalize swaps, releases the mutex, and only THEN deletes the `-old` asides,
+	 * because that delete is the one step whose cost scales with the site's file count. The whole
+	 * point of the ordering is that the request blocking on it may die. But the request dying is also
+	 * what stops the controller recording PHASE_DONE, so the next poll re-enters finalize and finds
+	 * the lock gone -- and used to tell the customer the deploy "was stopped before changing
+	 * production", on a deploy that had finished.
+	 *
+	 * The death is simulated the only way it can be in-process: let the verb run to completion, then
+	 * rewrite the state file to what was on disk a moment BEFORE the controller got to save
+	 * PHASE_DONE. Production is swapped, no `-new` remains, the lock is released. That is exactly the
+	 * world the next poll wakes up in.
+	 *
+	 * @return void
+	 */
+	public function test_a_swap_finished_by_an_orphaned_verb_is_reported_as_success() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy core download complete.' ),
+			$this->verb_response( 'Files deployed successfully.', array( $this, 'simulate_completed_swap' ) ),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$this->drive_to_completion( $controller );
+		$this->assertCount( 3, StagingWPUnitTest::$executed_commands );
+
+		// Rewind the record to the instant before PHASE_DONE was saved, leaving the disk as it is.
+		$state_path = $this->temp_production_dir . '/nfd-private/copy-deploy-files/phase-state.json';
+		$state       = json_decode( (string) file_get_contents( $state_path ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$state['phase'] = ContentCopyController::PHASE_FINALIZE;
+		file_put_contents( $state_path, wp_json_encode( $state ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertTrue( $state['finalize_attempted'], 'The attempt must be recorded before the verb runs.' );
+		$this->assertNull( $this->read_lock(), 'Precondition: the verb released the mutex.' );
+
+		$result = ( new ContentCopyController( $this->staging ) )->advance();
+
+		$this->assertSame( 'success', $result['status'] );
+		$this->assertSame( ContentCopyController::PHASE_DONE, $result['phase'] );
+		$this->assertCount( 3, StagingWPUnitTest::$executed_commands, 'The verb must not be run a second time.' );
+
+		// And the legacy status path, which is what the UI actually reads, agrees.
+		$this->assertSame( 'success', $this->staging->getDeployStatus( 'files' )['status'] );
+	}
+
+	/**
+	 * A finalize refused because an earlier verb of the SAME job is still running reports `running`.
+	 *
+	 * lock_check will not reclaim a lock whose recorded process is alive, and it reports that with the
+	 * same customer-facing message as every other refusal. When that process is our own orphaned
+	 * finalize, still swapping, the job is progressing and the poll driver has to be told to come
+	 * back. Treating the refusal as terminal failed a deploy that was about to succeed.
+	 *
+	 * @return void
+	 */
+	public function test_a_refusal_by_this_jobs_own_running_verb_reports_running() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy core download complete.' ),
+			// What lock_check prints for lock_check:held_by_own_live_step.
+			array(
+				'output' => array( '{"status":"error","message":"Staging action is locked by another command."}' ),
+				'status' => 0,
+			),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+
+		$result = array(
+			'status' => 'running',
+			'phase'  => '',
+		);
+		$guard  = 0;
+		while ( 'running' === $result['status'] && ContentCopyController::PHASE_FINALIZE !== $result['phase'] && $guard < 100 ) {
+			$result = $controller->advance();
+			++$guard;
+		}
+		$this->assertSame( ContentCopyController::PHASE_FINALIZE, $result['phase'] );
+
+		// The orphan: our own token, and a pid that is certainly alive (this process).
+		$token = $this->read_lock()['token'];
+		$this->plant_lock( $token, 0, getmypid() );
+
+		$result = $controller->advance();
+
+		$this->assertSame( 'running', $result['status'], 'A job whose own verb is still working is not a failure.' );
+		$this->assertSame( ContentCopyController::PHASE_FINALIZE, $result['phase'] );
+		// The `-new` trees are still there, so nothing was reported as promoted that was not.
+		$this->assertDirectoryExists( $this->temp_production_dir . '/wp-content/uploads-new' );
+
+		// With the same refusal but a DEAD holder, the job does fail: nothing is coming back to finish it.
+		StagingWPUnitTest::$exec_responses = array(
+			array(
+				'output' => array( '{"status":"error","message":"Staging action is locked by another command."}' ),
+				'status' => 0,
+			),
+		);
+		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
+
+		$result = $controller->advance();
+		$this->assertSame( 'error', $result['status'] );
+	}
+
+	/**
+	 * A PHP-side failure hands the mutex back instead of leaving the site locked for the TTL.
+	 *
+	 * Every bash failure path releases through error(), but a failure on the PHP side had no release
+	 * at all, so the lock the setup verb took stayed until it aged out and every staging operation on
+	 * the site was refused for up to half an hour over a deploy that was already over.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_job_releases_a_lock_it_can_prove_is_its_own() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			array(
+				'output' => array( '{"status":"error","message":"Preparing the WordPress core failed."}' ),
+				'status' => 0,
+			),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+
+		$result = array(
+			'status' => 'running',
+			'phase'  => '',
+		);
+		$guard  = 0;
+		while ( 'running' === $result['status'] && ContentCopyController::PHASE_CORE !== $result['phase'] && $guard < 100 ) {
+			$result = $controller->advance();
+			++$guard;
+		}
+		$this->assertSame( ContentCopyController::PHASE_CORE, $result['phase'] );
+
+		// Pid 0 is what a PHP-side refresh leaves, and the state in which no verb can be in flight.
+		$token = $this->read_lock()['token'];
+		$this->plant_lock( $token, 0, 0 );
+
+		$result = $controller->advance();
+
+		$this->assertSame( 'error', $result['status'] );
+		$this->assertNull( $this->read_lock(), 'A failed job must not leave the mutex held.' );
+
+		// A lock recording a bash pid is NOT released: an orphaned verb may still be running under it.
+		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
+		$controller->advance();
+		$this->assertNotNull( $this->read_lock() );
+		$this->assertSame( $token, $this->read_lock()['token'] );
+	}
+
+	/**
+	 * Restarting a job releases its lock before discarding the token that identifies it.
+	 *
+	 * The state file holds the only record of the token, so deleting it first stranded the lock
+	 * permanently: nothing could name it afterwards, and the site waited out the full TTL. The UI
+	 * resends `restart` after a gateway timeout, and a reload or a second tab does the same, so this
+	 * was reachable from an ordinary retry.
+	 *
+	 * @return void
+	 */
+	public function test_restarting_a_job_releases_its_lock_before_forgetting_the_token() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy setup complete.' ),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$controller->advance();
+
+		$token = $this->read_lock()['token'];
+		$this->plant_lock( $token, 0, 0 );   // as a copy burst's refresh leaves it
+
+		$controller->advance( true );
+
+		$lock = $this->read_lock();
+		$this->assertNotNull( $lock, 'The restart runs setup, which takes a lock of its own.' );
+		$this->assertNotSame( $token, $lock['token'], 'The old lock must have been released, not inherited.' );
+	}
+
+	/**
 	 * A lock that has simply VANISHED also stops the job, rather than being re-acquired.
 	 *
 	 * lib/.staging's lock_check cannot answer this one: presented with no lock file it just takes one,
@@ -728,6 +951,25 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		}
 
 		$this->plant_lock( $this->token_from_command( $command ), 0, self::DEPARTED_VERB_PID );
+	}
+
+	/**
+	 * Do to the tree what a real deploy_content_finalize does: promote each `-new` over production,
+	 * and leave no `-new` behind. The mocked verbs otherwise only touch the lock, so without this the
+	 * `-new` trees would still be on disk and nothing could tell a completed swap from a pending one.
+	 *
+	 * @return void
+	 */
+	public function simulate_completed_swap() {
+		foreach ( array( 'uploads', 'themes', 'plugins' ) as $dir ) {
+			$new  = $this->temp_production_dir . '/wp-content/' . $dir . '-new';
+			$live = $this->temp_production_dir . '/wp-content/' . $dir;
+			if ( ! is_dir( $new ) ) {
+				continue;
+			}
+			$this->recursive_rmdir( $live );
+			rename( $new, $live ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename
+		}
 	}
 
 	/**

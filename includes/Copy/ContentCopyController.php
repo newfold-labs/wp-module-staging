@@ -290,6 +290,22 @@ class ContentCopyController {
 	 * @return void
 	 */
 	private function resetLocked() {
+		/*
+		 * Release BEFORE the state file goes, because the state file holds the only record of the
+		 * token. Deleting it first stranded the lock permanently: no later call could name the token,
+		 * so nothing could ever release it and the site waited out the full TTL. That was reachable
+		 * from an ordinary retry -- the UI resends `restart` after a gateway timeout, and a reload or
+		 * a second tab does the same -- so the common case of "the first poll took too long" cost the
+		 * user half an hour of refusals.
+		 *
+		 * A restart is also exactly when this is safe: the caller is abandoning the old job, so there
+		 * is nothing of ours left that the lock protects. releaseIfOurs still declines a lock that
+		 * records a live bash pid, which is the one case where something IS still running.
+		 */
+		if ( is_file( $this->statePath() ) ) {
+			$this->lock()->releaseIfOurs( $this->jobToken( $this->loadState( false ) ) );
+		}
+
 		$this->engine()->cleanup();
 		if ( is_file( $this->statePath() ) ) {
 			wp_delete_file( $this->statePath() );
@@ -503,18 +519,117 @@ class ContentCopyController {
 	 * @return array
 	 */
 	private function runFinalize( $state ) {
+		/*
+		 * A finalize this job already ran may have SUCCEEDED without this phase ever being told.
+		 *
+		 * deploy_content_finalize swaps, releases the mutex, and only THEN deletes the `-old` asides,
+		 * which is the one step whose cost scales with the site's file count. The whole point of that
+		 * ordering is that the request blocking on it is free to die: by then production is live and
+		 * correct. But the request dying is also what stops saveState(PHASE_DONE) below from running,
+		 * so the job is still recorded as `finalize`, and the next poll re-enters here.
+		 *
+		 * Without this check, that poll found the lock gone (the verb released it) and reported "the
+		 * deploy lost its lock and was stopped BEFORE changing production" -- on a deploy that had
+		 * completed. That is the exact symptom the release-then-delete ordering was built to remove,
+		 * reintroduced on the PHP side.
+		 */
+		if ( $this->swapAlreadyCompleted( $state ) ) {
+			return $this->finishLocked( $state );
+		}
+
 		// Read-only: this phase invokes a bash verb, so it must not overwrite the pid in the
 		// lock. See holdsLockOrFail.
 		if ( ! $this->holdsLockOrFail( $state, $failure, false ) ) {
 			return $failure;
 		}
 
+		/*
+		 * Recorded BEFORE the verb runs, and durably, because the process that learns the answer may
+		 * not survive to report it. It is what lets the check above tell "a finalize of ours ran and
+		 * the trees are gone because it promoted them" from "the copy phase produced nothing to
+		 * promote in the first place". Both look identical on disk.
+		 */
+		if ( empty( $state['finalize_attempted'] ) ) {
+			$state['finalize_attempted'] = true;
+			$this->saveState( $state );
+		}
+
 		$response = $this->callVerb( 'deploy_content_finalize', $state );
 		if ( $this->verbFailed( $response ) ) {
+			// An earlier finalize of this same job may have got further than the one we just tried.
+			if ( $this->swapAlreadyCompleted( $state ) ) {
+				return $this->finishLocked( $state );
+			}
+
+			/*
+			 * lock_check refuses to reclaim a lock whose recorded process is still alive, and reports
+			 * it with the same customer-facing message as every other refusal. Here that process is
+			 * OUR OWN orphaned verb, still swapping: the job is progressing, not broken, so the poll
+			 * driver has to be told to come back. advance()'s stale window bounds this, so a verb that
+			 * hangs for ever still ends as a failure rather than polling for ever.
+			 */
+			if ( $this->lock()->heldByOwnLiveProcess( $this->jobToken( $state ) ) ) {
+				$this->writeRunning( $state );
+
+				return $this->envelope( 'running', $state );
+			}
+
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Finalizing the content deploy failed.', 'wp-module-staging' ) ) );
 		}
 
+		return $this->finishLocked( $state );
+	}
+
+	/**
+	 * Whether the swap this job was running has already finished, leaving nothing to promote.
+	 *
+	 * Only ever true once a finalize has actually been invoked (see `finalize_attempted`): a job whose
+	 * staging source had no content directories at all would otherwise have no `-new` trees from the
+	 * start and would be reported as a completed swap without the verb ever running, which would also
+	 * skip releasing the mutex.
+	 *
+	 * "Nothing to promote" is the same test bash itself uses to decide a directory is already done
+	 * (see finalize_new_content_dirs), and the states it could be confused with do not arise: a verb
+	 * killed mid-swap leaves the later directories' `-new` in place AND leaves its lock behind, and a
+	 * verb that failed and rolled back restores `-new` from each directory it had promoted.
+	 *
+	 * @param array $state Current state.
+	 *
+	 * @return bool
+	 */
+	private function swapAlreadyCompleted( array $state ) {
+		if ( empty( $state['finalize_attempted'] ) ) {
+			return false;
+		}
+
+		$config = $this->engineConfig();
+		foreach ( CopyEngine::DEFAULT_ROOTS as $dir ) {
+			if ( is_dir( $config['dest_root'] . '/' . $dir . $config['dest_suffix'] ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Record a completed deploy. Shared by the normal path and by the resumption check above, so a
+	 * deploy finished by an orphaned verb is reported exactly like one finished in place.
+	 *
+	 * @param array $state Current state.
+	 *
+	 * @return array
+	 */
+	private function finishLocked( array $state ) {
 		$this->engine()->cleanup();
+
+		/*
+		 * Normally the verb has already released the mutex by this point. It has not if the swap
+		 * completed but the verb was killed before its release, so this is a best-effort tidy-up:
+		 * releaseIfOurs only acts on a lock that is ours, records no bash pid, and is far enough
+		 * inside the TTL that nobody may concurrently steal it.
+		 */
+		$this->lock()->releaseIfOurs( $this->jobToken( $state ) );
 
 		$state['phase'] = self::PHASE_DONE;
 		$this->saveState( $state );
@@ -582,6 +697,20 @@ class ContentCopyController {
 		$state['phase']   = self::PHASE_ERROR;
 		$state['message'] = $message;
 		$this->saveState( $state );
+
+		/*
+		 * Give the mutex back. Every bash failure path releases through error(), but a failure on the
+		 * PHP side -- an unreadable manifest, a full disk, a directory the account cannot enter --
+		 * had no release at all, so the lock the setup verb took stayed until its TTL ran out and
+		 * every staging operation on the site was refused for up to half an hour over a deploy that
+		 * was already over.
+		 *
+		 * releaseIfOurs is the right tool rather than an unlink because it refuses anything it cannot
+		 * prove is free to delete: a lock carrying another token, one recording a bash pid (a verb may
+		 * still be in flight under it, including an orphaned setup whose `rm -rf` is still running),
+		 * or one close enough to the TTL that lib/.staging may concurrently decide it is abandoned.
+		 */
+		$this->lock()->releaseIfOurs( $this->jobToken( $state ) );
 
 		$this->staging->recordDeployResult(
 			array(

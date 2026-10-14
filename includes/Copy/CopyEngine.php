@@ -64,6 +64,15 @@ class CopyEngine {
 	private $lock_path;
 
 	/**
+	 * The wp-content subtrees a staging copy moves, when the caller does not name its own.
+	 *
+	 * Must stay in step with CONTENT_DIRS in lib/.staging and with the three directories
+	 * finalize_new_content_dirs promotes: a directory copied here but not promoted there would be
+	 * built and then silently left behind.
+	 */
+	const DEFAULT_ROOTS = array( 'uploads', 'themes', 'plugins' );
+
+	/**
 	 * Construct an engine for one copy job.
 	 *
 	 * @param array $config {
@@ -80,7 +89,7 @@ class CopyEngine {
 		$config           = array_merge(
 			array(
 				'dest_suffix'    => '',
-				'roots'          => array( 'uploads', 'themes', 'plugins' ),
+				'roots'          => self::DEFAULT_ROOTS,
 				'link_dest_root' => null,
 				'budget_seconds' => self::DEFAULT_BUDGET,
 			),

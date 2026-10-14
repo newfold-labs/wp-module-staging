@@ -247,6 +247,43 @@ class StagingCommandLock {
 	}
 
 	/**
+	 * Whether the lock is ours AND records a bash process that is still running.
+	 *
+	 * This is the difference between "an earlier verb of this job is still working" and "an earlier
+	 * verb died". Both leave a lock carrying our own token, because a SIGKILLed verb runs no EXIT trap
+	 * and so never releases, and the two need opposite answers: the first must be waited for, the
+	 * second is a failure. Without this a request killed on the FPM timeout mid-finalize was reported
+	 * to the customer as a failed deploy while its orphan completed the swap successfully.
+	 *
+	 * Only a bash verb writes a pid; refresh() above writes 0, so pid 0 means nothing of ours is in
+	 * flight. Biased towards "not running": being wrong that way costs a retry prompt on a deploy that
+	 * is already over, while being wrong the other way would poll until the job goes stale.
+	 *
+	 * @param string $token Our token.
+	 *
+	 * @return bool
+	 */
+	public function heldByOwnLiveProcess( $token ) {
+		if ( ! $this->isValidToken( $token ) ) {
+			return false;
+		}
+
+		$lock = $this->read();
+		if ( null === $lock || $lock['token'] !== $token || $lock['pid'] < 2 ) {
+			return false;
+		}
+
+		// `posix_kill($pid, 0)` is the direct test, but the POSIX extension is not always enabled on
+		// shared hosting. /proc is the fallback: under CageFS it is namespaced per account, which does
+		// not matter here because the process we are asking about is one of our own.
+		if ( function_exists( 'posix_kill' ) ) {
+			return @posix_kill( $lock['pid'], 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		return is_dir( '/proc/' . $lock['pid'] );
+	}
+
+	/**
 	 * Free the lock when the caller's PHP-side job has failed and is certainly the only thing holding
 	 * it.
 	 *
