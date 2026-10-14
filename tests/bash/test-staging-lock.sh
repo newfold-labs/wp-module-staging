@@ -1088,6 +1088,25 @@ assert_eq "a lock well inside the TTL is still not reclaimed when the guard cann
 assert_eq "and says why" "lock_check:guard_unavailable" "$LAST_ERROR_STEP"
 eval "$REAL_GUARD_FNS"
 
+# The margin itself, pinned at the function level, because lock_check can no longer show it: with a
+# working guard the contended path reclaims an own lock whatever its age, and with a broken one the
+# refusal fires before the age is read. The no-flock fallback is where the margin is load-bearing --
+# it is the only thing keeping that unguarded write-by-path away from the TTL boundary, where PHP's
+# releaseIfOurs keeps the same 60s stand-off on its side of the file.
+new_fixture
+lock_guard_available() { return 1; }
+lock_guard_enter() { return 1; }
+STAGING_LOCK_TOKEN="steppedjobtoken"
+plant_lock "$((LOCK_TTL - 5))" "steppedjobtoken" "$DEAD_PID"
+lock_reclaim_own_fresh
+assert_eq "the reclaim itself refuses an own lock inside the margin" "1" "$?"
+assert_eq "and leaves it untouched" "$DEAD_PID" "$(lock_pid)"
+plant_lock "$((LOCK_TTL - LOCK_RECLAIM_MARGIN - 60))" "steppedjobtoken" "$DEAD_PID"
+lock_reclaim_own_fresh
+assert_eq "and takes one comfortably inside the TTL" "0" "$?"
+assert_eq "recording this process as its holder" "$$" "$(lock_pid)"
+eval "$REAL_GUARD_FNS"
+
 echo "== a loser never touches the winner's lock file =="
 
 # The winner's lock file is EMPTY for the moment between the exclusive create and the write landing,

@@ -198,8 +198,10 @@ a filesystem operation, so it should not need a database to be readable.
   work are its *children*: a reaped parent's rsync survives up to an hour, during which the lock read
   as abandoned while the rsync still filled a tree. A clone's full copy and the legacy deploy's delta
   now run under a detached watcher (`lock_watch_child`) that rewrites the lock every minute with a
-  fresh timestamp and the *child's* pid, and stops by itself when the child exits or the lock stops
-  being ours; the script re-attributes the lock to itself once the child is reaped. Other long
+  fresh timestamp and the *child's* pid, and stops by itself within a second of the child's exit; it
+  re-checks ownership before every write, so a lock that changes hands is never written over (the
+  watcher just exits at its next tick). The script re-attributes the lock to itself once the child is
+  reaped. Other long
   children (core download, the sweeps, `deploy_db`'s dump/import) still record only the bash pid —
   their exposure is bounded by the lock's TTL and liveness rules and is no worse than the shipping
   code's.

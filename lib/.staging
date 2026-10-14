@@ -166,7 +166,9 @@ LOCK_TTL=1800
 # Past the TTL a lock is only abandoned if its holder is really gone. A still-running holder keeps it
 # up to this hard ceiling, which exists so a recycled pid can never pin the mutex forever.
 LOCK_HARD_TTL=21600
-# How far below LOCK_TTL a lock must be for this job to reclaim its own without the kernel guard.
+# How far below LOCK_TTL a lock must be before this job may reclaim its own, guarded or not, and the
+# stand-off every unguarded write-by-path keeps from the boundary. Mirrors the 60s RELEASE_MARGIN
+# PHP's releaseIfOurs keeps on the other side of the same file.
 LOCK_RECLAIM_MARGIN=60
 # A separate, permanent file used only as an flock target. Never the lock file itself: the lock gets
 # unlinked and replaced, and an flock follows the inode.
@@ -298,9 +300,11 @@ lock_mark_owned() {
 # work is genuinely running, whoever its parent is; recording the child makes the liveness probes
 # track the process actually touching the trees, so even a same-token reclaim waits for it. The
 # watcher survives this script (background, never waited on) and exits on its own within a second of
-# the child's exit -- or immediately once the lock stops carrying our token, so it can never prolong
-# somebody else's lock. Call lock_reattribute_to_self after reaping the child, or the lock is left
-# naming a dead pid while this script works on.
+# the child's exit, or at its next write tick once the lock stops carrying our token: it re-checks
+# ownership before EVERY write, so it never writes over -- and so never prolongs -- a lock that has
+# changed hands, though it may take up to an interval to notice and exit. Call
+# lock_reattribute_to_self after reaping the child, or the lock is left naming a dead pid while this
+# script works on.
 #
 # The write is by path, under the same margin reasoning as lock_refresh: it only lands on a lock that
 # is OURS and that the watcher's own previous write keeps far inside the TTL, so no steal is
@@ -442,8 +446,10 @@ lock_reclaim_own_fresh() {
 # A MARGIN below the TTL, not the TTL itself. At the boundary another operation is already entitled
 # to steal, and a steal is `rm -f` plus an exclusive create while this is a read plus a write BY
 # PATH: if the stealer's create landed in between, lock_refresh would truncate it and stamp our token
-# over it, and both would believe they held the mutex. The guard closes that against guarded stealers
-# too, but the margin keeps the no-flock fallback honest and costs nothing.
+# over it, and both would believe they held the mutex. Under the guard that steal cannot interleave
+# anyway (steals take the same guard), so there the margin is belt-and-braces; in the no-flock
+# fallback it is the only stand-off from the boundary, and it mirrors the 60s margin PHP's
+# releaseIfOurs keeps on its side of the same file.
 lock_reclaim_own_fresh_unguarded() {
   local data ts token pid now age
   data=$(cat "$LOCK_FILE" 2>/dev/null || true)
