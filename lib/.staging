@@ -3248,6 +3248,13 @@ deploy_content_core() {
 deploy_content_finalize() {
   cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
 
+  # NOTE, and it is load-bearing: the sweep below is reachable only because
+  # finalize_new_content_dirs is called with an EMPTY ON_ERROR, so its own failure paths end in
+  # error(), which exits. If anyone ever passes an ON_ERROR here, or error() stops exiting, the sweep
+  # runs after a rollback and removes every "-new" -- and since the PHP controller has by then
+  # recorded that a finalize was attempted, "no -new left" reads as a COMPLETED SWAP, so a deploy
+  # that restored the OLD production would be reported to the customer as a success. Keep these two
+  # facts together: ContentCopyController::swapAlreadyCompleted depends on this one.
   finalize_new_content_dirs "$PRODUCTION_DIR" || {
     cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
     error "Unable to finalize new content directories."
@@ -3256,8 +3263,9 @@ deploy_content_finalize() {
   # ORDER MATTERS HERE, and it is the whole reason the swap and the delete are separate steps.
   #
   # The swap is done: production is live and correct, and the asides are backups of content that is
-  # no longer in use anywhere. Deleting them is the one step whose cost scales with the site's file
-  # count, so it is the one step that can outlive the PHP request blocking on this script -- and by
+  # no longer in use anywhere. On a normal deploy, deleting them is the only step whose cost scales
+  # with the site's file count, so it is the step that can outlive the PHP request blocking on this
+  # script (see discard_content_asides for the other one, which this trick cannot help) -- and by
   # releasing the mutex FIRST, that stops mattering. A request timed out during the delete leaves an
   # orphan finishing a job nothing is waiting on, and the next poll finds the lock free, finds no
   # "-new" left to promote, and reports the success that already happened.

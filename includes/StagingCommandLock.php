@@ -269,18 +269,57 @@ class StagingCommandLock {
 		}
 
 		$lock = $this->read();
-		if ( null === $lock || $lock['token'] !== $token || $lock['pid'] < 2 ) {
+		if ( null === $lock || $lock['token'] !== $token ) {
 			return false;
 		}
 
-		// `posix_kill($pid, 0)` is the direct test, but the POSIX extension is not always enabled on
-		// shared hosting. /proc is the fallback: under CageFS it is namespaced per account, which does
-		// not matter here because the process we are asking about is one of our own.
-		if ( function_exists( 'posix_kill' ) ) {
-			return @posix_kill( $lock['pid'], 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		// An unknown answer counts as NOT running. The consequence of being wrong here is that a job
+		// is failed and the customer retries a deploy that was about to finish; the consequence of the
+		// opposite default is polling until the stale window expires, an hour later. releaseIfOurs
+		// takes the opposite default for the same reason: see the note there.
+		return true === $this->pidIsRunning( $lock['pid'] );
+	}
+
+	/**
+	 * Whether a recorded lock holder is still running: true, false, or null when it cannot be told.
+	 *
+	 * Pid 0 is not a process. It is what refresh() writes, and only refresh() writes it, so it means
+	 * no bash verb has run under this lock since the last PHP copy burst -- definitively nothing of
+	 * ours in flight.
+	 *
+	 * @param int $pid Recorded pid.
+	 *
+	 * @return bool|null
+	 */
+	private function pidIsRunning( $pid ) {
+		if ( $pid < 2 ) {
+			return false;
 		}
 
-		return is_dir( '/proc/' . $lock['pid'] );
+		// `posix_kill($pid, 0)` is the direct test, and the only one that can distinguish the two ways
+		// it fails. The POSIX extension is not always enabled on shared hosting, hence the fallback.
+		if ( function_exists( 'posix_kill' ) && function_exists( 'posix_get_last_error' ) ) {
+			if ( @posix_kill( $pid, 0 ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+				return true;
+			}
+
+			// ESRCH, which is 3 on Linux and on macOS, is the only definite "there is no such
+			// process". EPERM means a process IS there and belongs to another user, which cannot be
+			// one of our own verbs but is not something to act on either -- so it falls through to the
+			// unknown answer below rather than being read as gone.
+			if ( 3 === posix_get_last_error() ) {
+				return false;
+			}
+		}
+
+		// /proc as the fallback. Silenced because under open_basedir these emit a warning, and a
+		// warning here reaches the REST response body and breaks the JSON the poll loop parses.
+		if ( @is_dir( '/proc/' . $pid ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			return true;
+		}
+
+		// "Not in /proc" is only an answer on a host where /proc can be read at all; macOS has none.
+		return @is_dir( '/proc/self' ) ? false : null; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 	}
 
 	/**
@@ -295,15 +334,23 @@ class StagingCommandLock {
 	 * Three conditions, all required, and all of them about being sure nothing else is involved:
 	 *
 	 *   - the lock carries this job's token, so it is ours to free;
-	 *   - it records pid 0, which only refresh() above ever writes. A bash verb's lock_check always
-	 *     writes its own pid, so pid 0 means no verb has run since the last copy burst and none can
-	 *     be in flight -- in particular this is never the orphaned-setup case, where a killed
-	 *     request leaves a `rm -rf` still running under this same token and the lock must stay;
+	 *   - nothing is running under it. Pid 0, which only refresh() writes, means no bash verb has run
+	 *     since the last copy burst. A recorded pid means a verb DID run, and it may be an orphan
+	 *     still working -- a killed request leaves setup's `rm -rf` running under this same token --
+	 *     so that lock may only be freed once its holder is positively gone. An answer of "cannot
+	 *     tell" counts as still running: the cost of being wrong is waiting out the TTL, where the
+	 *     cost of the opposite default is freeing the mutex under a live `rm -rf`;
 	 *   - it is comfortably within the TTL (by RELEASE_MARGIN), so lib/.staging may not concurrently
 	 *     decide it is abandoned and claim it. That is what makes deleting by path safe: a lock
 	 *     nobody may steal right now cannot turn into somebody else's between the check and the
 	 *     unlink. For a lock already at or past the TTL there is nothing to gain anyway -- it no
 	 *     longer blocks anyone.
+	 *
+	 * Testing liveness rather than insisting on pid 0 is what makes this useful on the path that
+	 * actually matters. Restarting after a setup verb outlived its request -- which the UI does by
+	 * itself when the first poll times out -- leaves a lock carrying that verb's pid, and refusing it
+	 * on the pid alone meant the retry could not free it, could no longer even name its token once
+	 * the state file went, and the site refused every staging operation for the full half hour.
 	 *
 	 * @param string $token Our token.
 	 *
@@ -315,7 +362,11 @@ class StagingCommandLock {
 		}
 
 		$lock = $this->read();
-		if ( null === $lock || $lock['token'] !== $token || 0 !== $lock['pid'] ) {
+		if ( null === $lock || $lock['token'] !== $token ) {
+			return false;
+		}
+
+		if ( false !== $this->pidIsRunning( $lock['pid'] ) ) {
 			return false;
 		}
 

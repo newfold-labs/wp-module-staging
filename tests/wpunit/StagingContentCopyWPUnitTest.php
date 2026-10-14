@@ -527,8 +527,9 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 
 		$this->assertSame( 'running', $result['status'], 'A job whose own verb is still working is not a failure.' );
 		$this->assertSame( ContentCopyController::PHASE_FINALIZE, $result['phase'] );
-		// The `-new` trees are still there, so nothing was reported as promoted that was not.
-		$this->assertDirectoryExists( $this->temp_production_dir . '/wp-content/uploads-new' );
+		// The job is still resumable: nothing recorded it as failed, and the phase state was left
+		// alone so advance()'s stale window keeps measuring from the last real progress.
+		$this->assertNotSame( ContentCopyController::PHASE_ERROR, $this->state_on_disk()['phase'] );
 
 		// With the same refusal but a DEAD holder, the job does fail: nothing is coming back to finish it.
 		StagingWPUnitTest::$exec_responses = array(
@@ -584,11 +585,54 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 
 		$this->assertSame( 'error', $result['status'] );
 		$this->assertNull( $this->read_lock(), 'A failed job must not leave the mutex held.' );
+	}
 
-		// A lock recording a bash pid is NOT released: an orphaned verb may still be running under it.
-		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
-		$controller->advance();
-		$this->assertNotNull( $this->read_lock() );
+	/**
+	 * A failing job does NOT free a lock whose holder is still running.
+	 *
+	 * The orphan that matters is a setup verb whose request was killed while its stale-`-new` sweep
+	 * carried on: a live `rm -rf` under this job's own token. Freeing the mutex there would let a
+	 * clone start rewriting the very trees that sweep is deleting.
+	 *
+	 * Its own test rather than a second act in the one above, because once a job is in PHASE_ERROR
+	 * advance() returns the stored envelope and never reaches fail() again -- so asserting this on a
+	 * second advance() of a failed job exercised nothing at all.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_job_leaves_a_lock_whose_holder_is_still_running() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			array(
+				'output' => array( '{"status":"error","message":"Preparing the WordPress core failed."}' ),
+				'status' => 0,
+			),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+
+		$result = array(
+			'status' => 'running',
+			'phase'  => '',
+		);
+		$guard  = 0;
+		while ( 'running' === $result['status'] && ContentCopyController::PHASE_CORE !== $result['phase'] && $guard < 100 ) {
+			$result = $controller->advance();
+			++$guard;
+		}
+		$this->assertSame( ContentCopyController::PHASE_CORE, $result['phase'] );
+
+		// A live process, under our own token: this process stands in for the orphaned verb.
+		$token = $this->read_lock()['token'];
+		$this->plant_lock( $token, 0, getmypid() );
+
+		$result = $controller->advance();
+
+		// The refusal is read as "still working", so the job is not failed and the lock is not freed.
+		$this->assertSame( 'running', $result['status'] );
+		$this->assertNotNull( $this->read_lock(), 'A live holder keeps the mutex.' );
 		$this->assertSame( $token, $this->read_lock()['token'] );
 	}
 
@@ -624,8 +668,12 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		$controller = new ContentCopyController( $this->staging );
 		$controller->advance();
 
+		// The pid a real setup verb leaves: its own, by then departed. Planting 0 here instead would
+		// have been a fixture that cannot occur -- only a PHP copy burst writes 0, and no burst has
+		// run yet -- and it hid the fact that the release refused any recorded pid at all, dead or
+		// alive, which is exactly the retry path this test is named for.
 		$token = $this->read_lock()['token'];
-		$this->plant_lock( $token, 0, 0 );   // as a copy burst's refresh leaves it
+		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
 
 		$controller->advance( true );
 
@@ -783,8 +831,9 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 		$this->assertFalse( $lock->releaseIfOurs( $token ), "Another operation's lock is not ours to free." );
 		$this->assertNotNull( $this->read_lock() );
 
-		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
-		$this->assertFalse( $lock->releaseIfOurs( $token ), 'A recorded pid means a verb may be in flight.' );
+		// A LIVE holder, under our own token: an orphaned verb whose `rm -rf` may still be running.
+		$this->plant_lock( $token, 0, getmypid() );
+		$this->assertFalse( $lock->releaseIfOurs( $token ), 'A running holder means a verb is in flight.' );
 		$this->assertNotNull( $this->read_lock() );
 
 		$this->plant_lock( $token, 1795, 0 );
@@ -793,6 +842,13 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 
 		$this->plant_lock( $token, 0, 0 );
 		$this->assertTrue( $lock->releaseIfOurs( $token ), 'Our own fresh PHP-refreshed lock is ours to free.' );
+		$this->assertNull( $this->read_lock() );
+
+		// And a DEPARTED verb's pid is released too. Insisting on pid 0 here was the bug: a setup verb
+		// that outlived its request leaves its own pid, so the retry could not free the lock and the
+		// site refused every staging operation for the full TTL.
+		$this->plant_lock( $token, 0, self::DEPARTED_VERB_PID );
+		$this->assertTrue( $lock->releaseIfOurs( $token ), "A departed verb's lock is ours to free." );
 		$this->assertNull( $this->read_lock() );
 	}
 

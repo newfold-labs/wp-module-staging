@@ -299,8 +299,9 @@ class ContentCopyController {
 		 * user half an hour of refusals.
 		 *
 		 * A restart is also exactly when this is safe: the caller is abandoning the old job, so there
-		 * is nothing of ours left that the lock protects. releaseIfOurs still declines a lock that
-		 * records a live bash pid, which is the one case where something IS still running.
+		 * is nothing of ours left that the lock protects. releaseIfOurs still declines a lock whose
+		 * recorded holder is running, or cannot be shown not to be -- the one case where something of
+		 * ours may still be writing, such as an orphaned setup part-way through its sweep.
 		 */
 		if ( is_file( $this->statePath() ) ) {
 			$this->lock()->releaseIfOurs( $this->jobToken( $this->loadState( false ) ) );
@@ -389,6 +390,14 @@ class ContentCopyController {
 
 		$response = $this->callVerb( 'deploy_content_setup', $state );
 		if ( $this->verbFailed( $response ) ) {
+			// Setup is the verb most likely to outlive its request: its stale-`-new` sweep is one
+			// unlink per file. So it is also the one whose orphan the next poll runs into, and that
+			// refusal must not be read as a broken deploy.
+			$running = $this->ownStepStillRunning( $state );
+			if ( null !== $running ) {
+				return $running;
+			}
+
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Content deploy setup failed.', 'wp-module-staging' ) ) );
 		}
 
@@ -501,6 +510,11 @@ class ContentCopyController {
 
 		$response = $this->callVerb( 'deploy_content_core', $state );
 		if ( $this->verbFailed( $response ) ) {
+			$running = $this->ownStepStillRunning( $state );
+			if ( null !== $running ) {
+				return $running;
+			}
+
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Preparing the WordPress core for deploy failed.', 'wp-module-staging' ) ) );
 		}
 
@@ -562,23 +576,43 @@ class ContentCopyController {
 				return $this->finishLocked( $state );
 			}
 
-			/*
-			 * lock_check refuses to reclaim a lock whose recorded process is still alive, and reports
-			 * it with the same customer-facing message as every other refusal. Here that process is
-			 * OUR OWN orphaned verb, still swapping: the job is progressing, not broken, so the poll
-			 * driver has to be told to come back. advance()'s stale window bounds this, so a verb that
-			 * hangs for ever still ends as a failure rather than polling for ever.
-			 */
-			if ( $this->lock()->heldByOwnLiveProcess( $this->jobToken( $state ) ) ) {
-				$this->writeRunning( $state );
-
-				return $this->envelope( 'running', $state );
+			$running = $this->ownStepStillRunning( $state );
+			if ( null !== $running ) {
+				return $running;
 			}
 
 			return $this->fail( $state, $this->verbMessage( $response, __( 'Finalizing the content deploy failed.', 'wp-module-staging' ) ) );
 		}
 
 		return $this->finishLocked( $state );
+	}
+
+	/**
+	 * The `running` envelope to return when a verb was refused because an earlier verb of THIS job is
+	 * still working, or null when that is not what happened.
+	 *
+	 * lock_check will not reclaim a lock whose recorded process is alive, and it reports that with the
+	 * same customer-facing message as every other refusal, so the message cannot be used to tell them
+	 * apart. When the live holder is one of our own verbs -- a bookend that outlived the request that
+	 * started it and is still running -- the job is progressing, not broken, and the poll driver has
+	 * to be told to come back rather than shown a failure.
+	 *
+	 * Deliberately does NOT save the phase state. advance()'s stale window is measured from the last
+	 * state write, so leaving it alone is what bounds this: a verb that hangs for ever ends as a
+	 * failed job instead of polling for ever.
+	 *
+	 * @param array $state Current state.
+	 *
+	 * @return array|null
+	 */
+	private function ownStepStillRunning( array $state ) {
+		if ( ! $this->lock()->heldByOwnLiveProcess( $this->jobToken( $state ) ) ) {
+			return null;
+		}
+
+		$this->writeRunning( $state );
+
+		return $this->envelope( 'running', $state );
 	}
 
 	/**
