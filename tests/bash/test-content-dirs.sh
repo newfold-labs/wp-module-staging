@@ -473,6 +473,15 @@ assert_eq "production holds the staged content" "STAGED" "$(cat "$P11/wp-content
 # request recreating production's directory, after which nothing on disk can tell the backup from the
 # real thing -- the ambiguity the whole abandoned journal design existed to resolve.
 assert_absent "the uploads aside was discarded in-run" "$P11/wp-content/uploads-old"
+# And it leaves NO "-new" behind, for any dir. This is the contract the PHP side keys on: a request
+# killed during the aside delete never records the job as done, so the next poll decides whether the
+# swap happened by asking whether anything is left to promote
+# (ContentCopyController::swapAlreadyCompleted). If a completed finalize could leave a "-new", that
+# poll would re-run the verb on a finished deploy; if a FAILED one left none, it would report a
+# deploy that rolled back as a success. Asserted here because only the bash side can prove it.
+for d in uploads themes plugins; do
+  assert_absent "a completed finalize leaves no $d-new to promote" "$P11/wp-content/$d-new"
+done
 assert_absent "the themes aside was discarded in-run" "$P11/wp-content/themes-old"
 assert_absent "the plugins aside was discarded in-run" "$P11/wp-content/plugins-old"
 
