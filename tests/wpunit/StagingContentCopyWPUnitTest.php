@@ -9,6 +9,7 @@ use function NewfoldLabs\WP\ModuleLoader\container;
 // StagingWPUnitTest; load both so the stepped deploy's bash verbs hit the shadow, not a real shell.
 require_once __DIR__ . '/StagingWPUnitTest.php';
 require_once __DIR__ . '/StagingExecMock.php';
+require_once __DIR__ . '/StagingCommandLockProbeStub.php';
 
 /**
  * Tests the stepped, chunked content-copy deploy (ContentCopyController + the new bash verbs).
@@ -384,6 +385,140 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 			);
 			$this->assertSame( 'someoneelsesclonetoken', $this->read_lock()['token'] );
 		}
+	}
+
+	/**
+	 * When liveness cannot be determined, each caller takes the default that is safe for its own
+	 * consequence, and those defaults are opposite.
+	 *
+	 * The case needs a host with neither the POSIX extension nor /proc, so it is reached here by
+	 * substituting the probe. Getting these two backwards is not symmetrical: freeing the mutex under
+	 * a live `rm -rf` lets a clone start rewriting the trees it is deleting, while refusing to free it
+	 * costs a wait, and reporting `running` for ever hides a hung job where failing it does not.
+	 *
+	 * @return void
+	 */
+	public function test_an_undecidable_holder_counts_as_running_for_release_and_as_gone_for_resume() {
+		$this->set_up_fixture_tree();
+
+		$lock  = new StagingCommandLockProbeStub( $this->temp_production_dir );
+		$token = Staging::randomToken();
+		$this->plant_lock( $token, 0, 4242 );
+
+		$this->assertFalse(
+			$lock->releaseIfOurs( $token ),
+			'An undecidable holder must be treated as running, so the lock is left alone.'
+		);
+		$this->assertNotNull( $this->read_lock() );
+
+		$this->assertFalse(
+			$lock->heldByOwnLiveProcess( $token ),
+			'An undecidable holder must not keep a job polling; it is treated as gone.'
+		);
+	}
+
+	/**
+	 * An orphaned SETUP verb is recognised as our own work in progress, not as a broken deploy.
+	 *
+	 * Setup is the verb most likely to outlive its request, because its stale-`-new` sweep is one
+	 * unlink per file. So it is the one whose orphan the next poll collides with, and lock_check
+	 * refuses that poll with the same message as any other contention.
+	 *
+	 * @return void
+	 */
+	public function test_an_orphaned_setup_verb_reports_running_rather_than_failing() {
+		$this->set_up_fixture_tree();
+
+		// The first setup takes the lock; the second poll is refused by the orphan still holding it.
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+		);
+		$controller = new ContentCopyController( $this->staging );
+		$controller->advance();
+
+		$token = $this->read_lock()['token'];
+
+		// Rewind to the setup phase, as a killed request would leave it, and put a LIVE holder on the
+		// lock to stand in for the orphan still sweeping.
+		$state_path     = $this->temp_production_dir . '/nfd-private/copy-deploy-files/phase-state.json';
+		$state          = $this->state_on_disk();
+		$state['phase'] = ContentCopyController::PHASE_SETUP;
+		file_put_contents( $state_path, wp_json_encode( $state ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->plant_lock( $token, 0, getmypid() );
+
+		StagingWPUnitTest::$exec_responses = array(
+			array(
+				'output' => array( '{"status":"error","message":"Staging action is locked by another command."}' ),
+				'status' => 0,
+			),
+		);
+
+		$result = ( new ContentCopyController( $this->staging ) )->advance();
+
+		$this->assertSame( 'running', $result['status'] );
+		$this->assertNotSame( ContentCopyController::PHASE_ERROR, $this->state_on_disk()['phase'] );
+		$this->assertSame( $token, $this->read_lock()['token'], "The orphan's lock is left to it." );
+	}
+
+	/**
+	 * Reporting `running` for an orphan must not touch the phase-state file.
+	 *
+	 * advance()'s stale window is measured from that file's mtime, so refreshing it on every poll
+	 * would mean a verb that hangs for ever is polled for ever: the one bound on this branch would be
+	 * removed by the branch itself.
+	 *
+	 * @return void
+	 */
+	public function test_reporting_running_for_an_orphan_does_not_reset_the_stale_clock() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			$this->verb_response( 'Content deploy core download complete.' ),
+			array(
+				'output' => array( '{"status":"error","message":"Staging action is locked by another command."}' ),
+				'status' => 0,
+			),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+
+		$result = array(
+			'status' => 'running',
+			'phase'  => '',
+		);
+		$guard  = 0;
+		while ( 'running' === $result['status'] && ContentCopyController::PHASE_FINALIZE !== $result['phase'] && $guard < 100 ) {
+			$result = $controller->advance();
+			++$guard;
+		}
+		$this->assertSame( ContentCopyController::PHASE_FINALIZE, $result['phase'] );
+
+		$state_path = $this->temp_production_dir . '/nfd-private/copy-deploy-files/phase-state.json';
+
+		// Record the attempt first, as a finalize that was killed would have left it. Without this the
+		// poll under test makes a legitimate state write of its own (recording the attempt), the mtime
+		// moves for that reason, and the assertion below would be measuring the wrong thing.
+		$state                       = $this->state_on_disk();
+		$state['finalize_attempted'] = true;
+		file_put_contents( $state_path, wp_json_encode( $state ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+		// Old enough to be distinguishable, young enough that advance() does not call the job stale.
+		$aged = time() - 600;
+		touch( $state_path, $aged );
+		clearstatcache( true, $state_path );
+
+		$this->plant_lock( $this->read_lock()['token'], 0, getmypid() );
+
+		$result = $controller->advance();
+		$this->assertSame( 'running', $result['status'] );
+
+		clearstatcache( true, $state_path );
+		$this->assertSame(
+			$aged,
+			filemtime( $state_path ),
+			'The stale clock must keep running while an orphan is waited on, or a hung verb is never given up on.'
+		);
 	}
 
 	/**

@@ -287,11 +287,15 @@ class StagingCommandLock {
 	 * no bash verb has run under this lock since the last PHP copy burst -- definitively nothing of
 	 * ours in flight.
 	 *
+	 * Protected rather than private so a test can substitute the answer. The "cannot tell" branch is
+	 * otherwise unreachable in a test: it needs a host with neither the POSIX extension nor /proc, and
+	 * both of the callers' defaults hang off exactly that answer.
+	 *
 	 * @param int $pid Recorded pid.
 	 *
 	 * @return bool|null
 	 */
-	private function pidIsRunning( $pid ) {
+	protected function pidIsRunning( $pid ) {
 		if ( $pid < 2 ) {
 			return false;
 		}
