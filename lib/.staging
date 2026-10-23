@@ -130,9 +130,711 @@ resolve_db_charset() {
   echo "$charset"
 }
 
-# --- Staging lock (WordPress transient) ---
+# --- Staging lock ---
+#
+# The mutex every staging operation takes, so only one of them can be moving, rsyncing, `rm -rf`ing
+# and renaming a site's trees at a time.
+#
+# TWO MECHANISMS, and the split is deliberate:
+#
+#   1. A lock FILE under production's nfd-private is the real mutex. It has to be a file rather than
+#      the WordPress transient this used to be, for two reasons that both come from the WP-CLI
+#      wrapper above skipping the object-cache drop-in: a transient written here is DB-backed while
+#      PHP's get_transient() reads it through a live persistent cache, and the lock belongs to
+#      production while a deploy is driven from the staging install, whose $wpdb has a different
+#      table prefix. A file addressed by absolute path has neither problem and needs no WP-CLI
+#      bootstrap to read or write.
+#
+#   2. The `nfd_staging_lock` transient is kept, unchanged in meaning, purely so that an operation
+#      running an OLDER copy of this script still blocks. That copy knows nothing about the lock
+#      file. The published value gains a third field holding our token, which the old parser
+#      (`awk -F: '{print $2}'`) ignores and which stops a later verb of our own job blocking on it.
+#      Nothing here READS the transient to make a decision beyond what the old code already did.
+#
+# WHY THE FILE LOCK NEEDS A TOKEN. A files deploy is no longer one long bash run: it is a
+# `deploy_content_setup` verb, then an arbitrary number of PHP copy bursts (includes/Copy, roughly
+# ten seconds each), then `deploy_content_core`, then `deploy_content_finalize`. Three separate bash
+# processes, possibly hours apart, with long stretches where no process of the job is running at all.
+# A lock taken and released per process would leave the trees unprotected between verbs. The token
+# makes those three processes one continuous hold: a verb that finds the lock carrying its own token
+# reclaims it instead of blocking, and StagingCommandLock::refresh() keeps the timestamp current from
+# PHP between bursts.
+#
+# Value format (one line): active:<REFRESHED_AT>:<TOKEN>:<PID>
+LOCK_FILE="$PRODUCTION_DIR/nfd-private/nfd-staging-command.lock"
+LOCK_TTL=1800
+# Past the TTL a lock is only abandoned if its holder is really gone. A still-running holder keeps it
+# up to this hard ceiling, which exists so a recycled pid can never pin the mutex forever.
+LOCK_HARD_TTL=21600
+# How far below LOCK_TTL a lock must be before this job may reclaim its own, guarded or not, and the
+# stand-off every unguarded write-by-path keeps from the boundary. Mirrors the 60s RELEASE_MARGIN
+# PHP's releaseIfOurs keeps on the other side of the same file.
+LOCK_RECLAIM_MARGIN=60
+# A separate, permanent file used only as an flock target. Never the lock file itself: the lock gets
+# unlinked and replaced, and an flock follows the inode.
+LOCK_GUARD_FILE="$LOCK_FILE.guard"
+LEGACY_LOCK_NAME="nfd_staging_lock"
+
+# STAGING_LOCK_OWNED is set only by the process that actually acquired the lock. Without it a command
+# that was BLOCKED by the lock (its error() path), or one that never takes it at all (compat_check,
+# which exits before lock_check yet still fires the cleanup EXIT trap), would delete the lock held by
+# the operation that is actually running. The loser must never free the winner's lock.
+STAGING_LOCK_OWNED=0
+STAGING_LOCK_TOKEN=""
+# $BASHPID of the shell that acquired it, so a SUBSHELL of that shell does not read as the owner. A
+# subshell inherits STAGING_LOCK_OWNED and the token, and `$$` does not change inside one. The case
+# that matters: create() runs rewrite_htaccess in a command substitution and rewrite_htaccess ends in
+# `|| error ...`, so without this that error frees the lock its parent is still working under while
+# its `exit 1` ends only the subshell.
+STAGING_LOCK_OWNER_PID=""
+# Set by a stepped verb that completes successfully and is NOT the last one. Those verbs are single
+# steps of one long job whose other steps run in PHP, so the mutex has to outlive the bash process.
+# error() clears it before releasing, so a verb that FAILS still frees the lock; a verb that is
+# SIGKILLed runs no trap at all, so its lock stays and does make the next attempt wait, which is the
+# point: something it started may still be running.
+STAGING_LOCK_KEEP=0
+
+# Hold a kernel lock across the examine-and-steal section of lock_check.
+#
+# WHY A KERNEL LOCK. Deciding a lock is abandoned reads its CONTENTS; clearing it acts on the PATH.
+# Those are two steps, and nothing done with create/rename alone makes them one: if X examines an
+# abandoned lock, clears it and creates its own, a Y that examined the same abandoned lock a moment
+# earlier will then clear X'S FRESH LOCK and create its own on top, and both run. An flock has no
+# such gap, and the kernel releases it when the holder dies, SIGKILL included, so the guard itself
+# can never go stale and needs no TTL of its own. It is held for the few milliseconds of that
+# section, never for an operation.
+#
+# `flock` is util-linux, so it is on every cPanel box but not on macOS. Without it we DO NOT STEAL:
+# an abandoned lock reads as held, which costs availability and never lets two operations run at once.
+lock_guard_available() {
+  command -v flock >/dev/null 2>&1
+}
+
+lock_guard_enter() {
+  lock_guard_available || return 1
+  mkdir -p "$(dirname "$LOCK_GUARD_FILE")" 2>/dev/null || true
+  # Braces, not a bare `exec ... 2>/dev/null`: `exec` with no command applies EVERY redirection on
+  # the line permanently, so a bare form would silence this shell's stderr for the rest of the run.
+  if ! { exec 9>>"$LOCK_GUARD_FILE"; } 2>/dev/null; then
+    # A root run (support, or WP-CLI with --allow-root) leaves this file owned by root and, under
+    # root's usual umask, mode 0644: readable but not writable. `flock` needs only a descriptor, so
+    # try read-only before giving up. Refusing outright disabled stealing on the account for good,
+    # which is not the small loss it sounds like -- the steal path is how a lock left by any killed
+    # operation gets cleared, so every staging command would be refused until a human deleted a file.
+    if ! { exec 9<"$LOCK_GUARD_FILE"; } 2>/dev/null; then
+      log "WARN" "lock_guard_enter" "Cannot open the lock guard at $LOCK_GUARD_FILE for writing or reading; refusing to arbitrate. Remove that file to restore lock recovery." || true
+      return 1
+    fi
+  fi
+  flock -w "${LOCK_GUARD_WAIT:-30}" 9 2>/dev/null || return 1
+}
+
+lock_guard_leave() {
+  flock -u 9 2>/dev/null || true
+  { exec 9>&-; } 2>/dev/null || true
+}
+
+# 16 random bytes as hex. Alphanumeric because the token travels as a shell argument and as a field
+# in a colon-delimited value. Deliberately NOT wp_generate_password(), which ends in
+# apply_filters( 'random_password', ... ): that filter is hooked in the wild, Jetpack among others,
+# and a hook can both change the value and do work of its own including outbound HTTP.
+lock_new_token() {
+  local t
+  t=$(od -An -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+  [ -n "$t" ] || t="p$$t$(date +%s)r$RANDOM"
+  printf '%s' "$t"
+}
+
+# Create the lock, exclusively, then fill it.
+#
+# TWO STEPS, and the split is the point: it has to be possible to tell "I created this file and could
+# not fill it" from "somebody else's file is here". Both leave an empty file on disk for a moment --
+# the redirect creates the file before the write runs, so a quota failure leaves one behind, and a
+# winner's file is empty until its write lands. A combined step cannot distinguish them, and removing
+# "any empty lock file" let a LOSER delete the WINNER's file in the microseconds before the winner
+# wrote it, leaving two operations under the mutex.
+lock_write_exclusive() {
+  mkdir -p "$(dirname "$LOCK_FILE")" 2>/dev/null || true
+
+  # Step 1 is the mutex: `: > file` under noclobber is O_CREAT|O_EXCL, so exactly one of any number
+  # of racers wins. A loser returns here and NEVER touches the file.
+  if ! ( umask 077; set -o noclobber; : > "$LOCK_FILE" ) 2>/dev/null; then
+    return 1
+  fi
+
+  # Past step 1 the file is unambiguously OURS, so we are also the only process entitled to remove
+  # it. An empty lock belongs to nobody -- no token, so no release can claim it, and it is aged from
+  # its mtime -- so leaving one would block every staging operation for a full TTL.
+  if ! printf 'active:%s:%s:%s' "$(date +%s)" "$STAGING_LOCK_TOKEN" "$$" > "$LOCK_FILE" 2>/dev/null; then
+    log "ERROR" "lock_write_exclusive" "Took the staging lock but could not write it (out of space?); removing the empty file." || true
+    rm -f "$LOCK_FILE" 2>/dev/null || true
+    return 1
+  fi
+
+  return 0
+}
+
+# Rewrite a lock this process already owns, pushing its timestamp forward.
+lock_refresh() {
+  printf 'active:%s:%s:%s' "$(date +%s)" "$STAGING_LOCK_TOKEN" "$$" > "$LOCK_FILE" 2>/dev/null || true
+}
+
+lock_mark_owned() {
+  STAGING_LOCK_OWNED=1
+  STAGING_LOCK_OWNER_PID=$BASHPID
+}
+
+# Keep the mutex alive, and ATTRIBUTED, while a long-lived CHILD of this script runs.
+#
+# The lock records this script's pid, and every liveness probe (lock_holder_alive here, pidIsRunning
+# on the PHP side) tests only that pid. But the processes that do the site-size-scaled work are
+# CHILDREN -- a clone's rsync can run for hours -- and a child outlives its parent: when the hourly
+# lsphp_reaper SIGKILLs a PID-1-reparented bash, its rsync (not PID-1-parented at that moment)
+# carries on until the next reaper tick, up to an hour. From that moment the lock misdescribes the
+# job: its own token is instantly reclaimable (the recorded pid is dead), and a foreign operation may
+# steal it once it ages past the TTL. A stepped deploy could then walk a staging tree the orphaned
+# rsync is still filling, promote the partial result, and discard the "-old" backup.
+#
+# So for the child's lifetime a detached watcher rewrites the lock every LOCK_WATCH_INTERVAL seconds
+# with a fresh timestamp and the CHILD's pid. Freshness keeps every TTL-based steal away while the
+# work is genuinely running, whoever its parent is; recording the child makes the liveness probes
+# track the process actually touching the trees, so even a same-token reclaim waits for it. The
+# watcher runs in the background; lock_reattribute_to_self (via lock_stop_watcher) kills and reaps it
+# before handing the lock back, so no tick can fire AFTER the hand-back and stamp the reaped child's
+# pid over this script's. As a second line of defence it re-checks ownership before EVERY write, so it
+# never writes over -- and so never prolongs -- a lock that has changed hands; left to itself it exits
+# within a second of the child's exit, or at its next tick once the lock stops carrying our token.
+# Call lock_reattribute_to_self after reaping the child (via wait); it stops the watcher and puts this
+# script's pid back on the lock.
+#
+# The write is by path, under the same margin reasoning as lock_refresh: it only lands on a lock that
+# is OURS and that the watcher's own previous write keeps far inside the TTL, so no steal is
+# entitled to interleave. stdout/stderr go to /dev/null (a background child holding the request's
+# pipe stops PHP's exec() from seeing EOF until the watcher exits) and fd 9 is closed (it would
+# otherwise inherit, and keep holding, the lock guard's flock if one were ever held here).
+lock_watch_child() {
+  local child="${1:-}"
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
+  [ -n "${STAGING_LOCK_TOKEN:-}" ] || return 0
+  case "$child" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+  (
+    while kill -0 "$child" 2>/dev/null; do
+      lock_is_ours || exit 0
+      printf 'active:%s:%s:%s' "$(date +%s)" "$STAGING_LOCK_TOKEN" "$child" > "$LOCK_FILE" 2>/dev/null || true
+      # Sleep in one-second ticks so the watcher notices the child's exit promptly, instead of
+      # holding its last refresh (and its process-table entry) for a whole interval.
+      local slept=0
+      while [ "$slept" -lt "${LOCK_WATCH_INTERVAL:-60}" ]; do
+        sleep 1
+        slept=$((slept + 1))
+        kill -0 "$child" 2>/dev/null || exit 0
+      done
+    done
+  ) >/dev/null 2>&1 9>&- &
+  STAGING_LOCK_WATCHER_PID=$!
+}
+
+# Stop and reap the lock watcher started by lock_watch_child so it can make no further writes. The
+# watcher re-checks ownership but NOT the recorded pid, so a tick firing after lock_reattribute_to_self
+# would otherwise stamp the reaped child's pid back over this script's, leaving the lock naming a dead
+# process. kill+wait is exact: once wait returns the subshell is gone, so the lock_refresh that follows
+# lands last and stays.
+lock_stop_watcher() {
+  local w="${STAGING_LOCK_WATCHER_PID:-}"
+  [ -n "$w" ] || return 0
+  kill "$w" 2>/dev/null || true
+  wait "$w" 2>/dev/null || true
+  STAGING_LOCK_WATCHER_PID=''
+}
+
+# Put this script's own pid back on a lock a watcher above attributed to a now-reaped child, so the
+# rest of the run keeps the holder-is-alive protection (a lock naming a dead pid is reclaimable by a
+# same-token verb immediately and stealable the moment it ages out). Stops the watcher FIRST (so its
+# next tick cannot land after this refresh), then refreshes only a lock that is still ours and
+# comfortably fresh -- which a watched lock is, by construction; anything else is somebody else's
+# business or the guard's.
+lock_reattribute_to_self() {
+  lock_stop_watcher
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
+  lock_is_ours || return 0
+  lock_age_within "$((LOCK_TTL - LOCK_RECLAIM_MARGIN))" || return 0
+  lock_refresh
+}
+
+# Whether the lock on disk carries this process's token.
+lock_is_ours() {
+  [ -n "${STAGING_LOCK_TOKEN:-}" ] || return 1
+  local on_disk
+  on_disk=$(cat "$LOCK_FILE" 2>/dev/null | awk -F':' '{print $3}' || true)
+  [ -n "$on_disk" ] && [ "$on_disk" = "$STAGING_LOCK_TOKEN" ]
+}
+
+# Whether the lock was refreshed within $1 seconds. An unreadable or unparseable timestamp answers
+# NO, so a caller using this to justify an unguarded action never gets a yes it cannot back up.
+lock_age_within() {
+  local limit="$1" ts now
+  ts=$(cat "$LOCK_FILE" 2>/dev/null | awk -F':' '{print $2}' || true)
+  case "$ts" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  now=$(date +%s)
+  [ "$((now - ts))" -le "$limit" ]
+}
+
+# "Dead" is the answer that lets another operation take the lock, so every probe is biased towards
+# ALIVE. `kill -0` succeeding, then its message matched for EPERM under LC_ALL=C, then `ps -p`.
+#
+# The EPERM probe is not redundant: under CageFS, which is how these accounts run on the cPanel
+# boxes, /proc is namespaced, so a process owned by another user is invisible to `ps` AND `kill -0`
+# on it returns EPERM rather than succeeding. It is the only probe that keeps that case alive.
+lock_holder_alive() {
+  local pid="$1"
+  case "$pid" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  # `kill -0 0` signals our whole process group, so it would always report "alive".
+  [ "$pid" -gt 1 ] || return 1
+
+  local err
+  if err=$(LC_ALL=C kill -0 "$pid" 2>&1); then
+    return 0
+  fi
+  case "$err" in
+    *"not permitted"*|*"Not permitted"*) return 0 ;;
+  esac
+
+  ps -p "$pid" >/dev/null 2>&1
+}
+
+# Reclaim a lock that is OURS and still fresh. Three outcomes, because the caller has to tell "not
+# my business" from "refused":
+#   0  reclaimed.
+#   1  not ours to reclaim (no lock, somebody else's, ours but too old, or the guard could not be
+#      taken on a host that has one). Hand it to the guard section.
+#   2  ours, but an earlier step of this job is still RUNNING. Already reported; fail the command.
+#
+# UNDER THE GUARD, because the reclaim is a read (cat), a decision (is the recorded pid alive?) and a
+# write (lock_refresh), and two verbs of the SAME job can run it at once: PHP launches a bookend
+# verb, FPM kills that request mid-verb -- which releases the controller's advisory flock while the
+# bash verb is still in its WP-CLI bootstraps, before its own lock_check -- and the next poll, seeing
+# a lock that records only the PREVIOUS verb's dead pid, launches the same verb again. Both carry the
+# job's token, both read "holder gone", and unguarded both reclaimed: two finalizes then interleaved
+# their renames, and a rollback's `mv -T` could race the other's `rm -rf` into emptying live
+# production uploads. The guard serializes the read-to-write window, so the first verb's
+# lock_refresh records its own live pid and the second is refused with held_by_own_live_step.
+#
+# When flock exists but the guard cannot be taken, this does NOT fall back to the unguarded
+# read-then-write: somebody is inside the arbitration section right now, which is exactly when the
+# race is live. Returning 1 hands the decision back to lock_check, which re-attempts the guard itself:
+# it proceeds under the guard if it can take it, and refuses (guard_unavailable) only if it still
+# cannot -- the same answer that section gives every other arbitration it cannot guard. The cost
+# is that a host whose guard file is permanently unopenable (root-owned mode 0600; lock_guard_enter's
+# read-only fallback already covers 0644) cannot run a STEPPED deploy -- it fails with a clear lock
+# error while create/clone/legacy deploy still work -- where it previously ran one with an unguarded
+# mutex. Only a host with no flock at all (macOS, so dev only) still reclaims unguarded below, the
+# same degradation every guarded path accepts there, where it costs correctness only against a
+# sibling verb of the same job and steals cannot happen at all.
+#
+# The token pre-check stays OUTSIDE the guard on purpose: deciding NOT to act on a possibly-stale
+# read is safe (the guarded section re-reads), and it keeps contention on a foreign lock -- the
+# common case for every non-stepped command -- off the guard entirely.
+lock_reclaim_own_fresh() {
+  lock_is_ours || return 1
+
+  local guarded=0 rc=0
+  if lock_guard_enter; then
+    guarded=1
+  elif lock_guard_available; then
+    return 1
+  fi
+
+  lock_reclaim_own_fresh_unguarded || rc=$?
+
+  if [ "$guarded" = "1" ]; then
+    lock_guard_leave
+  fi
+  return $rc
+}
+
+# The read-check-write itself. Only lock_reclaim_own_fresh above may call this; everyone else must
+# come through the guard it takes.
+#
+# A MARGIN below the TTL, not the TTL itself. At the boundary another operation is already entitled
+# to steal, and a steal is `rm -f` plus an exclusive create while this is a read plus a write BY
+# PATH: if the stealer's create landed in between, lock_refresh would truncate it and stamp our token
+# over it, and both would believe they held the mutex. Under the guard that steal cannot interleave
+# anyway (steals take the same guard), so there the margin is belt-and-braces; in the no-flock
+# fallback it is the only stand-off from the boundary, and it mirrors the 60s margin PHP's
+# releaseIfOurs keeps on its side of the same file.
+lock_reclaim_own_fresh_unguarded() {
+  local data ts token pid now age
+  data=$(cat "$LOCK_FILE" 2>/dev/null || true)
+  [ -n "$data" ] || return 1
+
+  token=$(printf '%s' "$data" | awk -F':' '{print $3}')
+  if [ -z "$token" ] || [ "$token" != "${STAGING_LOCK_TOKEN:-}" ]; then
+    return 1
+  fi
+
+  ts=$(printf '%s' "$data" | awk -F':' '{print $2}')
+  case "$ts" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  now=$(date +%s)
+  age=$((now - ts))
+  [ "$age" -le "$((LOCK_TTL - LOCK_RECLAIM_MARGIN))" ] || return 1
+
+  # A live recorded pid that is not us means an earlier step of this job outlived the PHP request
+  # that started it and is still working. Reclaiming would start a second one beside it.
+  pid=$(printf '%s' "$data" | awk -F':' '{print $4}')
+  if [ "$pid" != "$$" ] && lock_holder_alive "$pid"; then
+    log "INFO" "lock_check" "This job's own lock is still held by a running step (pid $pid)."
+    error 'Staging action is locked by another command.' 'lock_check:held_by_own_live_step'
+    return 2
+  fi
+
+  lock_refresh
+  lock_mark_owned
+  log "INFO" "lock_check" "Reclaimed this job's own fresh lock."
+  return 0
+}
+
+# The contended half of lock_check. A separate function only so lock_check can release the guard on
+# every exit path; it runs in the SAME shell, so the STAGING_LOCK_* globals it sets are the caller's.
+# $1 is 1 when the guard is held; without it an abandoned lock must be left alone.
+lock_check_contended() {
+  local MAY_STEAL="$1"
+  local LOCK_DATA LOCK_TIMESTAMP LOCK_TOKEN LOCK_PID CURRENT_TIME LOCK_AGE
+  LOCK_DATA=$(cat "$LOCK_FILE" 2>/dev/null || true)
+  LOCK_TIMESTAMP=$(printf '%s' "$LOCK_DATA" | awk -F':' '{print $2}')
+  LOCK_TOKEN=$(printf '%s' "$LOCK_DATA" | awk -F':' '{print $3}')
+  LOCK_PID=$(printf '%s' "$LOCK_DATA" | awk -F':' '{print $4}')
+  CURRENT_TIME=$(date +%s)
+
+  # A lock that exists but carries no readable timestamp (a crash between the exclusive create and
+  # the write) still means somebody claimed the mutex. Age it from the file's mtime rather than
+  # treating it as free.
+  case "$LOCK_TIMESTAMP" in
+    ''|*[!0-9]*) LOCK_TIMESTAMP=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || stat -f %m "$LOCK_FILE" 2>/dev/null || printf '%s' "$CURRENT_TIME") ;;
+  esac
+  LOCK_AGE=$((CURRENT_TIME - LOCK_TIMESTAMP))
+
+  # Our own job's lock, too old for the margin-bounded fresh reclaim above (which is itself guarded);
+  # reclaim it here under the guard, bounded by the hard TTL.
+  if [ -n "$LOCK_TOKEN" ] && [ "$LOCK_TOKEN" = "$STAGING_LOCK_TOKEN" ]; then
+    if [ "$LOCK_PID" != "$$" ] && lock_holder_alive "$LOCK_PID" && [ "$LOCK_AGE" -le "$LOCK_HARD_TTL" ]; then
+      log "INFO" "lock_check" "This job's own lock is still held by a running step (pid $LOCK_PID)."
+      error 'Staging action is locked by another command.' 'lock_check:held_by_own_live_step'
+      return 1
+    fi
+    lock_refresh
+    lock_mark_owned
+    log "INFO" "lock_check" "Reclaimed this job's own lock."
+    return 0
+  fi
+
+  if [ "$LOCK_AGE" -le "$LOCK_TTL" ]; then
+    error 'Staging action is locked by another command.' 'lock_check:held'
+    return 1
+  fi
+
+  # A staging operation routinely outlives the PHP request that started it: PHP-FPM kills the worker
+  # on its request timeout and the bash process carries on. Under an age-only rule the next command
+  # declared such a lock expired and ran concurrently with an operation still writing files.
+  if lock_holder_alive "$LOCK_PID" && [ "$LOCK_AGE" -le "$LOCK_HARD_TTL" ]; then
+    log "INFO" "lock_check" "Lock is past its TTL but holder pid $LOCK_PID is still running."
+    error 'Staging action is locked by another command.' 'lock_check:held_by_live_process'
+    return 1
+  fi
+
+  if [ "$MAY_STEAL" != "1" ]; then
+    log "WARN" "lock_check" "Abandoned lock left in place: no lock guard available on this host."
+    error 'Staging action is locked by another command.' 'lock_check:no_guard'
+    return 1
+  fi
+
+  log "INFO" "lock_check" "Removing abandoned lock (age ${LOCK_AGE}s, pid '${LOCK_PID}')."
+  rm -f "$LOCK_FILE" || true
+
+  # The exclusive create still has to succeed: the guard does not cover the guard-free fast path, so
+  # a racer may have claimed it in the instant after the remove.
+  if lock_write_exclusive; then
+    lock_mark_owned
+    log "INFO" "lock_check" "Lock acquired after clearing an abandoned lock."
+    return 0
+  fi
+
+  error 'Staging action is locked by another command.' 'lock_check:lost_race'
+  return 1
+}
+
+# Whether an operation running an OLDER copy of this script holds the compat transient. Only a
+# well-formed `active:<digits>` value counts: WP-CLI prints whatever the site's boot prints, so
+# stdout can carry a deprecation notice or a BOM, and treating any output as a held lock refused
+# every staging operation on such a site forever -- noise is not a transient, so nothing expires it.
+legacy_lock_held() {
+  local data line value ts token now
+  data=$(wp transient get "$LEGACY_LOCK_NAME" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  [ -n "$data" ] || return 1
+
+  value=""
+  while IFS= read -r line; do
+    case "$line" in
+      active:[0-9]*) value="$line"; break ;;
+    esac
+  done <<EOF
+$data
+EOF
+  [ -n "$value" ] || return 1
+
+  # Our own publication, including one left by an earlier verb of this same stepped job.
+  token=$(printf '%s' "$value" | awk -F':' '{print $3}')
+  if [ -n "$token" ] && [ "$token" = "${STAGING_LOCK_TOKEN:-}" ]; then
+    return 1
+  fi
+
+  ts=$(printf '%s' "$value" | awk -F':' '{print $2}')
+  case "$ts" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+  now=$(date +%s)
+  [ "$((now - ts))" -le "$LOCK_TTL" ]
+}
+
+# Take the staging mutex, or fail the command. $1 is an optional token: the stepped content deploy
+# passes its per-job token so setup, core and finalize share ONE hold. Every other command passes
+# nothing and gets a fresh random token, so its lock is its own.
+lock_check() {
+  local SUPPLIED_TOKEN="${1:-}"
+  if [ -n "$SUPPLIED_TOKEN" ]; then
+    # Fail closed on anything that is not a plain token: a value with a colon would forge extra
+    # fields in the lock value, and one with shell metacharacters has no business being here.
+    case "$SUPPLIED_TOKEN" in
+      *[!A-Za-z0-9]*) error 'Invalid staging lock token.' 'lock_check:token_invalid'; return 1 ;;
+    esac
+    if [ "${#SUPPLIED_TOKEN}" -gt 64 ]; then
+      error 'Invalid staging lock token.' 'lock_check:token_too_long'
+      return 1
+    fi
+    STAGING_LOCK_TOKEN="$SUPPLIED_TOKEN"
+  else
+    STAGING_LOCK_TOKEN=$(lock_new_token)
+  fi
+
+  # An operation running an older copy of this script cannot see the lock file, so its own channel
+  # has to be checked before anything here claims the mutex.
+  if legacy_lock_held; then
+    error 'Staging action is locked by another command.' 'lock_check:legacy_lock_held'
+    return 1
+  fi
+
+  # The common case: no lock, so claim it atomically. Needs no guard -- the exclusive create is a
+  # single atomic step, so of any number of racers exactly one wins and the losers fall through.
+  if lock_write_exclusive; then
+    lock_mark_owned
+    log "INFO" "lock_check" "Lock acquired."
+    legacy_lock_announce
+    return 0
+  fi
+
+  # Contended, but possibly only by THIS job's own lock, which is the normal state for every bookend
+  # verb after setup.
+  local own_rc=0
+  lock_reclaim_own_fresh || own_rc=$?
+  if [ "$own_rc" -eq 0 ]; then
+    legacy_lock_announce
+    return 0
+  fi
+  if [ "$own_rc" -eq 2 ]; then
+    return 1
+  fi
+
+  # From here the decision READS the lock and may end in REPLACING it, which is only one operation
+  # if nothing else can examine or replace it in between -- hence the guard.
+  local GUARDED=0
+  if lock_guard_enter; then
+    GUARDED=1
+  elif lock_guard_available; then
+    # flock exists here, so failing to take the guard means somebody is inside the arbitration
+    # section right now (or the guard file is unusable). Carrying on would do the read-then-write
+    # unguarded, which is the whole thing the guard prevents.
+    log "WARN" "lock_check" "Could not take the lock guard; refusing rather than arbitrating without it."
+    error 'Staging action is locked by another command.' 'lock_check:guard_unavailable'
+    return 1
+  fi
+
+  local rc=0
+  lock_check_contended "$GUARDED" || rc=$?
+
+  if [ "$GUARDED" = "1" ]; then
+    lock_guard_leave
+  fi
+
+  # Announced only after the guard is released: this is a WP-CLI bootstrap, which takes seconds, and
+  # the guard is meant to cover the few milliseconds of arbitration.
+  if [ "$rc" -eq 0 ]; then
+    legacy_lock_announce
+  fi
+
+  return $rc
+}
+
+# Publish on the compat transient so an operation running an older copy of this script blocks on us.
+# Best effort and never read back for a decision: the lock FILE is the authority.
+legacy_lock_announce() {
+  [ -n "${STAGING_LOCK_TOKEN:-}" ] || return 0
+  wp transient set "$LEGACY_LOCK_NAME" "active:$(date +%s):$STAGING_LOCK_TOKEN" "$LOCK_TTL" \
+    --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet >/dev/null 2>&1 || true
+  return 0
+}
+
 release_staging_lock() {
-  wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet || true
+  [ "${STAGING_LOCK_OWNED:-0}" = "1" ] || return 0
+
+  # Only the shell that took the lock may free it. See STAGING_LOCK_OWNER_PID.
+  if [ -n "${STAGING_LOCK_OWNER_PID:-}" ] && [ "$BASHPID" != "$STAGING_LOCK_OWNER_PID" ]; then
+    log "INFO" "release_staging_lock" "Not the shell that took the lock (subshell $BASHPID of $STAGING_LOCK_OWNER_PID); leaving it held." || true
+    return 0
+  fi
+  if [ "${STAGING_LOCK_KEEP:-0}" = "1" ]; then
+    log "INFO" "release_staging_lock" "Holding the staging lock for the rest of the stepped job." || true
+    return 0
+  fi
+
+  # Delete only a lock that is still OURS. Ownership can lapse while we run: past LOCK_HARD_TTL
+  # another operation may take it from a holder that is still alive, and an unconditional `rm` would
+  # then delete the new holder's lock on our way out. Taken under the guard so no steal can land
+  # between the check and the rm.
+  local guarded=0
+  if lock_guard_enter; then
+    guarded=1
+  fi
+
+  if [ "$guarded" != "1" ] && lock_guard_available; then
+    # One case cannot be a steal in progress, and it is the same one lock_reclaim_own_fresh relies
+    # on: a lock still carrying OUR token and comfortably inside the TTL. Nobody is entitled to steal
+    # it yet, so removing it needs no guard. The alternative -- leaving it to age out -- blocks the
+    # site for half an hour after every operation on a host whose guard cannot be taken.
+    if lock_is_ours && lock_age_within "$((LOCK_TTL - LOCK_RECLAIM_MARGIN))"; then
+      log "INFO" "release_staging_lock" "Could not take the lock guard; releasing our own fresh lock anyway." || true
+      rm -f "$LOCK_FILE" || true
+      STAGING_LOCK_OWNED=0
+      legacy_lock_withdraw
+      return 0
+    fi
+    log "WARN" "release_staging_lock" "Could not take the lock guard; leaving the lock to age out." || true
+    STAGING_LOCK_OWNED=0
+    return 0
+  fi
+
+  local released=0
+  if lock_is_ours; then
+    rm -f "$LOCK_FILE" || true
+    released=1
+  else
+    log "INFO" "release_staging_lock" "Lock is no longer ours; leaving it for its current holder." || true
+  fi
+  if [ "$guarded" = "1" ]; then
+    lock_guard_leave
+  fi
+
+  # After the guard, not inside it: a WP-CLI bootstrap, and the guard covers milliseconds.
+  if [ "$released" = "1" ]; then
+    legacy_lock_withdraw
+  fi
+
+  STAGING_LOCK_OWNED=0
+}
+
+# Withdraw our publication from the compat transient, so an older copy of this script does not wait
+# out its TTL after we have finished. Only ours: a blind delete takes whatever is on the channel.
+legacy_lock_withdraw() {
+  if legacy_lock_held; then
+    log "INFO" "legacy_lock_withdraw" "The compat channel is held by another operation; leaving it." || true
+    return 0
+  fi
+  wp transient delete "$LEGACY_LOCK_NAME" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet >/dev/null 2>&1 || true
+  return 0
+}
+
+# --- Cross-version handshake ---
+#
+# Production and staging are two WordPress installs on one account, EACH running its own copy of the
+# brand plugin -- and therefore its own copy of this script and of the lock protocol above. A deploy
+# or clone is driven from one side but mutates BOTH trees, so when the two sides run different plugin
+# versions they can disagree about how the mutex works and fail to exclude each other. The concrete
+# failure: a clone driven by an older copy (file-lock-unaware, and its exit deletes the compat
+# transient unconditionally) rebuilds staging's content dirs while this copy's stepped deploy is
+# reading them; the copy engine SKIPs files whose parent vanished rather than failing, so the deploy
+# completes, promotes the partial tree over production, and discards the "-old" backup.
+#
+# So before any command that mutates the trees, compare the installed brand-plugin version on the two
+# installs and refuse on a mismatch. Deliberately refuse-and-tell rather than auto-update: updating a
+# plugin from inside a staging command is a far bigger side effect than the command the user asked
+# for, and plugin update paths are not safe to run headless from here.
+#
+# HARD LIMIT, by design: a handshake only protects once BOTH sides run a version that has it. A peer
+# still running an older copy performs no check when IT initiates -- nothing shipped here can make
+# old code cooperate. For that peer the compat transient broadcast (legacy_lock_announce, TTL-bounded)
+# stays the accepted best effort. This closes cross-version concurrency in the steady state (both
+# sides at or above this version, the common case once auto-updates settle) and consciously leaves
+# the un-upgraded-peer window as the residual it already is on every shipping version.
+#
+# Reading a version is best effort. A peer whose WordPress cannot even answer `wp plugin get` cannot
+# run staging commands against us either, so an unreadable version LOGS and proceeds on the broadcast
+# alone rather than bricking every deploy over a cosmetically broken peer.
+
+# Print the installed brand plugin's version for the install at $1, or fail. WP-CLI stdout can carry
+# boot noise around the real answer (see legacy_lock_held), so only a line shaped like a version
+# counts, and noise-only output reads as "could not tell".
+installed_plugin_version() {
+  local wp_path="$1" out line
+  [ -n "${PLUGIN_SLUG:-}" ] || return 1
+  out=$(wp plugin get "$PLUGIN_SLUG" --field=version --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
+  [ -n "$out" ] || return 1
+  while IFS= read -r line; do
+    case "$line" in
+      *[!0-9A-Za-z._+-]*) continue ;;   # spaces or other junk: boot noise, not a version
+    esac
+    case "$line" in
+      [0-9]*) printf '%s' "$line"; return 0 ;;
+    esac
+  done <<EOF
+$out
+EOF
+  return 1
+}
+
+# Refuse a tree-mutating command when production and staging run different versions of the brand
+# plugin. See the block comment above for why, and for the hard limit on what this can protect.
+version_handshake() {
+  if [ -z "${PLUGIN_SLUG:-}" ]; then
+    log "WARN" "version_handshake" "No plugin slug supplied; skipping the cross-version check." || true
+    return 0
+  fi
+  # No staging install yet (nothing mutates both trees until one exists), nothing to disagree with.
+  [ -d "$STAGING_DIR" ] || return 0
+
+  local prod_ver stg_ver
+  if ! prod_ver=$(installed_plugin_version "$PRODUCTION_DIR"); then
+    log "WARN" "version_handshake" "Could not read the production plugin version; proceeding on the compat broadcast alone." || true
+    return 0
+  fi
+  if ! stg_ver=$(installed_plugin_version "$STAGING_DIR"); then
+    log "WARN" "version_handshake" "Could not read the staging plugin version; proceeding on the compat broadcast alone." || true
+    return 0
+  fi
+
+  if [ "$prod_ver" != "$stg_ver" ]; then
+    log "ERROR" "version_handshake" "Plugin version mismatch: production runs $prod_ver, staging runs $stg_ver." || true
+    error "The production site runs version $prod_ver of the $PLUGIN_NAME plugin and the staging site runs $stg_ver. Update the older one so both sites match, then try again." 'version_handshake:mismatch'
+    return 1
+  fi
+
+  log "INFO" "version_handshake" "Production and staging both run plugin version $prod_ver." || true
+  return 0
 }
 
 # --- Async deploy result ---
@@ -179,6 +881,11 @@ error() {
   [ -n "${2:-}" ] && log "ERROR" "$2" "$1" || true
   log "ERROR" "operation_failed" "$1" || true
   write_deploy_result "error" "$1" || true
+  # A reported failure means this process is exiting with nothing left running behind it, so free the
+  # mutex even for a stepped verb that would otherwise hold it (see STAGING_LOCK_KEEP). Only a killed
+  # process -- which never reaches here -- keeps the lock, which is the point: something it started
+  # may still be running.
+  STAGING_LOCK_KEEP=0
   release_staging_lock
   exit 1
 }
@@ -547,11 +1254,26 @@ move_content_dirs() {
     mkdir -p "$DEST" || { log "ERROR" "move_content_dirs:$DIR" "Unable to create $DEST"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to create $DIR folder."; }
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
       log "INFO" "move_content_dirs:$DIR" "Attempting rsync from $SRC/ to $DEST"
-      log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
+      log "DEBUG" "move_content_dirs:$DIR" "Command: rsync -rt --exclude=.git $SRC/ $DEST"
+      # -t preserves modification times so a later deploy's --link-dest can recognise unchanged
+      # files and hardlink them instead of recopying (see prepare_new_content_dirs).
+      #
+      # Backgrounded (output to a file, exit code through `wait`) rather than run in a command
+      # substitution, so the rsync's pid exists to be watched: this copy scales with the site and is
+      # the child that outlives a reaped parent, so the mutex has to stay alive and attributed to it
+      # for as long as it runs. See lock_watch_child.
+      local RSYNC_TMP
+      RSYNC_TMP=$(mktemp)
       set +e
-      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
+      rsync -rt --exclude=.git "$SRC/" "$DEST" > "$RSYNC_TMP" 2>&1 &
+      RSYNC_PID=$!
+      lock_watch_child "$RSYNC_PID"
+      wait "$RSYNC_PID"
       RSYNC_EXIT=$?
       set -e
+      lock_reattribute_to_self
+      RSYNC_OUTPUT=$(cat "$RSYNC_TMP" 2>/dev/null || true)
+      rm -f "$RSYNC_TMP"
       log "DEBUG" "move_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
       if [ -n "$RSYNC_OUTPUT" ]; then
         log "ERROR" "move_content_dirs:$DIR" "Output rsync:"
@@ -708,26 +1430,6 @@ auth_action() {
 }
 
 # --- Lock check ---
-lock_check() {
-  local LOCK_DATA=$(wp transient get nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet)
-  local CURRENT_TIME=$(date +%s)
-  local LOCK_TTL=1800
-
-  if [ -n "$LOCK_DATA" ]; then
-    local LOCK_TIMESTAMP=$(echo "$LOCK_DATA" | awk -F':' '{print $2}')
-    if [ -z "$LOCK_TIMESTAMP" ] || [ "$((CURRENT_TIME - LOCK_TIMESTAMP))" -gt "$LOCK_TTL" ]; then
-
-      wp transient delete nfd_staging_lock --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
-      log "INFO" "lock_check" "Expired lock removed."
-    else
-      # Lock still valid, block process
-      error 'Staging action is locked by another command.'
-    fi
-  fi
-
-  wp transient set nfd_staging_lock "active:$CURRENT_TIME" "$LOCK_TTL" --path="$PRODUCTION_DIR" --skip-themes --skip-plugins --quiet
-  log "INFO" "lock_check" "Lock set successfully."
-}
 
 # --- Compatibility check ---
 compatibility_check() {
@@ -1715,22 +2417,61 @@ search_replace_paced() {
   return 0
 }
 
+# Mint a path for a tree that must be kept but must not be served or swept:
+# "<dir>-<kind>-<ts>-<pid>-<seq>". Sets NFD_ASIDE_PATH.
+#
+# The sequence number is not decoration, and a plain timestamp plus pid is not enough: one rollback
+# can mint two names for the same dir inside the same second, and with only those two fields the
+# second name EQUALS the first. `mv -T` onto a non-empty directory then fails and the caller is left
+# holding the aside it was trying to move out of the way.
+#
+# Sets a global rather than printing, because a command substitution runs in a subshell and would
+# throw the increment away.
+NFD_ASIDE_SEQ=0
+NFD_ASIDE_PATH=""
+content_aside_name() {
+  local to="$1" dir="$2" kind="$3"
+  NFD_ASIDE_SEQ=$((NFD_ASIDE_SEQ + 1))
+  NFD_ASIDE_PATH="$to/wp-content/$dir-$kind-$(date +%s)-$$-$NFD_ASIDE_SEQ"
+}
+
 # --- Utility: Cleanup failed new content dirs (with logging) ---
 cleanup_failed_new_content_dirs() {
   local TO="$1"
   log "INFO" "cleanup_failed_new_content_dirs" "START: Cleaning up failed new content dirs in $TO"
   for DIR in uploads themes plugins; do
+    local ORIG="$TO/wp-content/$DIR"
     local NEW="$TO/wp-content/$DIR-new"
+    local OLD="$TO/wp-content/$DIR-old"
+
+    # "-new" is always a disposable, rebuildable staging copy; safe to remove.
     if [ -d "$NEW" ]; then
-      log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Attempting to remove $NEW"
-      rm -rf "$NEW"
-      if [ $? -eq 0 ]; then
-        log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removed $NEW successfully"
+      log "INFO" "cleanup_failed_new_content_dirs:$DIR" "Removing $NEW"
+      rm -rf "$NEW" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $NEW"
+    fi
+
+    # A surviving "-old" is NEVER deleted here. Two branches, and neither one guesses.
+    #
+    # Finalize discards its own asides, in its own run, so reaching this function with an "-old" still
+    # present means a finalize was KILLED between its two renames -- a window of microseconds. In that
+    # window production is at "$OLD" and the "$ORIG" name is free, and one live request is enough to
+    # recreate it: wp_upload_dir() remakes uploads/YYYY/MM on any media request, and uploads is the
+    # first dir a swap touches.
+    #
+    # So `[ -d "$ORIG" ]` is NOT evidence that production is safe -- a recreated near-empty directory
+    # satisfies it just as well as the real thing, and deleting "$OLD" on that test deletes the
+    # customer's media library. Nothing on disk distinguishes the two, so the aside is PARKED under a
+    # name no sweep touches instead. Leaking a tree in a rare case costs disk; the alternative costs
+    # the customer's files.
+    if [ -d "$OLD" ]; then
+      if [ ! -e "$ORIG" ]; then
+        log "WARN" "cleanup_failed_new_content_dirs:$DIR" "$ORIG is missing; restoring production from $OLD"
+        mv -T "$OLD" "$ORIG" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to restore $OLD to $ORIG"
       else
-        log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to remove $NEW"
+        content_aside_name "$TO" "$DIR" recovered
+        log "WARN" "cleanup_failed_new_content_dirs:$DIR" "Both $ORIG and $OLD exist and nothing says which is production; keeping the aside at $NFD_ASIDE_PATH rather than deleting it"
+        mv -T "$OLD" "$NFD_ASIDE_PATH" || log "ERROR" "cleanup_failed_new_content_dirs:$DIR" "Failed to park $OLD"
       fi
-    else
-      log "DEBUG" "cleanup_failed_new_content_dirs:$DIR" "No $NEW to remove"
     fi
   done
   log "INFO" "cleanup_failed_new_content_dirs" "END: Cleanup of failed new content dirs in $TO"
@@ -1781,10 +2522,46 @@ prepare_new_content_dirs() {
 
     # Copy if source has content
     if [ -d "$SRC" ] && [ "$(ls -A "$SRC" 2>/dev/null)" ]; then
+      # --link-dest points at the current production dir ($ORIG). Files identical to production are
+      # hardlinked into $DEST instead of being copied, so the staging area costs only the delta in
+      # bytes rather than a second full copy of the tree. -t is required for rsync's quick check
+      # (size + mtime) to recognise unchanged files; without it every file looks changed and is
+      # recopied. The hardlinks are transient: finalize deletes the old production copy right after
+      # the swap, which just drops the extra link.
+      #
+      # Caveat (standard rsync quick-check semantics): a staging file whose size AND mtime both still
+      # match production but whose content differs would be treated as unchanged and hardlinked to
+      # production's bytes, shipping stale content. In normal use an edited staging file gets a fresh
+      # mtime, so this only arises if an mtime-preserving rewrite (e.g. a restore tool) makes a file
+      # differ in content while keeping the same size and mtime. --checksum would close it but must
+      # read every byte of the tree, which defeats the point and risks the reaper; we accept the
+      # quick-check as every rsync-based deploy does. See docs/content-sync.md.
+      local ORIG="$TO/wp-content/$DIR"
       log "INFO" "prepare_new_content_dirs:$DIR" "Copying to $DEST"
-      log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -r --exclude=.git $SRC/ $DEST"
-      RSYNC_OUTPUT=$(rsync -r --exclude=.git "$SRC/" "$DEST" 2>&1)
-      RSYNC_EXIT=$?
+      log "DEBUG" "prepare_new_content_dirs:$DIR" "Command: rsync -rt --exclude=.git --link-dest=\"$ORIG\" \"$SRC/\" \"$DEST\""
+      # Captured through `||` rather than a bare `$?`. Everything below reads RSYNC_EXIT to decide
+      # what the failure MEANS -- a permission denial on an ignorable .htaccess backup is tolerated,
+      # anything else sweeps and fails the deploy -- so losing the chance to read it loses the whole
+      # diagnosis. This function already runs with errexit off (see the `set +e` at its top), so a
+      # bare `$?` worked; the `||` form keeps working if that ever changes, and costs nothing.
+      # (NOT the `set +e` / `set -e` pair move_content_dirs uses: that pair does not restore the
+      # previous state, it asserts one, so calling such a function from anywhere errexit was off
+      # turns it ON for everything afterwards.)
+      #
+      # Backgrounded (output to a file, exit code through `wait`) rather than run in a command
+      # substitution, so the rsync's pid exists to be watched: this delta scales with the site's
+      # change set and is a child that outlives a reaped parent, so the mutex has to stay alive and
+      # attributed to it for as long as it runs. See lock_watch_child.
+      local RSYNC_TMP
+      RSYNC_TMP=$(mktemp)
+      RSYNC_EXIT=0
+      rsync -rt --exclude=.git --link-dest="$ORIG" "$SRC/" "$DEST" > "$RSYNC_TMP" 2>&1 &
+      RSYNC_PID=$!
+      lock_watch_child "$RSYNC_PID"
+      wait "$RSYNC_PID" || RSYNC_EXIT=$?
+      lock_reattribute_to_self
+      RSYNC_OUTPUT=$(cat "$RSYNC_TMP" 2>/dev/null || true)
+      rm -f "$RSYNC_TMP"
       log "DEBUG" "prepare_new_content_dirs:$DIR" "rsync exit code: $RSYNC_EXIT"
 
       if [ -n "$RSYNC_OUTPUT" ]; then
@@ -1840,25 +2617,218 @@ prepare_new_content_dirs() {
 }
 
 # --- Utility: Finalize new content dirs (with logging) ---
+#
+# Promotes each prepared "$DIR-new" over the live production "$DIR" using renames, never by deleting
+# live production first. The old sequence (`rm -rf "$ORIG"; mv "$NEW" "$ORIG"`) had two defects on
+# large/busy sites: (1) if the rm failed partway (e.g. a plugin writing into uploads while rm runs,
+# so a follow-up rmdir hits "Directory not empty"), production content was left destroyed with no way
+# back; and (2) the slow rm of a multi-GB tree happened before the swap, lengthening the window and
+# doing O(total size) work.
+#
+# Design:
+#   - Production is moved aside with an instant rename, the new tree is promoted with a second instant
+#     rename, and only then (once ALL dirs are promoted) are the asides deleted. Delaying the deletes
+#     to the end keeps every promoted dir recoverable from its "$DIR-old" if a later dir fails.
+#   - All renames onto a live path use `mv -T` (no-target-directory). Plain `mv` of a directory onto
+#     an existing directory NESTS the source inside it and returns success; that would hide production
+#     and make the "successful" swap delete the wrong copy. `-T` turns that case into a failure that
+#     triggers rollback instead. The deploy worker only ever runs on Linux (cPanel), where coreutils
+#     `mv` supports `-T`.
+#   - If any promotion fails, every already-promoted dir is rolled back from its aside, so a deploy is
+#     all-or-nothing, not left half-swapped.
+#   - A sole production copy is never deleted to reclaim a name: a disposable aside is only removed
+#     when production is confirmed in place, and if production cannot be restored it is kept under a
+#     "$DIR-recovered-<ts>" name that no cleanup path sweeps.
 finalize_new_content_dirs() {
   local TO="$1"; local ON_ERROR="$2"
   log "INFO" "finalize_new_content_dirs" "START: Finalizing new content dirs in $TO"
-  for DIR in uploads themes plugins; do
-    local ORIG="$TO/wp-content/$DIR"
-    local NEW="$TO/wp-content/$DIR-new"
-    log "INFO" "finalize_new_content_dirs:$DIR" "Preparing to remove $ORIG"
-    if [ -d "$ORIG" ]; then
-      rm -rf "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to remove $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to remove $DIR directory during finalize."; }
-      log "INFO" "finalize_new_content_dirs:$DIR" "Removed old $ORIG"
-    else
-      log "INFO" "finalize_new_content_dirs:$DIR" "No existing $ORIG to remove"
+
+  local -a FINAL_DIRS=(uploads themes plugins)
+  local -a PROMOTED=()
+
+  # Reverse every completed promotion: move the promoted staging copy back to "-new" and restore the
+  # old production from "-old". All renames, so no sole copy is destroyed.
+  _finalize_rollback() {
+    local d o n l
+    for d in "${PROMOTED[@]}"; do
+      o="$TO/wp-content/$d"; n="$TO/wp-content/$d-new"; l="$TO/wp-content/$d-old"
+      log "INFO" "finalize_new_content_dirs:$d" "Rolling back promoted $d"
+      [ -e "$n" ] || mv -T "$o" "$n" 2>/dev/null || true
+      mv -T "$l" "$o" 2>/dev/null || log "ERROR" "finalize_new_content_dirs:$d" "Rollback incomplete; production for $d may be at $l"
+    done
+  }
+
+  local DIR ORIG NEW OLD ASIDE
+  for DIR in "${FINAL_DIRS[@]}"; do
+    ORIG="$TO/wp-content/$DIR"
+    NEW="$TO/wp-content/$DIR-new"
+    OLD="$TO/wp-content/$DIR-old"
+
+    # No prepared "-new" for this dir means it was already promoted by an interrupted earlier run of
+    # this same finalize (the rename consumed its "-new"), or there is simply nothing to promote. Skip
+    # it: re-promoting would fail on the missing "-new", and treating that as an error would wrongly
+    # fail a deploy that already (partly) succeeded. Any stale "-old" is swept at the end.
+    if [ ! -d "$NEW" ]; then
+      log "INFO" "finalize_new_content_dirs:$DIR" "No $NEW to promote (already promoted or nothing to copy); skipping"
+      # If an interrupted earlier run already promoted this dir (its "-new" was consumed, ORIG now holds
+      # the new content, and the prior production is still asided at "-old"), record it as PROMOTED so a
+      # LATER dir's failure rolls THIS one back too. Without this, rollback would leave a half-deployed
+      # tree -- some dirs new, some old. Only when both exist: otherwise there is nothing to roll back.
+      [ -d "$OLD" ] && [ -d "$ORIG" ] && PROMOTED+=("$DIR")
+      continue
     fi
-    log "INFO" "finalize_new_content_dirs:$DIR" "Renaming $NEW to $ORIG"
-    mv "$NEW" "$ORIG" || { log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to move $NEW to $ORIG"; [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to finalize $DIR-new folder."; }
-    log "INFO" "finalize_new_content_dirs:$DIR" "Moved $NEW to $ORIG"
+
+    # Normalize a leftover aside from an interrupted prior run so the "-old" name is free. If
+    # production is in place, the leftover is a disposable post-swap copy; if production is missing,
+    # the leftover IS production (interrupted mid-swap) and must be restored, not deleted.
+    if [ -e "$OLD" ]; then
+      if [ -d "$ORIG" ]; then
+        # PARKED, not deleted, and for exactly the reason cleanup_failed_new_content_dirs parks it:
+        # `[ -d "$ORIG" ]` is not evidence that production is safe. A finalize killed between its two
+        # renames leaves production AT "$OLD" with the "$ORIG" name free, and one live request is
+        # enough to recreate it -- wp_upload_dir() remakes uploads/YYYY/MM on any media request. A
+        # near-empty recreated directory satisfies this test exactly as well as the real tree does.
+        #
+        # This branch used to `rm -rf "$OLD"` on that test, which reintroduced delete-before-promote
+        # on the one state the sweep declares unattributable: the same unsound rule, 200 lines away
+        # from where it was removed. All this branch actually needs is the "$OLD" NAME, and a rename
+        # gets that without deciding which copy is production.
+        content_aside_name "$TO" "$DIR" recovered
+        log "WARN" "finalize_new_content_dirs:$DIR" "A stale $OLD is in the way and nothing says which copy is production; parking it at $NFD_ASIDE_PATH rather than deleting it"
+        if ! mv -T "$OLD" "$NFD_ASIDE_PATH"; then
+          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not move stale $OLD aside; aborting rather than risk nesting"
+          _finalize_rollback
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to clear stale $DIR aside during finalize."
+          return 1
+        fi
+      else
+        log "WARN" "finalize_new_content_dirs:$DIR" "Restoring production from interrupted run at $OLD"
+        if ! mv -T "$OLD" "$ORIG"; then
+          log "ERROR" "finalize_new_content_dirs:$DIR" "Could not restore $OLD to $ORIG"
+          _finalize_rollback
+          [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to restore $DIR from interrupted run."
+          return 1
+        fi
+      fi
+    fi
+
+    # Move current production aside (instant). -T refuses to nest if "-old" unexpectedly still exists.
+    ASIDE=0
+    if [ -d "$ORIG" ]; then
+      log "INFO" "finalize_new_content_dirs:$DIR" "Moving current $ORIG aside to $OLD"
+      if ! mv -T "$ORIG" "$OLD"; then
+        log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to move $ORIG aside"
+        _finalize_rollback
+        [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to set aside $DIR directory during finalize."
+        return 1
+      fi
+      ASIDE=1
+    else
+      log "INFO" "finalize_new_content_dirs:$DIR" "No existing $ORIG to set aside"
+    fi
+
+    # Promote the prepared tree (instant). -T FAILS instead of nesting if production was recreated
+    # concurrently in the window since the aside, which correctly triggers rollback below.
+    log "INFO" "finalize_new_content_dirs:$DIR" "Promoting $NEW to $ORIG"
+    if ! mv -T "$NEW" "$ORIG"; then
+      # The promote can fail because a live request recreated "$ORIG" (e.g. wp_upload_dir() remaking
+      # uploads/YYYY/MM) in the window since the aside. Move that squatter aside and retry once, so a
+      # live write during the swap does not leave production serving an empty dir. The squatter holds
+      # only files written in that microsecond race, which this deploy is replacing anyway.
+      #
+      # Guard this hard: attempt it ONLY when we KNOW production is safely backed up (we set it aside
+      # THIS run, ASIDE=1, and "-old" still holds it). Otherwise the "$ORIG" we are about to move to the
+      # squatter could BE the only copy of production -- e.g. an NFS is_dir() misread left ASIDE=0, or a
+      # concurrent restore just put production back at ORIG -- and moving it away would risk losing it.
+      if [ -e "$ORIG" ] && [ "$ASIDE" -eq 1 ] && [ -d "$OLD" ]; then
+        local SQUATTER
+        content_aside_name "$TO" "$DIR" squatter; SQUATTER="$NFD_ASIDE_PATH"
+        if mv -T "$ORIG" "$SQUATTER" 2>/dev/null && mv -T "$NEW" "$ORIG"; then
+          log "WARN" "finalize_new_content_dirs:$DIR" "Promoted after setting a concurrently-created $ORIG aside to $SQUATTER (left for inspection)"
+          # Never rm the squatter from inside this loop: a concurrent "-old"->ORIG restore could race us,
+          # and we cannot prove the squatter is disposable here. Its name is swept by no cleanup path, so
+          # leaking it is harmless; deleting the wrong tree is not. A later sweep/support can clear it.
+          PROMOTED+=("$DIR")
+          continue
+        fi
+        # Retry failed. The squatter STAYS where it is, and this is the one decision in this block
+        # that matters: production comes first.
+        #
+        # Putting it back here (which this used to do) moved a near-empty directory into the name the
+        # rollback below needs. `mv -T "$OLD" "$ORIG"` then refuses an occupied target, so the
+        # rollback "could not restore in place", production got parked under "-recovered-", and the
+        # LIVE SITE was left serving the squatter -- a visibly empty media library, recoverable only
+        # by hand. Leaving the squatter parked costs a leaked tree whose name nothing sweeps, and the
+        # rollback finds "$ORIG" free and restores production into it.
+        #
+        # (It was also a bare `&&` list ending in `mv`, so a failure of that `mv` would have ended the
+        # whole finalize under `set -e`, skipping the rollback entirely.)
+      fi
+      log "ERROR" "finalize_new_content_dirs:$DIR" "Failed to promote $NEW to $ORIG"
+      if [ "$ASIDE" -eq 1 ]; then
+        if ! mv -T "$OLD" "$ORIG"; then
+          # Cannot restore in place (e.g. production was recreated). Keep the only copy under a name no
+          # cleanup path sweeps, rather than risk it being auto-deleted later.
+          local RECOVERED
+          content_aside_name "$TO" "$DIR" recovered; RECOVERED="$NFD_ASIDE_PATH"
+          if mv -T "$OLD" "$RECOVERED" 2>/dev/null; then
+            log "ERROR" "finalize_new_content_dirs:$DIR" "Rollback could not restore in place; production preserved at $RECOVERED"
+          else
+            log "ERROR" "finalize_new_content_dirs:$DIR" "Rollback failed; production for $DIR remains at $OLD"
+          fi
+        fi
+      fi
+      _finalize_rollback
+      [ -n "$ON_ERROR" ] && eval "$ON_ERROR" || error "Unable to finalize $DIR-new folder."
+      return 1
+    fi
+    PROMOTED+=("$DIR")
+    log "INFO" "finalize_new_content_dirs:$DIR" "Promoted $NEW to $ORIG"
     log "DEBUG" "finalize_new_content_dirs:$DIR" "Permissions after move: $(ls -ld "$ORIG")"
   done
+
+  # All dirs promoted; production is live. The asides are now disposable, but discarding them is NOT
+  # part of this function -- see discard_content_asides and the call in deploy_content_finalize.
   log "INFO" "finalize_new_content_dirs" "END: Finalized new content dirs in $TO"
+}
+
+# Delete the "-old" asides a completed swap left behind. The slow half of the swap, kept separate
+# from it on purpose.
+#
+# On a normal deploy this is the only step whose cost scales with the site's file count: the copy is
+# chunked into bounded bursts by includes/Copy, the core download is a fixed ~50MB, and the promote
+# itself is three renames. So this is the step that can outlive the PHP request that started it, and
+# the question is only what that costs.
+#
+# One other step shares the property and is NOT made safe this way: deploy_content_setup's call to
+# cleanup_failed_new_content_dirs removes any stale "-new", which is one unlink per file, holding the
+# mutex, inside the request. It is empty on a normal deploy and only has work to do after an attempt
+# was abandoned, so it is a retry-after-a-crash cost rather than a per-deploy one -- but a large
+# enough site can be killed there, which leaves the next retry the same work to do again. Chunking
+# that sweep is the open follow-up; it is not solvable by releasing the mutex, because setup needs the
+# trees gone before the copy may start.
+#
+# It costs nothing, because the CALLER releases the staging mutex before calling this. Production is
+# already live and correct and these trees are backups of content that is no longer anywhere else in
+# use, so deleting them needs no mutex. If the request times out here, the orphan carries on and the
+# next poll finds the lock FREE, finds no "-new" left to promote, and reports the success that has
+# already happened.
+#
+# The alternative was to defer this to the next deploy's setup so that finalize stayed instant. That
+# is what this replaces, and it was a bad trade: an aside that outlives its own run is exposed to a
+# live request recreating production's directory, after which nothing on disk can tell the backup from
+# the real thing. Every mechanism built to resolve that ambiguity -- a swap journal, three record
+# states, a trash namespace, a completion marker -- exists only because of the deferral.
+discard_content_asides() {
+  local TO="$1"
+  local DIR OLD
+  for DIR in uploads themes plugins; do
+    OLD="$TO/wp-content/$DIR-old"
+    [ -d "$OLD" ] || continue
+    log "INFO" "discard_content_asides:$DIR" "Discarding the pre-deploy copy at $OLD"
+    rm -rf "$OLD" || log "ERROR" "discard_content_asides:$DIR" "Failed to remove $OLD; the next deploy will park it"
+  done
+  return 0
 }
 
 # --- Main Functions ---
@@ -2433,6 +3403,130 @@ deploy_files() {
     error "Unable to finalize new content directories."
   }
 
+  # Production is live, so the asides are disposable. This path runs detached (see
+  # Staging::startAsyncDeploy), so no request is blocked by the delete.
+  discard_content_asides "$PRODUCTION_DIR"
+
+  log "SUCCESS" "deploy_files:end" "Files deployed successfully."
+  write_deploy_result "success" "Files deployed successfully." "deploy_files"
+  echo '{"status":"success","message":"Files deployed successfully."}'
+}
+
+# deploy_content_setup / deploy_content_finalize split deploy_files into the two bash-only bookends of
+# the content deploy, so the chunked PHP CopyEngine (includes/Copy) can run step (2) -- the
+# prepare_new_content_dirs --link-dest delta -- between them, one bounded burst per request, instead
+# of the single long rsync that prepare_new_content_dirs would otherwise do in one shot.
+#
+# deploy_files above is left untouched for back-compat (the /staging/deploy route still uses it). The
+# stepped path is: PHP calls deploy_content_setup, then drives CopyEngine until the "-new" tree is
+# built, then calls deploy_content_finalize. Setup and finalize are the exact step (1) and step (3) of
+# deploy_files; only step (2) is handed to PHP. write_deploy_result is a no-op unless NFD_DEPLOY_*
+# are exported (only Staging::startAsyncDeploy does that), so on the stepped path the PHP
+# ContentCopyController owns the deploy-result file; error()/run_or_fail still record a failure.
+
+# Step (1) of a content deploy: sweep any stale -new/-old from a prior attempt and verify the sweep
+# succeeded. Does NOT move core or run prepare/finalize -- the PHP CopyEngine builds the "-new" delta
+# next, then deploy_content_core lays the WordPress core, then deploy_content_finalize swaps.
+deploy_content_setup() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+
+  # Fail if a stale "-new" or "-old" survived the sweep. cleanup_failed_new_content_dirs only LOGS an rm
+  # failure, so verify here:
+  #   - a stale "-new" would be copied on top of and shipped to production;
+  #   - a stale "-old" means a prior finalize died between its two renames (deploy_content_finalize
+  #     otherwise deletes the asides itself, in the same run, right after releasing the mutex, so an
+  #     "-old" does not normally outlive its run). Left in place it lets finalize's "already promoted"
+  #     skip-branch mis-count it as a promoted dir, which can corrupt a later-dir rollback.
+  #     cleanup_failed_new_content_dirs never guesses which copy is production: with production's name
+  #     free it RESTORES the aside to that name, and with both names occupied it PARKS the aside under
+  #     a "-recovered-" name no sweep touches. Either way a successful sweep leaves no "-old" behind.
+  for d in uploads themes plugins; do
+    [ ! -e "$PRODUCTION_DIR/wp-content/$d-new" ] || error "Unable to clear stale $d-new before content copy."
+    [ ! -e "$PRODUCTION_DIR/wp-content/$d-old" ] || error "Unable to clear stale $d-old before content copy."
+  done
+
+  # The job continues in PHP (the copy bursts) and then in later verbs, so keep the mutex instead of
+  # dropping it on exit. deploy_content_finalize releases it. See STAGING_LOCK_KEEP.
+  STAGING_LOCK_KEEP=1
+
+  log "INFO" "deploy_content_setup:end" "Content deploy setup complete."
+  echo '{"status":"success","message":"Content deploy setup complete."}'
+}
+
+# Step (2.5) of a content deploy: move the WordPress core into place (or notify the symlink-core
+# watcher) and sync php-ai-client. This runs AFTER the PHP CopyEngine has finished building "-new" and
+# immediately BEFORE finalize, rather than at setup: on the stepped path the content copy between setup
+# and here can take a long time, and downloading new core at setup would leave production running new
+# core against old content for that whole window. Kept as its OWN bounded phase (not folded into
+# finalize) so that finalize is only the instant rename swap -- a phase that cannot time out and orphan
+# a long-running bash process mid-swap. `wp core download --force` is idempotent, so if this phase is
+# interrupted and re-run it simply re-lays the same files.
+deploy_content_core() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  if [ -L "$PRODUCTION_DIR/index.php" ]; then
+    echo "path=$PRODUCTION_DIR" > "/nfssys/etc/wp_symink_watch/$(whoami).notify"
+  else
+    WP_VER=$(wp core version)
+    # --skip-content is load-bearing here, NOT cosmetic. --skip-themes/--skip-plugins only stop WP-CLI
+    # from LOADING themes/plugins at boot; they do not change what `core download` extracts. Without
+    # --skip-content, core download copy()s the tarball's bundled wp-content (akismet, hello.php, the
+    # twenty* themes, the index.php guards) over production's files -- and because the copy phase has
+    # already HARDLINKED each unchanged file into the "-new" tree, rewriting production's inode rewrites
+    # the "-new" copy too, shipping stock bundled content to production on the swap (and corrupting the
+    # "-old" backup, which shares those inodes). --skip-content extracts ONLY core; wp-content comes
+    # solely from the staging copy that built "-new".
+    run_or_fail "deploy_files:core_download" "Unable to move WordPress files." wp core download --version="$WP_VER" --force --path="$PRODUCTION_DIR" --skip-content --skip-themes --skip-plugins --quiet
+    sync_php_ai_client "$STAGING_DIR" "$PRODUCTION_DIR"
+  fi
+
+  # The job continues in PHP (the copy bursts) and then in later verbs, so keep the mutex instead of
+  # dropping it on exit. deploy_content_finalize releases it. See STAGING_LOCK_KEEP.
+  STAGING_LOCK_KEEP=1
+
+  log "INFO" "deploy_content_core:end" "Content deploy core download complete."
+  echo '{"status":"success","message":"Content deploy core download complete."}'
+}
+
+# Step (3) of a content deploy: atomically promote the "-new" tree the PHP CopyEngine built. This is
+# ONLY the instant rename swap now (core download moved to deploy_content_core above), so the window in
+# which an FPM timeout could orphan a still-running bash finalize -- releasing the PHP flock and letting
+# the next poll re-enter finalize and collide on the transient lock_check -- is shrunk to microseconds.
+# Reuses the deploy_files:end SUCCESS marker so the existing log-tail reader (getDeployStatusFromLog)
+# still sees completion.
+deploy_content_finalize() {
+  cd "$STAGING_DIR" || error 'Unable to move to staging directory.'
+
+  # NOTE, and it is load-bearing: the sweep below is reachable only because
+  # finalize_new_content_dirs is called with an EMPTY ON_ERROR, so its own failure paths end in
+  # error(), which exits. If anyone ever passes an ON_ERROR here, or error() stops exiting, the sweep
+  # runs after a rollback and removes every "-new" -- and since the PHP controller has by then
+  # recorded that a finalize was attempted, "no -new left" reads as a COMPLETED SWAP, so a deploy
+  # that restored the OLD production would be reported to the customer as a success. Keep these two
+  # facts together: ContentCopyController::swapAlreadyCompleted depends on this one.
+  finalize_new_content_dirs "$PRODUCTION_DIR" || {
+    cleanup_failed_new_content_dirs "$PRODUCTION_DIR"
+    error "Unable to finalize new content directories."
+  }
+
+  # ORDER MATTERS HERE, and it is the whole reason the swap and the delete are separate steps.
+  #
+  # The swap is done: production is live and correct, and the asides are backups of content that is
+  # no longer in use anywhere. On a normal deploy, deleting them is the only step whose cost scales
+  # with the site's file count, so it is the step that can outlive the PHP request blocking on this
+  # script (see discard_content_asides for the other one, which this trick cannot help) -- and by
+  # releasing the mutex FIRST, that stops mattering. A request timed out during the delete leaves an
+  # orphan finishing a job nothing is waiting on, and the next poll finds the lock free, finds no
+  # "-new" left to promote, and reports the success that already happened.
+  #
+  # Holding the mutex across the delete is what made a successful swap get reported as a failure: the
+  # next poll collided with the orphan and had no way to tell "still running" from "finished".
+  release_staging_lock
+
+  discard_content_asides "$PRODUCTION_DIR"
+
   log "SUCCESS" "deploy_files:end" "Files deployed successfully."
   write_deploy_result "success" "Files deployed successfully." "deploy_files"
   echo '{"status":"success","message":"Files deployed successfully."}'
@@ -2733,13 +3827,40 @@ esac
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   compatibility_check "$1"
   auth_action $2
-  lock_check
+
+  # Every command that copies content between the installs needs both of them to agree on the lock
+  # protocol BEFORE it takes the mutex; see version_handshake. The stepped job is checked once, at its
+  # setup verb -- core and finalize are later steps of the same hold, so re-checking them would only
+  # add ways for an in-flight job to fail. create builds the staging install (no peer to disagree with
+  # yet), destroy deletes it (a mismatch message telling the user to update a site they are removing
+  # helps nobody), and the SSO commands read only.
+  case "$1" in
+    clone|deploy_files|deploy_db|deploy_files_db|deploy_content_setup)
+      version_handshake
+      ;;
+  esac
+
+  # The stepped content-deploy verbs are three steps of ONE job, so they share one hold on the mutex
+  # by presenting the same per-job token (ContentCopyController generates it and passes it as the
+  # last argument). Every other command takes a lock of its own.
+  case "$1" in
+    deploy_content_setup|deploy_content_core|deploy_content_finalize)
+      # Fail closed rather than take a lock under a token PHP does not know: the verb would hold the
+      # mutex for the rest of the job (STAGING_LOCK_KEEP) and no later step could ever reclaim it.
+      [ -n "${11:-}" ] || error 'Missing staging lock token.' 'lock_check:token_missing'
+      lock_check "${11}"
+      ;;
+    *) lock_check ;;
+  esac
 
   case "$1" in
     create) create "$@";;
     destroy) destroy "$@";;
     clone) clone "$@";;
     deploy_files) deploy_files "$@";;
+    deploy_content_setup) deploy_content_setup "$@";;
+    deploy_content_core) deploy_content_core "$@";;
+    deploy_content_finalize) deploy_content_finalize "$@";;
     deploy_db) deploy_db "$@";;
     deploy_files_db) deploy_files_db "$@";;
     sso_staging) sso_staging "$@";;
