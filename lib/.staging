@@ -62,7 +62,6 @@ DB_NAME=$(wp eval 'echo DB_NAME;' --path=$PRODUCTION_DIR --skip-themes --skip-pl
 DB_USER=$(wp eval 'echo DB_USER;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PASS=$(wp eval 'echo DB_PASSWORD;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 DB_PREFIX=$(wp eval 'global $wpdb; echo $wpdb->prefix;' --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
-STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 PRODUCTION_TABLES=$(wp db tables --all-tables-with-prefix --format=csv --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet)
 # LOG_FILE must be set after PRODUCTION_DIR is set
 LOG_FILE="$PRODUCTION_DIR/nfd-private/nfd-staging.log"  # Log file always in production uploads
@@ -198,6 +197,111 @@ run_or_fail() {
     log "ERROR" "$step" "$errmsg"
     error "$errmsg"
   fi
+}
+
+# Strip CR/LF from a value before it is passed to cPanel ea-php wrappers (they stat() argv paths).
+nfd_strip_cr_newline() {
+  printf '%s' "$1" | tr -d '\r\n'
+}
+
+# Escape a string for inclusion in a JSON value (double-quoted).
+nfd_json_string_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+# Write staging_config JSON from script parameters (used when wp option get fails on the host).
+nfd_write_staging_config_fallback_json() {
+  local outfile="$1"
+  local production_dir="$2"
+  local production_url="$3"
+  local staging_dir="$4"
+  local staging_url="$5"
+  local created
+
+  created=$(date -u '+%b %d, %Y' 2>/dev/null || date -u '+%Y-%m-%d')
+  printf '{"creation_date":"%s","production_dir":"%s","production_url":"%s","staging_dir":"%s","staging_url":"%s"}' \
+    "$(nfd_json_string_escape "$created")" \
+    "$(nfd_json_string_escape "$production_dir")" \
+    "$(nfd_json_string_escape "$production_url")" \
+    "$(nfd_json_string_escape "$staging_dir")" \
+    "$(nfd_json_string_escape "$staging_url")" \
+    > "$outfile"
+}
+
+# Copy staging_config from production into a target install without passing JSON on the shell argv.
+# Export uses wp option get (eval-file often exits 255 on cPanel EA4 with no stderr). Import reads
+# the payload file via a single-line wp eval, then falls back to option update from the file body.
+# Returns 0 on success, 1 on failure.
+copy_staging_config_option() {
+  local target_path="$1"
+  local log_step="$2"
+  local prod_path tmp_path production_dir production_url staging_dir staging_url
+  local tmpfile err export_status import_status import_output payload_bytes used_fallback
+
+  target_path=$(nfd_strip_cr_newline "$target_path")
+  prod_path=$(nfd_strip_cr_newline "$PRODUCTION_DIR")
+  production_dir=$(nfd_strip_cr_newline "$PRODUCTION_DIR")
+  production_url=$(nfd_strip_cr_newline "$PRODUCTION_URL")
+  staging_dir=$(nfd_strip_cr_newline "$STAGING_DIR")
+  staging_url=$(nfd_strip_cr_newline "$STAGING_URL")
+
+  log "DEBUG" "$log_step" "copy_staging_config: export from production path=$prod_path import to target path=$target_path"
+
+  tmpfile=$(mktemp) || return 1
+  err=$(mktemp) || { rm -f "$tmpfile"; return 1; }
+  chmod 600 "$tmpfile" 2>/dev/null || true
+  tmp_path=$(nfd_strip_cr_newline "$tmpfile")
+  used_fallback=0
+
+  set +e
+  wp option get staging_config --format=json --path="$prod_path" --skip-themes --skip-plugins >"$tmpfile" 2>"$err"
+  export_status=$?
+  log "DEBUG" "$log_step" "staging_config wp option get exit code: $export_status"
+
+  if [ $export_status -ne 0 ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "[export] $line"; done < "$err"
+  fi
+
+  if [ $export_status -ne 0 ] || [ ! -s "$tmpfile" ] || [ "$(head -c 1 "$tmpfile")" != "{" ]; then
+    log "WARN" "$log_step" "staging_config export via option get unusable; building JSON from script parameters."
+    nfd_write_staging_config_fallback_json "$tmpfile" "$production_dir" "$production_url" "$staging_dir" "$staging_url"
+    used_fallback=1
+    export_status=0
+  fi
+
+  if [ ! -s "$tmpfile" ]; then
+    log "ERROR" "$log_step" "staging_config export file is empty."
+    rm -f "$tmpfile" "$err"
+    return 1
+  fi
+
+  payload_bytes=$(wc -c < "$tmpfile" | tr -d ' ')
+  log "DEBUG" "$log_step" "staging_config JSON byte length: $payload_bytes (fallback=$used_fallback)"
+
+  import_output=$(wp eval "update_option('staging_config', json_decode(file_get_contents('${tmp_path}'), true));" --path="$target_path" --skip-themes --skip-plugins 2>&1)
+  import_status=$?
+
+  if [ $import_status -ne 0 ]; then
+    log "DEBUG" "$log_step" "staging_config import via eval failed (exit $import_status); trying option update from file."
+    import_output=$(wp option update staging_config "$(cat "$tmpfile")" --format=json --path="$target_path" --skip-themes --skip-plugins 2>&1)
+    import_status=$?
+  fi
+
+  log "DEBUG" "$log_step" "staging_config import exit code: $import_status"
+  set -e
+
+  if [ -n "$import_output" ]; then
+    while IFS= read -r line; do [ -n "$line" ] && log "ERROR" "$log_step" "[import] $line"; done <<< "$import_output"
+  elif [ $import_status -ne 0 ]; then
+    log "ERROR" "$log_step" "staging_config import failed with no output (check staging wp-config.php and database prefix)."
+  fi
+
+  rm -f "$tmpfile" "$err"
+
+  if [ $import_status -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # Normalize foreign-key constraint names in a SQL dump file.
@@ -1943,16 +2047,7 @@ create() {
   log "DEBUG" "create:before_import_config" "Starting import config"
   # Import config
   log "INFO" "create" "[STEP] Import config."
-  set +e
-  STAGING_CONFIG_JSON=$(wp option get staging_config --format=json --path=$PRODUCTION_DIR --skip-themes --skip-plugins --quiet 2>/dev/null)
-  CONFIG2_OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet 2>&1)
-  CONFIG2_STATUS=$?
-  set -e
-  log "DEBUG" "create:import_config" "wp option update exit code: $CONFIG2_STATUS"
-  if [ -n "$CONFIG2_OUTPUT" ]; then
-    log "ERROR" "create:import_config" "Output: $CONFIG2_OUTPUT"
-  fi
-  if [ $CONFIG2_STATUS -ne 0 ]; then
+  if ! copy_staging_config_option "$STAGING_DIR" "create:import_config"; then
     delete_temp_staging 4 "Unable to import global config on staging."
   fi
   log "DEBUG" "create:after_import_config" "Import config completed"
@@ -2237,7 +2332,9 @@ clone() {
   if ! search_replace_paced "$STAGING_DIR" "$PRODUCTION_URL" "$STAGING_URL" "clone:search_replace" "staging_$DB_PREFIX"; then
     error "Unable to update URLs on staging."
   fi
-  run_or_fail "clone:import_config" "Unable to import global config on staging." wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
+  if ! copy_staging_config_option "$STAGING_DIR" "clone:import_config"; then
+    error "Unable to import global config on staging."
+  fi
   run_or_fail "clone:coming_soon" "Unable to turn on Coming Soon page in staging." wp option update nfd_coming_soon 'true' --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   run_or_fail "clone:rewrite_flush" "Unable to flush rewrite rules." wp rewrite flush --path="$STAGING_DIR" --skip-themes --skip-plugins --quiet
   rm "$STAGING_DIR/.export-sql" --force
@@ -2481,15 +2578,8 @@ deploy_db() {
 
     # 8. Update staging_config
     log "INFO" "deploy_db" "Updating staging_config"
-    log "DEBUG" "deploy_db" "Command: wp option update staging_config '$STAGING_CONFIG_JSON' --format=json --path='$PRODUCTION_DIR'"
-    OUTPUT=$(wp option update staging_config "$STAGING_CONFIG_JSON" --format=json --path="$PRODUCTION_DIR" --skip-themes --skip-plugins 2>&1)
-    RC=$?
-    log "DEBUG" "deploy_db" "staging_config update exit code: $RC; raw output length: ${#OUTPUT}; output: $OUTPUT"
-    if [ $RC -ne 0 ]; then
-      fail_and_exit "Unable to import global config on production. Exit code: $RC. Output: $OUTPUT"
-    fi
-    if echo "$OUTPUT" | grep -qE '^Error:'; then
-      fail_and_exit "Detected explicit error prefix in output when updating staging_config. Output: $OUTPUT"
+    if ! copy_staging_config_option "$PRODUCTION_DIR" "deploy_db:import_config"; then
+      fail_and_exit "Unable to import global config on production."
     fi
 
     # 9. Disable coming soon
