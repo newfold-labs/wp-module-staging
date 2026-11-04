@@ -1,15 +1,16 @@
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
+"PO-Revision-Date: 2026-11-04T08:31:09+00:00\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
+"Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-10-08T07:36:45+00:00\n"
-"Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-File: wp-module-staging.pot\n"
 "X-Crowdin-File-ID: 8\n"
@@ -19,345 +20,89 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: includes/Staging.php:370
-msgid "Cloning can only be done from the production environment."
-msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
-
-#: includes/Staging.php:400
-msgid "Staging environment already exists!"
-msgstr "Testomgeving bestaat al!"
-
-#: includes/Staging.php:508
-msgid "Unable to create the deployment lock directory."
-msgstr "Kan de deployment lock-map niet aanmaken."
-
-#: includes/Staging.php:516
-msgid "Unable to open the deployment lock file."
-msgstr "Het deployment lock-bestand kan niet worden geopend."
-
-#: includes/Staging.php:664
-msgid "Deployment failed. Check the staging log for details."
-msgstr "Deployment mislukt. Controleer het stagelogboek voor details."
-
-#: includes/Staging.php:705
-msgid "Files deployed successfully."
-msgstr "Bestanden succesvol gedeployeerd."
-
-#: includes/Staging.php:706
-msgid "Database deployed successfully."
-msgstr "Database succesvol uitgerold."
-
-#: includes/Staging.php:707
-msgid "Files and Database deployed successfully."
-msgstr "Bestanden en database succesvol uitgerold."
-
-#: includes/Staging.php:710
-msgid "Deployment completed successfully."
-msgstr "Inzet succesvol voltooid."
-
-#: includes/Staging.php:750
-#: includes/Staging.php:768
-#: includes/Staging.php:797
-#: includes/Staging.php:826
-#: includes/Staging.php:1412
-#: includes/Staging.php:1423
-msgid "Deployment in progress. This may take several minutes."
-msgstr "Inzet in uitvoering. Dit kan enkele minuten duren."
-
-#: includes/Staging.php:759
-msgid "The deployment stopped before it completed. Please try again."
-msgstr "De uitrol stopte voordat deze voltooid was. Probeer het alsjeblieft opnieuw."
-
-#: includes/Staging.php:868
-msgid "Unable to start the deployment process."
-msgstr "Het uitrolproces kan niet starten."
-
-#: includes/Staging.php:1113
-msgid "The deployment is still running. Please wait and check again shortly."
-msgstr "De uitrol loopt nog steeds. Wacht alstublieft en controleer binnenkort opnieuw."
-
-#: includes/Staging.php:1118
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
-
-#: includes/Staging.php:1128
-msgid "The staging operation did not complete, please get in touch with our support."
-msgstr "De staging is niet voltooid, neem contact op met onze support."
-
-#: includes/Staging.php:1152
-msgid "You must switch to the production environment before destroying staging."
-msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
-
-#: includes/Staging.php:1174
-msgid "Switch to an environment you are already in, you cannot."
-msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
-
-#: includes/Staging.php:1291
-msgid "Invalid staging CLI command."
-msgstr "Ongeldig testomgeving CLI commando."
-
-#. translators: Invalid character that was entered
-#: includes/Staging.php:1358
-#, php-format
-msgid "Invalid character (%s) in command."
-msgstr "Ongeldig teken (%s) in command."
-
-#: includes/Staging.php:1367
-msgid "Unable to execute script (disabled_function)."
-msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
-
-#: includes/Staging.php:1380
-msgid "Filesystem credentials required."
-msgstr "Bestandssysteemgegevens vereist."
-
-#: includes/Staging.php:1384
-msgid "Unable to initialize WP Filesystem."
-msgstr "WP Filesystem kan niet initialiseren."
-
-#: includes/Staging.php:1391
-msgid "Unable to execute script (permission error)."
-msgstr "Kan script niet uitvoeren (toestemmingsfout)."
-
-#: includes/Staging.php:1429
+#: includes/Staging.php:1443
 msgid "A deployment is currently in progress. Please wait for it to finish."
 msgstr "Er is momenteel een uitzending gaande. Wacht alstublieft tot deze is afgerond."
 
-#: includes/Staging.php:1442
-msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
-msgstr "Het staging-authenticatietoken kan niet worden opgeslagen. Een persistent objectcache kan niet synchroon lopen met de database, of de database accepteert geen schrijfopdrachten."
-
-#: includes/Staging.php:1467
-#: views/staging-log.php:11
-msgid "Log Staging"
-msgstr "Logstamopstelling"
-
-#: includes/Staging.php:1481
-msgid "Don't have capabilities to access this page"
-msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
-
-#: includes/Staging.php:1582
-msgid "Staging configuration was automatically repaired."
-msgstr "De stagingconfiguratie werd automatisch gerepareerd."
-
-#: includes/StagingBootstrapCheck.php:242
-msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr ""
-
-#. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:250
-#, php-format
-msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
-msgstr ""
-
-#. translators: %s: must-use plugin directory or file name.
-#: includes/StagingBootstrapCheck.php:258
-#, php-format
-msgid "The must-use plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Remove it from mu-plugins, then try again."
-msgstr ""
-
-#. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:265
-#, php-format
-msgid "The plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
-msgstr ""
-
-#. translators: 1: plugin or theme that declared the symbol first, 2: plugin or theme that declared it again.
-#: includes/StagingBootstrapCheck.php:280
-#, php-format
-msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
-msgstr ""
-
-#. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:289
-#, php-format
-msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
-msgstr ""
-
-#. translators: %s: must-use plugin directory or file name.
-#: includes/StagingBootstrapCheck.php:297
-#, php-format
-msgid "The must-use plugin \"%s\" has a code conflict (Cannot redeclare). Remove it from mu-plugins, then try again."
-msgstr ""
-
-#. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:305
-#, php-format
-msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
-msgstr ""
-
-#: includes/StagingBootstrapCheck.php:310
+#: includes/StagingBootstrapCheck.php:347
 msgid "A plugin has a code conflict (Cannot redeclare). Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr ""
+msgstr "Een plugin heeft een codeconflict (kan niet opnieuw declareren). Deactiveer plugins van derden en schakel over naar een standaardthema zoals Twenty Twenty-Five, probeer het dan opnieuw."
 
-#: includes/StagingBootstrapCheck.php:321
-msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr ""
-
-#. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:329
-#, php-format
-msgid "The theme \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr ""
-
-#. translators: %s: must-use plugin directory or file name.
-#: includes/StagingBootstrapCheck.php:337
-#, php-format
-msgid "The must-use plugin \"%s\" caused a fatal error while loading WordPress. Remove it from mu-plugins, then try again."
-msgstr ""
-
-#. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:344
-#, php-format
-msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr ""
-
-#: includes/StagingCLI.php:19
-msgid "No sub-command provided"
-msgstr "Geen subopdracht opgegeven"
-
-#: includes/StagingCLI.php:39
-msgid "Invalid user."
-msgstr "Ongeldige gebruiker."
-
-#: includes/StagingCLI.php:67
-msgid "Invalid deploy type"
-msgstr "Ongeldig implementatietype"
-
-#: includes/StagingCLI.php:84
-msgid "Invalid action"
-msgstr "Ongeldige actie"
-
-#: includes/StagingCLI.php:96
-msgid "Invalid JSON response"
-msgstr "Ongeldig JSON-antwoord"
-
-#: includes/StagingCLI.php:239
-msgid "Error: "
-msgstr "Fout: "
-
-#: includes/StagingCLI.php:288
-msgid "Provided $data wasn't valid array or JSON string."
-msgstr "De opgegeven $data was geen geldig array of JSON-tekenreeks."
-
-#: includes/StagingMenu.php:33
-msgctxt "Menu item text"
-msgid "Staging"
-msgstr "Testomgeving"
-
-#: includes/StagingMenu.php:53
-msgid "Staging Environment"
-msgstr "Testomgeving"
-
-#: includes/StagingMenu.php:55
-msgid "Staging Actions"
-msgstr "Testomgeving acties"
-
-#: includes/StagingMenu.php:71
-#: includes/StagingMenu.php:72
-msgid "Staging"
-msgstr "Enscenering"
-
-#: views/staging-log.php:14
-msgid "Production DIR:"
-msgstr "Productie-DIRECTIE:"
-
-#: views/staging-log.php:15
-msgid "Production URL:"
-msgstr "Productie-URL:"
-
-#: views/staging-log.php:16
-msgid "Staging DIR:"
-msgstr "Stage DIR:"
-
-#: views/staging-log.php:17
-msgid "Staging URL:"
-msgstr "Staging-URL:"
-
-#: views/staging-log.php:18
-msgid "Staging environment:"
-msgstr "Stage-omgeving:"
-
-#: views/staging-log.php:24
-msgid "Filter by date (YYYY-MM-DD):"
-msgstr "Filter op datum (JJJJ-MM-DD):"
-
-#: views/staging-log.php:26
-msgid "Items per page:"
-msgstr "Items per pagina:"
-
-#: views/staging-log.php:32
-msgid "Save"
-msgstr "Redden"
-
-#: views/staging-log.php:34
-msgid "Reset"
-msgstr "Terugstellen"
-
-#: views/staging-log.php:39
-msgid "Log"
-msgstr "Log"
-
-#: views/staging-log.php:63
-#: views/staging-log.php:65
-msgid "Prev"
-msgstr "Vorige"
-
-#: views/staging-log.php:132
-#: views/staging-log.php:134
-msgid "Next"
-msgstr "Volgend"
-
-#: views/staging-log.php:140
-msgid "No log found for selected date."
-msgstr "Geen logboek gevonden voor de geselecteerde datum."
+#: includes/StagingBootstrapCheck.php:279
+msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "Een plugin of thema is niet compatibel met PHP 8 omdat het create_function() gebruikt, wat is verwijderd. Deactiveer plugins van derden en schakel over naar een standaardthema zoals Twenty Twenty-Five, probeer het dan opnieuw."
 
 #: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Productie site"
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
 
 #: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Momenteel bewerken"
+msgid "An unknown error has occurred."
+msgstr "Er is een onbekende fout opgetreden."
 
 #: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "Momenteel niet bewerkt"
+msgid "Cancel"
+msgstr "annuleren"
 
 #: build/staging/bundle.js:1
 msgid "Clone"
 msgstr "Dupliceren"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Clone Action"
-msgstr "Bevestig kloonactie"
-
-#: build/staging/bundle.js:1
-msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
-msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
-
-#: build/staging/bundle.js:1
 msgid "Clone to staging"
 msgstr "Kopieer naar testomgeving"
 
 #: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Testomgeving"
+msgid "Cloned to Staging"
+msgstr "Gekopieerd naar testomgeving"
+
+#: includes/Staging.php:370
+msgid "Cloning can only be done from the production environment."
+msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
 
 #: build/staging/bundle.js:1
-msgid "You don't have a staging site yet."
-msgstr "U heeft nog geen testomgeving."
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Confirm Clone Action"
+msgstr "Bevestig kloonactie"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Verwijderen bevestigen"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Bevestig implementatie"
 
 #: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr "Testomgeving aanmaken"
 
 #: build/staging/bundle.js:1
-msgid "Delete Staging Site"
-msgstr "Testomgeving verwijderen"
+msgid "Created"
+msgstr "Aangemaakt"
 
 #: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
+
+#: build/staging/bundle.js:1
+msgid "Currently editing"
+msgstr "Momenteel bewerken"
+
+#: includes/Staging.php:719
+msgid "Database deployed successfully."
+msgstr "Database succesvol uitgerold."
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: build/staging/bundle.js:1
+msgid "Delete Staging Site"
+msgstr "Testomgeving verwijderen"
 
 #: build/staging/bundle.js:1
 msgid "Deleted Staging"
@@ -368,56 +113,20 @@ msgid "Deleting the staging site, this should take about a minute."
 msgstr "De testomgeving wordt verwijderd, dit duurt ongeveer een minuut."
 
 #: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "annuleren"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Gekopieerd naar testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Productieomgeving wordt gekopieerd naar testomgeving, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Testomgeving aangemaakt"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
-
-#: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Aangemaakt"
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Verwijderen"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Verwijderen bevestigen"
-
-#: build/staging/bundle.js:1
 msgid "Deploy"
 msgstr "Implementeren"
+
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Site implementeren"
 
 #: build/staging/bundle.js:1
 msgid "Deploy all changes"
 msgstr "Alle wijzigingen implementeren"
 
 #: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Bevestig implementatie"
-
-#: build/staging/bundle.js:1
 msgid "Deploy database only"
 msgstr "Alleen database implementeren"
-
-#: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
 
 #: build/staging/bundle.js:1
 msgid "Deploy files only"
@@ -431,21 +140,188 @@ msgstr "Geïmplementeerd"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
 
-#: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Site implementeren"
+#: includes/Staging.php:723
+msgid "Deployment completed successfully."
+msgstr "Inzet succesvol voltooid."
+
+#: includes/Staging.php:677
+msgid "Deployment failed. Check the staging log for details."
+msgstr "Deployment mislukt. Controleer het stagelogboek voor details."
+
+#: includes/Staging.php:763 includes/Staging.php:781 includes/Staging.php:810 includes/Staging.php:839 includes/Staging.php:1426 includes/Staging.php:1437
+msgid "Deployment in progress. This may take several minutes."
+msgstr "Inzet in uitvoering. Dit kan enkele minuten duren."
+
+#: includes/Staging.php:1495
+msgid "Don't have capabilities to access this page"
+msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
 
 #: build/staging/bundle.js:1
 msgid "Error"
 msgstr "Foutmelding"
 
+#: includes/StagingCLI.php:239
+msgid "Error: "
+msgstr "Fout: "
+
+#: includes/Staging.php:720
+msgid "Files and Database deployed successfully."
+msgstr "Bestanden en database succesvol uitgerold."
+
+#: includes/Staging.php:718
+msgid "Files deployed successfully."
+msgstr "Bestanden succesvol gedeployeerd."
+
+#: includes/Staging.php:1394
+msgid "Filesystem credentials required."
+msgstr "Bestandssysteemgegevens vereist."
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr "Filter op datum (JJJJ-MM-DD):"
+
+#: includes/StagingCLI.php:96
+msgid "Invalid JSON response"
+msgstr "Ongeldig JSON-antwoord"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Ongeldige actie"
+
+#. translators: Invalid character that was entered
+#: includes/Staging.php:1372
+#, php-format
+msgid "Invalid character (%s) in command."
+msgstr "Ongeldig teken (%s) in command."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Ongeldig implementatietype"
+
+#: includes/Staging.php:1305
+msgid "Invalid staging CLI command."
+msgstr "Ongeldig testomgeving CLI commando."
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Ongeldige gebruiker."
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr "Items per pagina:"
+
 #: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Een testomgeving is een kopie van uw live website die een veilige omgeving biedt om te experimenteren, updates te testen en door te voeren wanneer u klaar bent."
+msgid "Loading the production environment now."
+msgstr "De productieomgeving nu laden."
+
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
+msgstr "De testomgeving wordt nu geladen."
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr "Log"
+
+#: includes/Staging.php:1481 views/staging-log.php:11
+msgid "Log Staging"
+msgstr "Logstamopstelling"
+
+#: views/staging-log.php:132 views/staging-log.php:134
+msgid "Next"
+msgstr "Volgend"
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
+msgstr "Geen logboek gevonden voor de geselecteerde datum."
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "Geen subopdracht opgegeven"
+
+#: build/staging/bundle.js:1
+msgid "Not currently editing"
+msgstr "Momenteel niet bewerkt"
+
+#: views/staging-log.php:63 views/staging-log.php:65
+msgid "Prev"
+msgstr "Vorige"
 
 #: build/staging/bundle.js:1
 msgid "Proceed"
 msgstr "Doorgaan"
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr "Productie-DIRECTIE:"
+
+#: build/staging/bundle.js:1
+msgid "Production Site"
+msgstr "Productie site"
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr "Productie-URL:"
+
+#: includes/StagingCLI.php:288
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "De opgegeven $data was geen geldig array of JSON-tekenreeks."
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr "Terugstellen"
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr "Redden"
+
+#: includes/Staging.php:1131
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
+
+#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
+msgid "Staging"
+msgstr "Enscenering"
+
+#: includes/StagingMenu.php:33
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Testomgeving"
+
+#: includes/StagingMenu.php:55
+msgid "Staging Actions"
+msgstr "Testomgeving acties"
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Testomgeving aangemaakt"
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr "Stage DIR:"
+
+#: includes/StagingMenu.php:53
+msgid "Staging Environment"
+msgstr "Testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "Staging Site"
+msgstr "Testomgeving"
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr "Staging-URL:"
+
+#: includes/Staging.php:1596
+msgid "Staging configuration was automatically repaired."
+msgstr "De stagingconfiguratie werd automatisch gerepareerd."
+
+#: includes/Staging.php:411
+msgid "Staging environment already exists!"
+msgstr "Testomgeving bestaat al!"
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr "Stage-omgeving:"
 
 #: build/staging/bundle.js:1
 msgid "Switch"
@@ -456,41 +332,157 @@ msgid "Switch to Production"
 msgstr "Overschakelen naar productie"
 
 #: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "Dit zal je naar de productieomgeving navigeren"
-
-#: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "De productieomgeving nu laden."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
-
-#: build/staging/bundle.js:1
 msgid "Switch to Staging"
 msgstr "Overschakelen naar testomgeving"
 
-#: build/staging/bundle.js:1
-msgid "This will navigate you to the staging environment"
-msgstr "Dit brengt u naar de testomgeving"
-
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "De testomgeving wordt nu geladen."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
+#: includes/Staging.php:1187
+msgid "Switch to an environment you are already in, you cannot."
+msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
 
 #: build/staging/bundle.js:1
 msgid "Switching"
 msgstr "Schakelen"
 
 #: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "Er is een onbekende fout opgetreden."
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten duren."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
+
+#: includes/Staging.php:1126
+msgid "The deployment is still running. Please wait and check again shortly."
+msgstr "De uitrol loopt nog steeds. Wacht alstublieft en controleer binnenkort opnieuw."
+
+#: includes/Staging.php:772
+msgid "The deployment stopped before it completed. Please try again."
+msgstr "De uitrol stopte voordat deze voltooid was. Probeer het alsjeblieft opnieuw."
+
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:374
+#, php-format
+msgid "The must-use plugin \"%s\" caused a fatal error while loading WordPress. Remove it from mu-plugins, then try again."
+msgstr "De must-use plugin \"%s\" veroorzaakte een fatale fout tijdens het laden van WordPress. Verwijder het uit mu-plugins en probeer het dan opnieuw."
+
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:334
+#, php-format
+msgid "The must-use plugin \"%s\" has a code conflict (Cannot redeclare). Remove it from mu-plugins, then try again."
+msgstr "De must-use plugin \"%s\" heeft een codeconflict (Kan niet opnieuw declareren). Verwijder het uit mu-plugins en probeer het dan opnieuw."
+
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:295
+#, php-format
+msgid "The must-use plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Remove it from mu-plugins, then try again."
+msgstr "De must-use plugin \"%s\" is niet compatibel met PHP 8 omdat hij create_function() gebruikt, wat is verwijderd. Verwijder het uit mu-plugins en probeer het dan opnieuw."
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:381
+#, php-format
+msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "De plugin \"%s\" veroorzaakte een fatale fout tijdens het laden van WordPress. Deactiveer het, of deactiveer plugins van derden en schakel over naar een standaardthema zoals Twenty Twenty Five, en probeer het dan opnieuw."
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:342
+#, php-format
+msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr "De plugin \"%s\" heeft een codeconflict (kan niet opnieuw declareren). Deactiveer hem en probeer het dan opnieuw."
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:302
+#, php-format
+msgid "The plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
+msgstr "De plugin \"%s\" is niet compatibel met PHP 8 omdat hij create_function() gebruikt, wat is verwijderd. Deactiveer het en probeer het dan opnieuw."
+
+#. translators: 1: plugin or theme that declared the symbol first, 2: plugin or theme that declared it again.
+#: includes/StagingBootstrapCheck.php:317
+#, php-format
+msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
+msgstr "De plugin of het thema \"%1$s\" conflicteert met \"%2$s\" (Kan niet opnieuw declareren). Deactiveer of verwijder er één en probeer het opnieuw."
+
+#: includes/Staging.php:1141
+msgid "The staging operation did not complete, please get in touch with our support."
+msgstr "De staging is niet voltooid, neem contact op met onze support."
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:366
+#, php-format
+msgid "The theme \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "Het thema \"%s\" veroorzaakte een fatale fout tijdens het laden van WordPress. Deactiveer het, of deactiveer plugins van derden en schakel over naar een standaardthema zoals Twenty Twenty-Five, probeer het dan opnieuw."
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:326
+#, php-format
+msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr "Het thema \"%s\" heeft een codeconflict (Kan niet opnieuw declareren). Deactiveer het en probeer het opnieuw."
+
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:287
+#, php-format
+msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
+msgstr "Het thema \"%s\" is niet compatibel met PHP 8 omdat het create_function() gebruikt, wat is verwijderd. Deactiveer het en probeer het dan opnieuw."
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Dit zal de testomgeving naar productie overzetten en de huidige productiesite overschrijven. Weet u zeker dat u wilt doorgaan?"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
+msgstr "Dit zal je naar de productieomgeving navigeren"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
+msgstr "Dit brengt u naar de testomgeving"
+
+#: build/staging/bundle.js:1
+msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
+msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exacte kopie van de huidige productiesite. Weet u zeker dat u wilt doorgaan?"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
+
+#: includes/Staging.php:521
+msgid "Unable to create the deployment lock directory."
+msgstr "Kan de deployment lock-map niet aanmaken."
+
+#: includes/Staging.php:1381
+msgid "Unable to execute script (disabled_function)."
+msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
+
+#: includes/Staging.php:1405
+msgid "Unable to execute script (permission error)."
+msgstr "Kan script niet uitvoeren (toestemmingsfout)."
+
+#: includes/Staging.php:1398
+msgid "Unable to initialize WP Filesystem."
+msgstr "WP Filesystem kan niet initialiseren."
+
+#: includes/Staging.php:529
+msgid "Unable to open the deployment lock file."
+msgstr "Het deployment lock-bestand kan niet worden geopend."
+
+#: includes/Staging.php:881
+msgid "Unable to start the deployment process."
+msgstr "Het uitrolproces kan niet starten."
+
+#: includes/Staging.php:1456
+msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
+msgstr "Het staging-authenticatietoken kan niet worden opgeslagen. Een persistent objectcache kan niet synchroon lopen met de database, of de database accepteert geen schrijfopdrachten."
+
+#: includes/StagingBootstrapCheck.php:358
+msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "WordPress kon niet starten vanwege een fatale fout in een plugin of thema. Deactiveer plugins van derden en schakel over naar een standaardthema zoals Twenty Twenty-Five, en probeer het dan opnieuw."
 
 #: build/staging/bundle.js:1
 msgid "Working…"
 msgstr "Werkend..."
+
+#: build/staging/bundle.js:1
+msgid "You don't have a staging site yet."
+msgstr "U heeft nog geen testomgeving."
+
+#: includes/Staging.php:1165
+msgid "You must switch to the production environment before destroying staging."
+msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
