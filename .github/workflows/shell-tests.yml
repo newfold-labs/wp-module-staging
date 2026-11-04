@@ -1,0 +1,40 @@
+name: Shell Tests
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'lib/.staging'
+      - 'tests/bash/**'
+      - '.github/workflows/shell-tests.yml'
+  pull_request:
+    types: [opened, edited, reopened, ready_for_review, synchronize]
+    paths:
+      - 'lib/.staging'
+      - 'tests/bash/**'
+      - '.github/workflows/shell-tests.yml'
+  workflow_dispatch:
+
+# Disable permissions for all available scopes by default.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  bash-unit:
+    name: Staging script unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to clone the repository (checkout).
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The staging worker (lib/.staging) runs server-side via PHP exec() and is not exercised by the
+      # PHP (wpunit) or Playwright suites, so these bash tests are its only automated coverage. They
+      # are pure text/string logic and need no database or wp-cli.
+      - name: Run staging prefix unit tests
+        run: bash tests/bash/test-staging-prefix.sh
