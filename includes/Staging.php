@@ -371,6 +371,22 @@ class Staging {
 			);
 		}
 
+		$bootstrap = $this->check_bootstrap( $this->getProductionDir() );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
+		/*
+		 * Before move_content_dirs(), clone runs WP-CLI against the existing staging directory
+		 * with --skip-plugins --skip-themes. Regular plugins are replaced by production's copy
+		 * and are not booted, so a full probe would block the clone that repairs them. Must-use
+		 * plugins, drop-ins, and wp-config.php still load and can fail those commands.
+		 */
+		$bootstrap = $this->check_bootstrap( $this->getStagingDir(), false );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		return $this->runCommand( 'clone' );
 	}
 
@@ -396,6 +412,11 @@ class Staging {
 			);
 		}
 
+		$bootstrap = $this->check_bootstrap( $this->getProductionDir() );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		return $this->runCommand( 'create' );
 	}
 
@@ -410,7 +431,22 @@ class Staging {
 	 * @return array|\WP_Error
 	 */
 	public function deployToProduction( $type = 'all' ) {
-		return $this->runCommand( $this->getDeployCommandForType( $type ) );
+		$command = $this->getDeployCommandForType( $type );
+
+		/*
+		 * deploy_files runs `wp core version` and `wp core download`, which WP-CLI runs before
+		 * WordPress loads, and every other call passes --skip-plugins --skip-themes. A regular
+		 * plugin cannot fail the deploy. Must-use plugins, drop-ins, and wp-config.php still can.
+		 * deploy_db never boots those either, so it is not probed.
+		 */
+		if ( 'deploy_db' !== $command ) {
+			$bootstrap = $this->check_bootstrap( $this->getStagingDir(), false );
+			if ( is_wp_error( $bootstrap ) ) {
+				return $bootstrap;
+			}
+		}
+
+		return $this->runCommand( $command );
 	}
 
 	/**
@@ -1152,11 +1188,39 @@ class Staging {
 			);
 		}
 
+		/*
+		 * `wp newfold sso` boots the destination with every active plugin. Check that install
+		 * before the script turns an empty link into "Unable to create SSO link".
+		 */
+		$target    = ( 'staging' === $env ) ? $this->getStagingDir() : $this->getProductionDir();
+		$bootstrap = $this->check_bootstrap( $target );
+		if ( is_wp_error( $bootstrap ) ) {
+			return $bootstrap;
+		}
+
 		if ( 'staging' === $env ) {
 			return $this->runCommand( 'sso_staging', array( $user_id ) );
 		}
 
 		return $this->runCommand( 'sso_production', array( $user_id ) );
+	}
+
+	/**
+	 * Stop an operation whose directory cannot bootstrap under WP-CLI.
+	 *
+	 * Runs before runCommand(), so a fatal never writes staging_config or the auth token.
+	 * An empty path fails open and leaves the script to report the missing directory.
+	 *
+	 * @param string $path            Production or staging directory the operation will boot.
+	 * @param bool   $load_extensions Whether that boot loads regular plugins and themes.
+	 * @return true|\WP_Error
+	 */
+	protected function check_bootstrap( $path, $load_extensions = true ) {
+		if ( ! is_string( $path ) || '' === $path ) {
+			return true;
+		}
+
+		return ( new StagingBootstrapCheck() )->check( $path, $load_extensions );
 	}
 
 	/**
