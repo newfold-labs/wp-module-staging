@@ -80,6 +80,8 @@ class StagingApiWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCase {
 		$this->assertArrayHasKey( '/newfold-staging/v1/staging', $routes );
 		$this->assertArrayHasKey( '/newfold-staging/v1/staging/clone', $routes );
 		$this->assertArrayHasKey( '/newfold-staging/v1/staging/deploy', $routes );
+		$this->assertArrayHasKey( '/newfold-staging/v1/staging/copy/advance', $routes );
+		$this->assertArrayHasKey( '/newfold-staging/v1/staging/copy/status', $routes );
 		$this->assertArrayHasKey( '/newfold-staging/v1/staging/switch-to', $routes );
 	}
 

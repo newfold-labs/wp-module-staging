@@ -1,0 +1,56 @@
+name: PHP Unit Tests
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'includes/Copy/**'
+      - 'tests/php/**'
+      - '.github/workflows/php-unit.yml'
+  pull_request:
+    types: [opened, edited, reopened, ready_for_review, synchronize]
+    paths:
+      - 'includes/Copy/**'
+      - 'tests/php/**'
+      - '.github/workflows/php-unit.yml'
+  workflow_dispatch:
+
+# Disable permissions for all available scopes by default.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  php-unit:
+    name: Copy engine unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to clone the repository (checkout).
+    strategy:
+      matrix:
+        php: [ '7.4', '8.3' ]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      # The copy engine (includes/Copy) is pure PHP and is not exercised by the wpunit or Playwright
+      # suites, so these standalone tests are its automated coverage. They need no database or wp-cli.
+      # Run across the PHP floor (7.4) and a current version to catch version-specific breakage.
+      - name: Run copy engine unit tests
+        run: |
+          status=0
+          for t in tests/php/test-*.php; do
+            echo "::group::$t"
+            php "$t" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
