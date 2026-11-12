@@ -34,7 +34,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The staging worker (lib/.staging) runs server-side via PHP exec() and is not exercised by the
-      # PHP (wpunit) or Playwright suites, so these bash tests are its only automated coverage. They
-      # are pure text/string logic and need no database or wp-cli.
-      - name: Run staging prefix unit tests
-        run: bash tests/bash/test-staging-prefix.sh
+      # PHP (wpunit) or Playwright suites, so these bash tests are its only automated coverage. The
+      # prefix tests are pure string logic; the content-dir and lock tests do real filesystem work in
+      # temp dirs. None of them needs a database or wp-cli.
+      #
+      # The lock tests need util-linux `flock` and a non-root user, and skip the assertions that
+      # depend on them otherwise. The GitHub runner provides both, so a run here that reports skips
+      # means something changed about the environment.
+      - name: Run staging bash unit tests
+        run: |
+          status=0
+          for t in tests/bash/test-*.sh; do
+            echo "::group::$t"
+            bash "$t" || status=1
+            echo "::endgroup::"
+          done
+          exit $status

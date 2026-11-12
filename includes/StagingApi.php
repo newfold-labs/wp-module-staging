@@ -94,6 +94,32 @@ class StagingApi extends \WP_REST_Controller {
 
 		register_rest_route(
 			$this->namespace,
+			'/staging/copy/advance',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'advanceContentCopy' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+					'args'                => $this->getCopyTypeArgs(),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staging/copy/status',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'getContentCopyStatus' ),
+					'permission_callback' => array( $this, 'checkPermission' ),
+					'args'                => $this->getCopyTypeArgs(),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
 			'/staging/switch-to',
 			array(
 				array(
@@ -180,6 +206,54 @@ class StagingApi extends \WP_REST_Controller {
 	 */
 	public function getDeployStatus( \WP_REST_Request $request ) {
 		return rest_ensure_response( $this->staging->getDeployStatus( $request->get_param( 'type' ) ) );
+	}
+
+	/**
+	 * Advance the stepped content-copy deploy by one bounded unit.
+	 *
+	 * @param \WP_REST_Request $request WordPress HTTP request model.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function advanceContentCopy( \WP_REST_Request $request ) {
+		return rest_ensure_response(
+			$this->staging->advanceContentCopy( $request->get_param( 'type' ), (bool) $request->get_param( 'restart' ) )
+		);
+	}
+
+	/**
+	 * Poll the stepped content-copy deploy progress without advancing it.
+	 *
+	 * @param \WP_REST_Request $request WordPress HTTP request model.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function getContentCopyStatus( \WP_REST_Request $request ) {
+		return rest_ensure_response( $this->staging->getContentCopyStatus( $request->get_param( 'type' ) ) );
+	}
+
+	/**
+	 * Shared REST args for copy type on the content-copy advance and status routes.
+	 *
+	 * @return array
+	 */
+	protected function getCopyTypeArgs() {
+		return array(
+			'type'    => array(
+				'default'           => 'deploy_files',
+				'enum'              => array( 'deploy_files' ),
+				'validate_callback' => function ( $value ) {
+					return in_array( $value, array( 'deploy_files' ), true );
+				},
+			),
+			// Advance only: true on the first call of a new deploy to discard any prior job's state so a
+			// previous run's terminal 'done'/'error' does not short-circuit it. Ignored by status.
+			'restart' => array(
+				'default'           => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			),
+		);
 	}
 
 	/**

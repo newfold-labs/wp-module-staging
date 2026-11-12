@@ -2,6 +2,7 @@
 namespace NewfoldLabs\WP\Module\Staging;
 
 use NewfoldLabs\WP\ModuleLoader\Container;
+use NewfoldLabs\WP\Module\Staging\Copy\ContentCopyController;
 use function NewfoldLabs\WP\ModuleLoader\container;
 
 /**
@@ -37,6 +38,20 @@ class Staging {
 	 */
 	const DEPLOY_JOB_TTL = 1800;
 
+	/**
+	 * WP-cron hook that advances an in-progress stepped content copy.
+	 *
+	 * @var string
+	 */
+	const CONTENT_COPY_CRON_HOOK = 'nfd_staging_advance_content_copy';
+
+	/**
+	 * Seconds between content-copy cron reschedules while a job is still running.
+	 *
+	 * @var int
+	 */
+	const CONTENT_COPY_CRON_INTERVAL = 20;
+
 
 	/**
 	 * Constructor.
@@ -55,6 +70,10 @@ class Staging {
 			}
 		);
 		add_action( 'wp_loaded', array( StagingMenu::class, 'init' ), 100 );
+
+		// WP-cron fallback that advances an in-progress stepped content copy and reschedules itself
+		// until the job finishes, so a closed browser (no more REST polls) still completes a deploy.
+		add_action( self::CONTENT_COPY_CRON_HOOK, array( $this, 'runContentCopyCron' ) );
 
 		// Mark Safe Mode as confirmed so the banner never re-appears
 		add_action( 'init', array( $this, 'confirm_jetpack_safe_mode' ), 20 );
@@ -237,6 +256,115 @@ class Staging {
 		}
 
 		return $this->getConfigValue( 'production_dir', ABSPATH );
+	}
+
+	/**
+	 * Withdraw this job's publication on the cross-version compat channel (lib/.staging's
+	 * LEGACY_LOCK_NAME / nfd_staging_lock transient).
+	 *
+	 * lib/.staging writes that transient with `wp transient set --path=<production_dir>` while
+	 * skipping the object-cache drop-in, so it always lives as `_transient_nfd_staging_lock` in
+	 * production's options table. Production and staging share the same MySQL database under
+	 * different table prefixes, so we query production's options table directly via $wpdb rather
+	 * than get_option() (which would hit staging's prefix and/or a persistent object cache).
+	 *
+	 * @param string $token Lock token being abandoned; must match the published value.
+	 *
+	 * @return void
+	 */
+	public function withdrawCompatLockPublication( $token ) {
+		global $wpdb;
+
+		if ( '' === $token || ! ( $wpdb instanceof \wpdb ) ) {
+			return;
+		}
+
+		$prefix        = $this->resolveProductionTablePrefix();
+		$options_table = $prefix . 'options';
+		$option_name   = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+		$timeout_name  = '_transient_timeout_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM `{$options_table}` WHERE option_name = %s LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$option_name
+			)
+		);
+
+		if ( ! is_string( $value ) || ! $this->compatLockValueMatchesToken( $value, $token ) ) {
+			return;
+		}
+
+		// Guard the DELETE by exact option_value so a concurrent takeover between SELECT and DELETE is untouched.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$options_table}` WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$option_name,
+				$value
+			)
+		);
+
+		if ( ! $deleted ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$options_table}` WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$timeout_name
+			)
+		);
+
+		if ( $prefix === $wpdb->prefix ) {
+			wp_cache_delete( $option_name, 'options' );
+			wp_cache_delete( $timeout_name, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
+	}
+
+	/**
+	 * Resolve production's MySQL table prefix from staging_config, production's wp-config.php, or $wpdb.
+	 *
+	 * @return string Validated SQL-safe table prefix.
+	 */
+	private function resolveProductionTablePrefix() {
+		global $wpdb;
+
+		$config = $this->getConfig( false );
+		if ( ! empty( $config['production_prefix'] )
+			&& is_string( $config['production_prefix'] )
+			&& preg_match( '/^[A-Za-z0-9_]+$/', $config['production_prefix'] ) ) {
+			return $config['production_prefix'];
+		}
+
+		$prod_wp_config = untrailingslashit( $this->getProductionDir() ) . '/wp-config.php';
+		if ( is_readable( $prod_wp_config ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$contents = file_get_contents( $prod_wp_config );
+			if ( is_string( $contents )
+				&& preg_match( '/^[ \t]*\$table_prefix[ \t]*=[ \t]*([\'"])([A-Za-z0-9_]+)\1/m', $contents, $matches ) ) {
+				return $matches[2];
+			}
+		}
+
+		return preg_match( '/^[A-Za-z0-9_]+$/', (string) $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
+	}
+
+	/**
+	 * Whether a compat-channel value belongs to the given lock token.
+	 *
+	 * @param string $value Published transient value.
+	 * @param string $token Expected token.
+	 *
+	 * @return bool
+	 */
+	private function compatLockValueMatchesToken( $value, $token ) {
+		$parts = explode( ':', $value );
+		return count( $parts ) >= 3 && 'active' === $parts[0] && hash_equals( (string) $parts[2], $token );
 	}
 
 	/**
@@ -461,6 +589,196 @@ class Staging {
 	}
 
 	/**
+	 * Advance one bounded unit of the stepped content-copy deploy and return progress.
+	 *
+	 * This is the new chunked deploy path: each call runs at most one bash bookend verb OR one
+	 * CopyEngine burst, so a poll driver (the REST advance route or the cron fallback) makes steady
+	 * progress without any single request running long. The legacy `/staging/deploy` path is
+	 * untouched.
+	 *
+	 * @param string $type    Copy type. Only `deploy_files` is supported for now.
+	 * @param bool   $restart When true, discard any prior job and start fresh (the UI sends this on the
+	 *                        first advance of a new deploy).
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function advanceContentCopy( $type = 'deploy_files', $restart = false ) {
+		$controller = $this->getContentCopyController( $type );
+		if ( is_wp_error( $controller ) ) {
+			return $controller;
+		}
+
+		$result = $controller->advance( (bool) $restart );
+		$this->maybeScheduleContentCopyCron( $result );
+
+		return $result;
+	}
+
+	/**
+	 * Report the current phase/progress of the stepped content-copy deploy without advancing it.
+	 *
+	 * @param string $type Copy type. Only `deploy_files` is supported for now.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function getContentCopyStatus( $type = 'deploy_files' ) {
+		$controller = $this->getContentCopyController( $type );
+		if ( is_wp_error( $controller ) ) {
+			return $controller;
+		}
+
+		return $controller->status();
+	}
+
+	/**
+	 * Build a content-copy controller for a validated copy type.
+	 *
+	 * @param string $type Copy type.
+	 *
+	 * @return ContentCopyController|\WP_Error
+	 */
+	protected function getContentCopyController( $type ) {
+		if ( 'deploy_files' !== $type ) {
+			return new \WP_Error(
+				'invalid_copy_type',
+				__( 'Unsupported content copy type.', 'wp-module-staging' )
+			);
+		}
+
+		return new ContentCopyController( $this );
+	}
+
+	/**
+	 * Run a single content-deploy bash verb through the normal command path.
+	 *
+	 * Exposed so ContentCopyController (a separate class in the Copy namespace) can invoke the
+	 * `deploy_content_setup` / `deploy_content_finalize` verbs while keeping runCommand's token
+	 * handshake, cache resync, NFD_STAGING_ENV, and shell-escaping. These verbs are bounded and
+	 * synchronous (not isDeployCommand()), so runCommand runs them via executeStagingScript.
+	 *
+	 * @param string $verb       One of `deploy_content_setup`, `deploy_content_core`,
+	 *                           `deploy_content_finalize`.
+	 * @param string $lock_token The job's staging-lock token, passed to the script as a command
+	 *                           argument so all three verbs share one hold on the staging mutex. See
+	 *                           lock_check in lib/.staging and StagingCommandLock.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function runContentDeployVerb( $verb, $lock_token = '' ) {
+		if ( ! in_array( $verb, array( 'deploy_content_setup', 'deploy_content_core', 'deploy_content_finalize' ), true ) ) {
+			return new \WP_Error(
+				'invalid_command',
+				__( 'Invalid staging CLI command.', 'wp-module-staging' )
+			);
+		}
+
+		/*
+		 * Checked here as well as in the script: a malformed token would forge extra fields in the
+		 * colon-delimited lock value, and the script refuses the verb outright without one, which
+		 * would surface as an opaque failure mid-deploy.
+		 */
+		$lock = new StagingCommandLock( $this->getProductionDir() );
+		if ( ! $lock->isValidToken( $lock_token ) ) {
+			return new \WP_Error(
+				'invalid_lock_token',
+				__( 'Missing or invalid staging lock token.', 'wp-module-staging' )
+			);
+		}
+
+		return $this->runCommand( $verb, array( $lock_token ) );
+	}
+
+	/**
+	 * A random 32-character alphanumeric token, from a generator that never calls into WordPress.
+	 *
+	 * Deliberately NOT wp_generate_password(), which ends in
+	 * `apply_filters( 'random_password', ... )`. That filter is hooked in the wild -- Jetpack among
+	 * others -- and a hook can both change the value and do work of its own, including outbound HTTP.
+	 * A filtered value carrying symbols would fail the `[A-Za-z0-9]` shape both the lock value and the
+	 * shell argument require, so every staging operation on such a site would fail for a reason
+	 * nothing explains; and minting a local identifier has no business reaching out to anything.
+	 *
+	 * @return string
+	 */
+	public static function randomToken() {
+		try {
+			return bin2hex( random_bytes( 16 ) );
+		} catch ( \Throwable $t ) {
+			return substr( hash( 'sha256', uniqid( (string) getmypid(), true ) . microtime() ), 0, 32 );
+		}
+	}
+
+	/**
+	 * Persist a deploy progress/result payload to the shared result file.
+	 *
+	 * Lets ContentCopyController reuse the exact file the legacy `/staging/deploy` GET status reads,
+	 * so the stepped path's running/success/error states surface through the existing poller too.
+	 *
+	 * @param array $data Result payload.
+	 *
+	 * @return void
+	 */
+	public function recordDeployResult( array $data ) {
+		$this->writeDeployResult( $data );
+	}
+
+	/**
+	 * Cron callback: advance an in-progress content copy and reschedule until it finishes.
+	 *
+	 * @return void
+	 */
+	public function runContentCopyCron() {
+		$controller = new ContentCopyController( $this );
+		if ( ! $controller->isInProgress() ) {
+			// No job, or it already finished; nothing to reschedule.
+			return;
+		}
+
+		$result = $controller->advance();
+		$this->maybeScheduleContentCopyCron( $result );
+	}
+
+	/**
+	 * Schedule or unschedule the content-copy cron fallback based on a job result.
+	 *
+	 * @param array|\WP_Error $result Latest advance()/status() envelope.
+	 *
+	 * @return void
+	 */
+	protected function maybeScheduleContentCopyCron( $result ) {
+		$running = is_array( $result ) && isset( $result['status'] ) && 'running' === $result['status'];
+
+		if ( $running ) {
+			$this->scheduleContentCopyCron();
+		} else {
+			$this->unscheduleContentCopyCron();
+		}
+	}
+
+	/**
+	 * Schedule the next content-copy cron tick if one is not already queued.
+	 *
+	 * @return void
+	 */
+	protected function scheduleContentCopyCron() {
+		if ( ! wp_next_scheduled( self::CONTENT_COPY_CRON_HOOK ) ) {
+			wp_schedule_single_event( time() + self::CONTENT_COPY_CRON_INTERVAL, self::CONTENT_COPY_CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Remove any queued content-copy cron tick (job done, errored, or gone).
+	 *
+	 * @return void
+	 */
+	protected function unscheduleContentCopyCron() {
+		$timestamp = wp_next_scheduled( self::CONTENT_COPY_CRON_HOOK );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, self::CONTENT_COPY_CRON_HOOK );
+		}
+	}
+
+	/**
 	 * Map REST deploy type to the staging CLI command name.
 	 *
 	 * @param string $type Deployment type.
@@ -577,6 +895,15 @@ class Staging {
 	 */
 	protected function isDeployInProgress() {
 		if ( $this->isDeployLockHeld() ) {
+			return true;
+		}
+
+		// A stepped content copy has no PHP deploy flock and can legitimately run far longer than
+		// DEPLOY_JOB_TTL (that is the whole point), so consult it directly. Without this, a big stepped
+		// deploy older than the TTL would let a legacy /staging/deploy start on top of it and rm -rf the
+		// engine's in-progress `-new` tree.
+		$content_copy = new ContentCopyController( $this );
+		if ( $content_copy->isInProgress() ) {
 			return true;
 		}
 
@@ -1287,15 +1614,18 @@ class Staging {
 		}
 
 		$allowedCommands = array(
-			'clone'           => true,
-			'compat_check'    => true,
-			'create'          => true,
-			'deploy_db'       => true,
-			'deploy_files'    => true,
-			'deploy_files_db' => true,
-			'destroy'         => true,
-			'sso_production'  => true,
-			'sso_staging'     => true,
+			'clone'                   => true,
+			'compat_check'            => true,
+			'create'                  => true,
+			'deploy_db'               => true,
+			'deploy_files'            => true,
+			'deploy_files_db'         => true,
+			'deploy_content_setup'    => true,
+			'deploy_content_core'     => true,
+			'deploy_content_finalize' => true,
+			'destroy'                 => true,
+			'sso_production'          => true,
+			'sso_staging'             => true,
 		);
 
 		// Check if command is allowed
@@ -1304,6 +1634,26 @@ class Staging {
 				'invalid_command',
 				__( 'Invalid staging CLI command.', 'wp-module-staging' )
 			);
+		}
+
+		/*
+		 * A stepped content copy builds the production `-new` tree over many short requests. While it is
+		 * in progress, any OTHER staging command would mutate or `rm -rf` the very trees the copy is
+		 * reading from (staging) or writing to (production/`-new`): a concurrent `clone`/`create` runs
+		 * move_content_dirs and wipes staging mid-copy, a `destroy` tears it down, a legacy `deploy_*`
+		 * promotes on top of a half-built tree. Files then vanish mid-copy and a partial tree can be
+		 * finalized over production. Refuse every command except the copy's OWN bounded bookend verbs
+		 * (which are how the in-progress job makes progress) until it finishes. Fail closed.
+		 */
+		$stepped_copy_verbs = array( 'deploy_content_setup', 'deploy_content_core', 'deploy_content_finalize' );
+		if ( ! in_array( $command_name, $stepped_copy_verbs, true ) ) {
+			$content_copy = new ContentCopyController( $this );
+			if ( $content_copy->isInProgress() ) {
+				return new \WP_Error(
+					'content_copy_in_progress',
+					__( 'A content deploy is already in progress. Wait for it to finish before running another staging operation.', 'wp-module-staging' )
+				);
+			}
 		}
 
 		$config = $this->getConfig();
@@ -1325,7 +1675,9 @@ class Staging {
 
 		}
 
-		$token = wp_generate_password( 32, false );
+		// Not wp_generate_password: see Staging::randomToken for why a `random_password` filter has no
+		// business in a single-use local identifier.
+		$token = self::randomToken();
 
 		/*
 		 * Handed to lib/.staging, which runs WP-CLI with the object-cache drop-in skipped so a
@@ -1467,7 +1819,13 @@ class Staging {
 			return $response;
 		}
 
-		wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
+		// Do not wipe the log after a stepped content-copy bookend. These verbs are synchronous (so they
+		// reach this non-deploy path), but finalize writes the forensic trail -- "-recovered" rollbacks,
+		// kept-aside warnings -- that a support engineer needs after a failed/partial swap. The other
+		// verbs run standalone, so clearing the log for them keeps it scoped to the latest operation.
+		if ( 0 !== strpos( $command_name, 'deploy_content_' ) ) {
+			wp_delete_file( ABSPATH . '/nfd-private/nfd-staging.log' );
+		}
 
 		return $response;
 	}

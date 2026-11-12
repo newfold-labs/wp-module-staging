@@ -17,4 +17,7 @@
     </rule>
 
     <exclude-pattern>build/staging/staging.min.asset.php</exclude-pattern>
+    <!-- Standalone PHP unit tests are a terse, framework-free harness (like tests/bash/*), not plugin
+         runtime code, so they are not held to the WordPress runtime coding standard. -->
+    <exclude-pattern>tests/php/*</exclude-pattern>
 </ruleset>
