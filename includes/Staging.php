@@ -259,6 +259,115 @@ class Staging {
 	}
 
 	/**
+	 * Withdraw this job's publication on the cross-version compat channel (lib/.staging's
+	 * LEGACY_LOCK_NAME / nfd_staging_lock transient).
+	 *
+	 * lib/.staging writes that transient with `wp transient set --path=<production_dir>` while
+	 * skipping the object-cache drop-in, so it always lives as `_transient_nfd_staging_lock` in
+	 * production's options table. Production and staging share the same MySQL database under
+	 * different table prefixes, so we query production's options table directly via $wpdb rather
+	 * than get_option() (which would hit staging's prefix and/or a persistent object cache).
+	 *
+	 * @param string $token Lock token being abandoned; must match the published value.
+	 *
+	 * @return void
+	 */
+	public function withdrawCompatLockPublication( $token ) {
+		global $wpdb;
+
+		if ( '' === $token || ! ( $wpdb instanceof \wpdb ) ) {
+			return;
+		}
+
+		$prefix        = $this->resolveProductionTablePrefix();
+		$options_table = $prefix . 'options';
+		$option_name   = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+		$timeout_name  = '_transient_timeout_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM `{$options_table}` WHERE option_name = %s LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$option_name
+			)
+		);
+
+		if ( ! is_string( $value ) || ! $this->compatLockValueMatchesToken( $value, $token ) ) {
+			return;
+		}
+
+		// Guard the DELETE by exact option_value so a concurrent takeover between SELECT and DELETE is untouched.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$options_table}` WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$option_name,
+				$value
+			)
+		);
+
+		if ( ! $deleted ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$options_table}` WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$timeout_name
+			)
+		);
+
+		if ( $prefix === $wpdb->prefix ) {
+			wp_cache_delete( $option_name, 'options' );
+			wp_cache_delete( $timeout_name, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
+	}
+
+	/**
+	 * Resolve production's MySQL table prefix from staging_config, production's wp-config.php, or $wpdb.
+	 *
+	 * @return string Validated SQL-safe table prefix.
+	 */
+	private function resolveProductionTablePrefix() {
+		global $wpdb;
+
+		$config = $this->getConfig( false );
+		if ( ! empty( $config['production_prefix'] )
+			&& is_string( $config['production_prefix'] )
+			&& preg_match( '/^[A-Za-z0-9_]+$/', $config['production_prefix'] ) ) {
+			return $config['production_prefix'];
+		}
+
+		$prod_wp_config = untrailingslashit( $this->getProductionDir() ) . '/wp-config.php';
+		if ( is_readable( $prod_wp_config ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$contents = file_get_contents( $prod_wp_config );
+			if ( is_string( $contents )
+				&& preg_match( '/^[ \t]*\$table_prefix[ \t]*=[ \t]*([\'"])([A-Za-z0-9_]+)\1/m', $contents, $matches ) ) {
+				return $matches[2];
+			}
+		}
+
+		return preg_match( '/^[A-Za-z0-9_]+$/', (string) $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
+	}
+
+	/**
+	 * Whether a compat-channel value belongs to the given lock token.
+	 *
+	 * @param string $value Published transient value.
+	 * @param string $token Expected token.
+	 *
+	 * @return bool
+	 */
+	private function compatLockValueMatchesToken( $value, $token ) {
+		$parts = explode( ':', $value );
+		return count( $parts ) >= 3 && 'active' === $parts[0] && hash_equals( (string) $parts[2], $token );
+	}
+
+	/**
 	 * Get the production URL
 	 *
 	 * @return string

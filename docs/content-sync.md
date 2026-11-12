@@ -209,13 +209,13 @@ a filesystem operation, so it should not need a database to be readable.
   an **older copy** of `lib/.staging` on the staging install still blocks. It is a compatibility
   broadcast, never read for a decision — and it is weak: the older copy deletes the transient
   unconditionally on every exit of its own, and nothing republishes ours during the long copy phase.
-- **A version handshake refuses a cross-version deploy outright.** Production and staging each run
-  their own copy of the plugin, so their lock protocols can differ. Before every command that copies
-  content between the installs (`clone`, the deploys, the stepped job's setup verb), the worker reads
-  the brand plugin's installed version on both installs and refuses on a mismatch, telling the user to
-  update the older side. Refuse-and-tell on purpose: updating a plugin from inside a staging command
-  is a bigger side effect than the command itself. An unreadable version proceeds on the broadcast
-  alone (a peer that cannot answer `wp plugin get` cannot run staging commands either).
+- **A lock-protocol handshake refuses a cross-version deploy outright.** Production and staging each
+  run their own copy of the staging module, so their mutex semantics can differ. Before every **deploy**
+  that touches production (`deploy_files`, the stepped job's setup verb, and the DB deploys), the worker
+  compares `STAGING_CONTENT_LOCK_PROTOCOL` from each install's vendored `lib/.staging` and refuses on a
+  mismatch. **Clone is not checked:** it is how a staging install that lags a production plugin patch is
+  brought back in line. Brand-plugin release numbers often differ between the two installs without
+  implying incompatible lock code. An unreadable protocol proceeds on the compat broadcast alone.
 
 `includes/StagingCommandLock.php` is the PHP half, reading and refreshing the same file. Both halves
 are covered by tests: `tests/bash/test-staging-lock.sh` and `StagingContentCopyWPUnitTest`.
@@ -227,10 +227,12 @@ are covered by tests: `tests/bash/test-staging-lock.sh` and `StagingContentCopyW
   mtime-preserving rewrite, e.g. a restore tool) would be hardlinked to production's bytes and ship
   stale. `--checksum` would close this but must read every byte of the tree, which defeats the delta
   and risks the reaper, so the quick check is accepted as in any rsync-based deploy.
-- **Empty staging replaces production.** A deploy copies staging content over production, so if the
-  staging `<dir>` is empty (user cleared it, or a partial clone) the corresponding production dir is
-  emptied too. This is deploy semantics, not a bug, but it is unrecoverable once the aside is deleted,
-  which is now at the end of the same run rather than at the start of the next one.
+- **Empty staging replaces production (and empty subdirectories are preserved).** The manifest
+  records every walked directory (including empty subdirectories and empty content roots) alongside
+  regular files, so if a staging `<dir>` is empty (user cleared it, or a partial clone) the prepared
+  `<dir>-new` is created empty and promoted over production, emptying production's `<dir>` too. This
+  is deploy semantics, not a bug, and is unrecoverable once the `-old` aside is deleted at the end of
+  the run.
 - **Hardlinks need one filesystem.** `--link-dest` can only hardlink when the link-dest, the staging
   source, and the destination are on the same filesystem. They are here (all under the account's home),
   so this holds; if that ever stops being true, rsync silently falls back to copying and the deploy

@@ -140,7 +140,8 @@ do { $r = $e7->advance();
 eq( 'SER7 large flat dir completes', $r['status'], 'success' );
 eq( 'SER7 resumed tree matches source (nothing dropped)', snap( $s7dst ), snap( $s7src ) );
 $manifest_lines = count( array_filter( explode( "\n", (string) @file_get_contents( "$s7job/manifest.list" ) ), 'strlen' ) );
-eq( 'SER7 manifest has exactly one entry per file (no unbounded re-append)', $manifest_lines, 60 );
+// One file line each, plus one directory marker per content root that exists on the source tree.
+eq( 'SER7 manifest has one file entry each and no unbounded re-append', $manifest_lines, 61 );
 eq( 'SER7 took per-entry bursts, not one whole-dir burst', $bursts > 60 ? 'many' : "few($bursts)", 'many' );
 
 echo "== M11: a corrupt (non-empty, unparseable) manifest line fails the job CLOSED ==\n";
@@ -186,22 +187,68 @@ eq( 'new file present in -new', file_get_contents( "$prod/uploads-new/new.jpg" )
 
 echo "== FileCopier: vanished source skipped; wrong size fails verify ==\n";
 $off = 0;
-eq( 'missing source (parent + root present) returns SKIP', FileCopier::copyOne( "$ROOT/nope", "$ROOT/s4dst", 5, 123, null, $off, microtime( true ) + 5, "$ROOT" ), FileCopier::RESULT_SKIP );
+$sz = 5;
+$mt = 123;
+eq( 'missing source (parent + root present) returns SKIP', FileCopier::copyOne( "$ROOT/nope", "$ROOT/s4dst", $sz, $mt, null, $off, microtime( true ) + 5, "$ROOT" ), FileCopier::RESULT_SKIP );
 // A source whose real size/mtime differ from the manifest (changed since enumeration) is re-snapshotted
 // to its current content and COMPLETES, rather than shipping a frankenfile or failing the deploy forever.
 putf( "$ROOT/s6/src.bin", '12345' );
 $off = 0;
-eq( 'changed source re-snapshots and completes', FileCopier::copyOne( "$ROOT/s6/src.bin", "$ROOT/s6/dst.bin", 99, 123, null, $off, microtime( true ) + 5, "$ROOT/s6" ), FileCopier::RESULT_DONE );
+$sz  = 99;
+$mt  = 123;
+eq( 'changed source re-snapshots and completes', FileCopier::copyOne( "$ROOT/s6/src.bin", "$ROOT/s6/dst.bin", $sz, $mt, null, $off, microtime( true ) + 5, "$ROOT/s6" ), FileCopier::RESULT_DONE );
 eq( 'changed source dest has the real current content', @file_get_contents( "$ROOT/s6/dst.bin" ), '12345' );
+
+echo "== RS1: post-walk size change resumes across bursts (cursor re-snapshot, no livelock) ==\n";
+$rs1src = "$ROOT/rs1/wp-content";
+$rs1dst = "$ROOT/rs1/staging/wp-content";
+$rs1job = "$ROOT/rs1/job";
+putf( "$rs1src/uploads/small.txt", 'x' );
+$big_rs = str_repeat( 'Q', 8000000 );
+putf( "$rs1src/uploads/grew.bin", $big_rs );
+@mkdir( $rs1job, 0777, true );
+$stale_len = 100;
+file_put_contents( "$rs1job/manifest.list", "uploads/small.txt\t1\t123\nuploads/grew.bin\t{$stale_len}\t123\n" );
+$cp_rs = new CopyCheckpoint( "$rs1job/cursor.json" );
+$cp_rs->set(
+	array(
+		'job_id'          => 'rs1',
+		'phase'           => CopyCheckpoint::PHASE_COPY,
+		'walk_complete'   => true,
+		'manifest_offset' => 0,
+	)
+);
+$cp_rs->save();
+$e_rs     = new CopyEngine(
+	array(
+		'source_root'    => $rs1src,
+		'dest_root'      => $rs1dst,
+		'dest_suffix'    => '',
+		'link_dest_root' => null,
+		'job_dir'        => $rs1job,
+		'budget_seconds' => 0.001,
+	)
+);
+$n      = 0;
+$bursts = 0;
+do {
+	$r = $e_rs->advance();
+	++$bursts;
+} while ( 'running' === $r['status'] && ++$n < 100000 );
+eq( 'RS1 completes with stale manifest size on a large changed file', $r['status'], 'success' );
+eq( 'RS1 grew.bin byte-identical to source', sha1_file( "$rs1dst/uploads/grew.bin" ), sha1( $big_rs ) );
+eq( 'RS1 took more than one burst', $bursts > 1 ? 'many' : "few($bursts)", 'many' );
 
 echo "== CAT2: a vanished source with a missing tree fails CLOSED (not skipped -> not deleted from prod) ==\n";
 // Root gone entirely (e.g. a concurrent clone rm -rf'd staging mid-copy): must ERROR, never SKIP.
 $off = 0;
-eq( 'CAT2 vanished source + MISSING content root returns ERROR', FileCopier::copyOne( "$ROOT/gone/wp-content/uploads/x.txt", "$ROOT/s7dst", 5, 123, null, $off, microtime( true ) + 5, "$ROOT/gone/wp-content" ), FileCopier::RESULT_ERROR );
+$sz  = 5;
+$mt  = 123;
+eq( 'CAT2 vanished source + MISSING content root returns ERROR', FileCopier::copyOne( "$ROOT/gone/wp-content/uploads/x.txt", "$ROOT/s7dst", $sz, $mt, null, $off, microtime( true ) + 5, "$ROOT/gone/wp-content" ), FileCopier::RESULT_ERROR );
 // Root present but the file's own subtree removed: still ERROR (distinguishes the parent-dir branch).
 mkdir( "$ROOT/s7/wp-content", 0777, true );
 $off = 0;
-eq( 'CAT2 vanished source + MISSING parent subtree (root present) returns ERROR', FileCopier::copyOne( "$ROOT/s7/wp-content/uploads/gone/x.txt", "$ROOT/s7dst2", 5, 123, null, $off, microtime( true ) + 5, "$ROOT/s7/wp-content" ), FileCopier::RESULT_ERROR );
+eq( 'CAT2 vanished source + MISSING parent subtree (root present) returns ERROR', FileCopier::copyOne( "$ROOT/s7/wp-content/uploads/gone/x.txt", "$ROOT/s7dst2", $sz, $mt, null, $off, microtime( true ) + 5, "$ROOT/s7/wp-content" ), FileCopier::RESULT_ERROR );
 
 echo "== C1: a partial manifest with no cursor reseeds; never copies a partial tree ==\n";
 $c1src = "$ROOT/c1/wp-content"; $c1dst = "$ROOT/c1/staging/wp-content"; $c1job = "$ROOT/c1/job";
@@ -287,8 +334,10 @@ $destlink = "$ROOT/s1/uploads-new.txt";
 link( "$ROOT/s1/prod.txt", $destlink ); // dest is a hardlink sharing production's inode
 putf( "$ROOT/s1/staging.txt", 'STAGING-NEW-CONTENT' );
 touch( "$ROOT/s1/staging.txt", 123 ); // Manifest size+mtime must match the source (the walk records real values).
-$off = 0;
-$res = FileCopier::copyOne( "$ROOT/s1/staging.txt", $destlink, strlen( 'STAGING-NEW-CONTENT' ), 123, null, $off, microtime( true ) + 5, "$ROOT/s1" );
+$off      = 0;
+$s1_size  = strlen( 'STAGING-NEW-CONTENT' );
+$s1_mtime = 123;
+$res      = FileCopier::copyOne( "$ROOT/s1/staging.txt", $destlink, $s1_size, $s1_mtime, null, $off, microtime( true ) + 5, "$ROOT/s1" );
 eq( 'S1 copy completes', $res, FileCopier::RESULT_DONE );
 eq( 'S1 dest got staging content', file_get_contents( $destlink ), 'STAGING-NEW-CONTENT' );
 eq( 'S1 production inode NOT corrupted', file_get_contents( "$ROOT/s1/prod.txt" ), 'PRODUCTION-ORIGINAL' );
@@ -357,10 +406,11 @@ touch( "$hlprod/uploads/same.txt", $stale_mtime );
 touch( "$hlsrc/uploads/same.txt", $stale_mtime );
 
 $offset = 0;
-$res    = FileCopier::copyOne(
+$same_size = 4;
+$res      = FileCopier::copyOne(
 	"$hlsrc/uploads/same.txt",
 	"$hlprod/uploads-new/same.txt",
-	4,
+	$same_size,
 	$stale_mtime,
 	"$hlprod/uploads/same.txt",
 	$offset,
@@ -373,6 +423,97 @@ eq(
 	@fileinode( "$hlprod/uploads-new/same.txt" ) === @fileinode( "$hlprod/uploads/same.txt" ),
 	true
 );
+
+echo "== ED1: empty subdirectory is recorded and recreated on the destination ==\n";
+$edsrc = "$ROOT/ed/wp-content";
+$eddst = "$ROOT/ed/staging/wp-content";
+$edjob = "$ROOT/ed/job";
+mkdir( "$edsrc/uploads/empty/nested", 0777, true );
+putf( "$edsrc/uploads/one.txt", '1' );
+$r     = drive(
+	new CopyEngine(
+		array(
+			'source_root'    => $edsrc,
+			'dest_root'      => $eddst,
+			'dest_suffix'    => '',
+			'link_dest_root' => null,
+			'job_dir'        => $edjob,
+			'budget_seconds' => 10,
+		)
+	)
+);
+eq( 'ED1 completes', $r['status'], 'success' );
+eq( 'ED1 empty nested dir exists on dest', is_dir( "$eddst/uploads/empty/nested" ), true );
+eq( 'ED1 directory markers do not inflate files_done', $r['progress']['files_done'], 1 );
+eq( 'ED1 files_total counts regular files only', $r['progress']['files_total'], 1 );
+
+echo "== PM1: byte copy preserves file mode and 0555 source dirs stay writable on dest ==\n";
+$pmsrc = "$ROOT/pm/wp-content";
+$pmdst = "$ROOT/pm/staging/wp-content";
+$pmjob = "$ROOT/pm/job";
+mkdir( "$pmsrc/uploads/rodir", 0777, true );
+mkdir( "$pmsrc/uploads/privdir", 0700, true );
+putf( "$pmsrc/uploads/exec.sh", "#!/bin/sh\n" );
+putf( "$pmsrc/uploads/rodir/a.txt", 'A' );
+putf( "$pmsrc/uploads/rodir/b.txt", 'B' );
+@chmod( "$pmsrc/uploads/exec.sh", 0700 );
+@chmod( "$pmsrc/uploads/rodir", 0555 );
+@chmod( "$pmsrc/uploads/privdir", 0700 );
+$r = drive(
+	new CopyEngine(
+		array(
+			'source_root'    => $pmsrc,
+			'dest_root'      => $pmdst,
+			'dest_suffix'    => '',
+			'link_dest_root' => null,
+			'job_dir'        => $pmjob,
+			'budget_seconds' => 10,
+		)
+	)
+);
+@chmod( "$pmsrc/uploads/rodir", 0755 );
+eq( 'PM1 copy completes including 0555 dir', $r['status'], 'success' );
+eq( 'PM1 dest file is 0700', ( fileperms( "$pmdst/uploads/exec.sh" ) & 0777 ), 0700 );
+eq( 'PM1 second file inside 0555 dir copied', file_get_contents( "$pmdst/uploads/rodir/b.txt" ), 'B' );
+eq( 'PM1 0555 source dir gets owner rwx (0755) on dest', ( fileperms( "$pmdst/uploads/rodir" ) & 0777 ), 0755 );
+eq( 'PM1 0700 private dir stays 0700 on dest', ( fileperms( "$pmdst/uploads/privdir" ) & 0777 ), 0700 );
+
+echo "== RS2: a hot file appended to on EVERY burst still finishes (MAX_RESNAPSHOTS cap) ==\n";
+$rs2src = "$ROOT/rs2/wp-content";
+$rs2dst = "$ROOT/rs2/staging/wp-content";
+$rs2job = "$ROOT/rs2/job";
+$hot    = "$rs2src/uploads/debug.log";
+putf( $hot, str_repeat( 'L', 4000000 ) );
+@mkdir( $rs2job, 0777, true );
+file_put_contents( "$rs2job/manifest.list", "uploads/debug.log\t4000000\t123\n" );
+$cp_rs2 = new CopyCheckpoint( "$rs2job/cursor.json" );
+$cp_rs2->set(
+	array(
+		'job_id'          => 'rs2',
+		'phase'           => CopyCheckpoint::PHASE_COPY,
+		'walk_complete'   => true,
+		'manifest_offset' => 0,
+	)
+);
+$cp_rs2->save();
+$e_rs2  = new CopyEngine(
+	array(
+		'source_root'    => $rs2src,
+		'dest_root'      => $rs2dst,
+		'dest_suffix'    => '',
+		'link_dest_root' => null,
+		'job_dir'        => $rs2job,
+		'budget_seconds' => 0.0,
+	)
+);
+$n      = 0;
+do {
+	$r = $e_rs2->advance();
+	// Simulate WP_DEBUG_LOG appending on every single burst.
+	file_put_contents( $hot, "more\n", FILE_APPEND );
+} while ( 'running' === $r['status'] && ++$n < 50 );
+eq( 'RS2 hot append-only file finishes within bounded bursts (no livelock)', $r['status'], 'success' );
+eq( 'RS2 copied prefix is >= initial 4MB snapshot', filesize( "$rs2dst/uploads/debug.log" ) >= 4000000, true );
 
 rmrf( $ROOT );
 echo "\n-----------------------------------------\n";

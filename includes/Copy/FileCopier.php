@@ -35,21 +35,63 @@ class FileCopier {
 	const CHUNK_BYTES = 1048576; // 1 MiB.
 
 	/**
+	 * Maximum mid-file re-snapshots from offset 0 before pinning a growing file's target size.
+	 */
+	const MAX_RESNAPSHOTS = 3;
+
+	/**
+	 * Ensure one directory entry from the manifest exists on the destination tree.
+	 *
+	 * @param string $src         Absolute source directory path.
+	 * @param string $dest        Absolute destination directory path.
+	 * @param int    $mtime       Expected mtime from the manifest.
+	 * @param string $source_root Absolute content root the copy reads from.
+	 * @return string One of the RESULT_* constants.
+	 */
+	public static function ensureDirectory( $src, $dest, $mtime, $source_root ) {
+		if ( ! is_dir( $src ) ) {
+			$parent_ok = is_dir( dirname( $src ) );
+			$root_ok   = is_dir( $source_root );
+			return ( $parent_ok && $root_ok ) ? self::RESULT_SKIP : self::RESULT_ERROR;
+		}
+
+		$dest_dir = dirname( $dest );
+		if ( ! is_dir( $dest_dir ) ) {
+			if ( ! mkdir( $dest_dir, 0755, true ) && ! is_dir( $dest_dir ) ) {
+				return self::RESULT_ERROR;
+			}
+			self::applyDirModeFromSource( dirname( $src ), $dest_dir );
+		}
+		if ( is_dir( $dest ) ) {
+			self::applyDirModeFromSource( $src, $dest );
+		} elseif ( ! mkdir( $dest, 0755, false ) && ! is_dir( $dest ) ) {
+			return self::RESULT_ERROR;
+		} else {
+			self::applyDirModeFromSource( $src, $dest );
+		}
+		if ( $mtime > 0 ) {
+			@touch( $dest, $mtime );
+		}
+		return self::RESULT_DONE;
+	}
+
+	/**
 	 * Copy one file.
 	 *
-	 * @param string      $src        Absolute source path.
-	 * @param string      $dest       Absolute destination path.
-	 * @param int         $size       Expected size from the manifest.
-	 * @param int         $mtime      Expected mtime from the manifest.
-	 * @param string|null $link_cand  Absolute hardlink candidate (current production copy), or null.
+	 * @param string      $src         Absolute source path.
+	 * @param string      $dest        Absolute destination path.
+	 * @param int         $size        In/out: expected size (manifest or a persisted re-snapshot).
+	 * @param int         $mtime       In/out: expected mtime (manifest or a persisted re-snapshot).
+	 * @param string|null $link_cand   Absolute hardlink candidate (current production copy), or null.
 	 * @param int         $offset      In/out: bytes already written; updated as copying proceeds.
 	 * @param float       $deadline    microtime(true) to stop at.
 	 * @param string      $source_root Absolute content root the copy reads from. Used to tell a single
 	 *                                 file genuinely vanishing (safe to skip) from the whole tree
 	 *                                 disappearing (catastrophic: fail closed).
+	 * @param int         $resnapshots In/out: mid-file re-snapshot count for continuously changing files.
 	 * @return string One of the RESULT_* constants.
 	 */
-	public static function copyOne( $src, $dest, $size, $mtime, $link_cand, &$offset, $deadline, $source_root ) {
+	public static function copyOne( $src, $dest, &$size, &$mtime, $link_cand, &$offset, $deadline, $source_root, &$resnapshots = 0 ) {
 		if ( ! file_exists( $src ) ) {
 			// The source is gone. Distinguish a single file genuinely removed between walk and copy (safe
 			// to skip) from the whole subtree or content root having vanished -- e.g. a concurrent clone
@@ -62,8 +104,11 @@ class FileCopier {
 		}
 
 		$dest_dir = dirname( $dest );
-		if ( ! is_dir( $dest_dir ) && ! mkdir( $dest_dir, 0755, true ) && ! is_dir( $dest_dir ) ) {
-			return self::RESULT_ERROR;
+		if ( ! is_dir( $dest_dir ) ) {
+			if ( ! mkdir( $dest_dir, 0755, true ) && ! is_dir( $dest_dir ) ) {
+				return self::RESULT_ERROR;
+			}
+			self::applyDirModeFromSource( dirname( $src ), $dest_dir );
 		}
 
 		// 1. Hardlink fast path.
@@ -104,18 +149,31 @@ class FileCopier {
 		// short read). Re-snapshot to the CURRENT size + mtime and copy THAT instead: that ships a
 		// self-consistent version of the file (its state right now) and lets the deploy COMPLETE, rather
 		// than failing every retry while a live file (regenerated CSS, an active log) keeps changing.
-		// Restart from offset 0 so no stale partial sized to the old snapshot is kept. A static large
-		// file keeps the same size + mtime across bursts, so a legitimate multi-burst resume is
-		// untouched; only a concurrently-modified file is re-snapshotted.
+		// Restart from offset 0 so no stale partial sized to the old snapshot is kept. CopyEngine persists
+		// the re-snapshotted size + mtime in the cursor so the next burst passes them back in and a
+		// large, stable post-change file can resume mid-file instead of re-snapshotting every burst.
 		$sstat = fstat( $in );
 		if ( false === $sstat ) {
 			fclose( $in );
 			return self::RESULT_ERROR;
 		}
 		if ( (int) $sstat['size'] !== (int) $size || (int) $sstat['mtime'] !== (int) $mtime ) {
-			$size   = (int) $sstat['size'];
-			$mtime  = (int) $sstat['mtime'];
-			$offset = 0;
+			if ( $offset > 0 && $resnapshots >= self::MAX_RESNAPSHOTS ) {
+				// A hot file (e.g. an active debug.log) has changed across every burst. If it only grew,
+				// keep copying up to the pinned snapshot size so the job finishes without livelocking; if
+				// it shrank below our progress, fail this attempt so CopyEngine's retry cap bounds it.
+				if ( (int) $sstat['size'] < (int) $size ) {
+					fclose( $in );
+					return self::RESULT_ERROR;
+				}
+			} else {
+				if ( $offset > 0 ) {
+					++$resnapshots;
+				}
+				$size   = (int) $sstat['size'];
+				$mtime  = (int) $sstat['mtime'];
+				$offset = 0;
+			}
 		}
 		// At offset 0, remove any existing destination first. If $dest is a hardlink to the production
 		// inode (a re-processed entry, or a stale -new), writing through it would truncate and corrupt
@@ -177,13 +235,36 @@ class FileCopier {
 			return $result;
 		}
 
-		// 3. Verify + stamp mtime.
+		// 3. Verify + stamp mode and mtime.
+		$mode = (int) $sstat['mode'] & 0777;
+		if ( $mode > 0 ) {
+			@chmod( $dest, $mode );
+		}
 		@touch( $dest, $mtime );
 		clearstatcache( true, $dest );
 		if ( filesize( $dest ) !== $size ) {
 			return self::RESULT_ERROR;
 		}
 		return self::RESULT_DONE;
+	}
+
+	/**
+	 * Match a newly created destination directory to its source's permission bits while keeping owner
+	 * rwx (0700) so files can still be written into it during the copy and sweeps can remove `-old`.
+	 *
+	 * @param string $src_dir  Absolute source directory.
+	 * @param string $dest_dir Absolute destination directory just created.
+	 * @return void
+	 */
+	private static function applyDirModeFromSource( $src_dir, $dest_dir ) {
+		clearstatcache( true, $src_dir );
+		if ( ! is_dir( $src_dir ) ) {
+			return;
+		}
+		$raw_mode = fileperms( $src_dir ) & 0777;
+		if ( $raw_mode > 0 ) {
+			@chmod( $dest_dir, $raw_mode | 0700 );
+		}
 	}
 
 	/**

@@ -162,6 +162,9 @@ resolve_db_charset() {
 # Value format (one line): active:<REFRESHED_AT>:<TOKEN>:<PID>
 LOCK_FILE="$PRODUCTION_DIR/nfd-private/nfd-staging-command.lock"
 LOCK_TTL=1800
+
+# Stepped-copy / file-mutex protocol version. Keep in sync with StagingCommandLock::CONTENT_LOCK_PROTOCOL.
+STAGING_CONTENT_LOCK_PROTOCOL=1
 # Past the TTL a lock is only abandoned if its holder is really gone. A still-running holder keeps it
 # up to this hard ceiling, which exists so a recycled pid can never pin the mutex forever.
 LOCK_HARD_TTL=21600
@@ -769,10 +772,11 @@ legacy_lock_withdraw() {
 # reading them; the copy engine SKIPs files whose parent vanished rather than failing, so the deploy
 # completes, promotes the partial tree over production, and discards the "-old" backup.
 #
-# So before any command that mutates the trees, compare the installed brand-plugin version on the two
-# installs and refuse on a mismatch. Deliberately refuse-and-tell rather than auto-update: updating a
-# plugin from inside a staging command is a far bigger side effect than the command the user asked
-# for, and plugin update paths are not safe to run headless from here.
+# So before any deploy that mutates production's trees (not clone: clone is how a lagging staging
+# plugin is brought back in line), compare the staging content-lock protocol version baked into each
+# install's copy of this script and refuse on a mismatch. Brand-plugin release numbers often differ
+# between production and staging (staging sees little traffic and may not auto-update); the protocol
+# constant is what actually has to agree.
 #
 # HARD LIMIT, by design: a handshake only protects once BOTH sides run a version that has it. A peer
 # still running an older copy performs no check when IT initiates -- nothing shipped here can make
@@ -785,54 +789,79 @@ legacy_lock_withdraw() {
 # run staging commands against us either, so an unreadable version LOGS and proceeds on the broadcast
 # alone rather than bricking every deploy over a cosmetically broken peer.
 
-# Print the installed brand plugin's version for the install at $1, or fail. WP-CLI stdout can carry
-# boot noise around the real answer (see legacy_lock_held), so only a line shaped like a version
-# counts, and noise-only output reads as "could not tell".
-installed_plugin_version() {
-  local wp_path="$1" out line
-  [ -n "${PLUGIN_SLUG:-}" ] || return 1
-  out=$(wp plugin get "$PLUGIN_SLUG" --field=version --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null || true)
-  [ -n "$out" ] || return 1
-  while IFS= read -r line; do
-    case "$line" in
-      *[!0-9A-Za-z._+-]*) continue ;;   # spaces or other junk: boot noise, not a version
-    esac
-    case "$line" in
-      [0-9]*) printf '%s' "$line"; return 0 ;;
-    esac
-  done <<EOF
-$out
-EOF
+# Absolute path to this install's copy of lib/.staging (the vendored wp-module-staging script).
+# Prefers the active brand plugin ($PLUGIN_SLUG) so an inactive second brand plugin on disk cannot
+# shadow the running one.
+staging_lib_script_for_install() {
+  local wp_path="$1" slug="${PLUGIN_SLUG%%/*}" old_nullglob p
+  if [ -n "$slug" ]; then
+    for p in \
+      "$wp_path/wp-content/plugins/$slug/vendor/newfold-labs/wp-module-staging/lib/.staging" \
+      "$wp_path/wp-content/mu-plugins/$slug/vendor/newfold-labs/wp-module-staging/lib/.staging"; do
+      if [ -f "$p" ]; then
+        printf '%s' "$p"
+        return 0
+      fi
+    done
+  fi
+
+  old_nullglob=$(shopt -p nullglob || true)
+  shopt -s nullglob
+  for p in \
+    "$wp_path"/wp-content/plugins/*/vendor/newfold-labs/wp-module-staging/lib/.staging \
+    "$wp_path"/wp-content/mu-plugins/*/vendor/newfold-labs/wp-module-staging/lib/.staging; do
+    if [ -f "$p" ]; then
+      printf '%s' "$p"
+      eval "$old_nullglob"
+      return 0
+    fi
+  done
+  eval "$old_nullglob"
   return 1
 }
 
-# Refuse a tree-mutating command when production and staging run different versions of the brand
-# plugin. See the block comment above for why, and for the hard limit on what this can protect.
-version_handshake() {
-  if [ -z "${PLUGIN_SLUG:-}" ]; then
-    log "WARN" "version_handshake" "No plugin slug supplied; skipping the cross-version check." || true
+# Read STAGING_CONTENT_LOCK_PROTOCOL from the vendored script on an install, or fail when no readable
+# script exists. A readable script that predates STAGING_CONTENT_LOCK_PROTOCOL reports protocol 0 so
+# version_handshake refuses a deploy against an older, file-lock-unaware peer.
+read_lock_protocol_for_install() {
+  local wp_path="$1" script line val
+  script=$(staging_lib_script_for_install "$wp_path") || return 1
+  [ -r "$script" ] || return 1
+  line=$(grep -E '^STAGING_CONTENT_LOCK_PROTOCOL=' "$script" 2>/dev/null | head -1 || true)
+  if [ -z "$line" ]; then
+    printf '0'
     return 0
   fi
+  val="${line#STAGING_CONTENT_LOCK_PROTOCOL=}"
+  case "$val" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  printf '%s' "$val"
+}
+
+# Refuse a deploy when production and staging disagree on the content-lock protocol version. See the
+# block comment above. Clone is not checked here: it is how a lagging staging install is refreshed.
+version_handshake() {
   # No staging install yet (nothing mutates both trees until one exists), nothing to disagree with.
   [ -d "$STAGING_DIR" ] || return 0
 
-  local prod_ver stg_ver
-  if ! prod_ver=$(installed_plugin_version "$PRODUCTION_DIR"); then
-    log "WARN" "version_handshake" "Could not read the production plugin version; proceeding on the compat broadcast alone." || true
+  local prod_proto stg_proto
+  if ! prod_proto=$(read_lock_protocol_for_install "$PRODUCTION_DIR"); then
+    log "WARN" "version_handshake" "Could not read the production lock-protocol version; proceeding on the compat broadcast alone." || true
     return 0
   fi
-  if ! stg_ver=$(installed_plugin_version "$STAGING_DIR"); then
-    log "WARN" "version_handshake" "Could not read the staging plugin version; proceeding on the compat broadcast alone." || true
+  if ! stg_proto=$(read_lock_protocol_for_install "$STAGING_DIR"); then
+    log "WARN" "version_handshake" "Could not read the staging lock-protocol version; proceeding on the compat broadcast alone." || true
     return 0
   fi
 
-  if [ "$prod_ver" != "$stg_ver" ]; then
-    log "ERROR" "version_handshake" "Plugin version mismatch: production runs $prod_ver, staging runs $stg_ver." || true
-    error "The production site runs version $prod_ver of the $PLUGIN_NAME plugin and the staging site runs $stg_ver. Update the older one so both sites match, then try again." 'version_handshake:mismatch'
+  if [ "$prod_proto" != "$stg_proto" ]; then
+    log "ERROR" "version_handshake" "Lock protocol mismatch: production runs protocol $prod_proto, staging runs $stg_proto." || true
+    error "The production and staging sites run incompatible versions of the ${PLUGIN_NAME:-staging} plugin (lock protocol $prod_proto vs $stg_proto). Clone production to staging or update the older plugin so both sites match, then try again." 'version_handshake:mismatch'
     return 1
   fi
 
-  log "INFO" "version_handshake" "Production and staging both run plugin version $prod_ver." || true
+  log "INFO" "version_handshake" "Production and staging both run lock protocol $prod_proto." || true
   return 0
 }
 
@@ -3925,7 +3954,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   # yet), destroy deletes it (a mismatch message telling the user to update a site they are removing
   # helps nobody), and the SSO commands read only.
   case "$1" in
-    clone|deploy_files|deploy_db|deploy_files_db|deploy_content_setup)
+    deploy_files|deploy_db|deploy_files_db|deploy_content_setup)
       version_handshake
       ;;
   esac

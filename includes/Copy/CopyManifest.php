@@ -8,7 +8,8 @@
 namespace NewfoldLabs\WP\Module\Staging\Copy;
 
 /**
- * Writes and reads a manifest: one line per source file, "relpath\tsize\tmtime".
+ * Writes and reads a manifest: one line per source file, "relpath\tsize\tmtime", and directory-only
+ * entries "relpath\t0\tmtime\td" so empty dirs are recreated under the destination tree.
  *
  * The walk itself is budget-bounded and resumable (via a directory worklist in the checkpoint), so
  * enumerating a tree of millions of inodes cannot blow the per-request envelope either. Symlinks are
@@ -130,6 +131,22 @@ class CopyManifest {
 				$status = self::WALK_ERROR;
 				break;
 			}
+
+			// At the start of each readable directory, record the directory itself so empty subtrees
+			// (and empty content roots) still land in the destination and are not dropped by the swap.
+			if ( null === $walk_last && '' !== $rel_dir ) {
+				$dstat = @filemtime( $abs_dir );
+				if ( false === $dstat ) {
+					$status = self::WALK_ERROR;
+					break;
+				}
+				$dir_line = $rel_dir . "\t0\t" . (int) $dstat . "\td\n";
+				$written  = fwrite( $handle, $dir_line );
+				if ( false === $written || $written < strlen( $dir_line ) ) {
+					$status = self::WALK_ERROR;
+					break;
+				}
+			}
 			// Deterministic byte-wise order, locale-independent, so the name-based resume below is stable.
 			sort( $entries, SORT_STRING );
 
@@ -250,19 +267,44 @@ class CopyManifest {
 	 * Splits size and mtime off the right so a relative path that itself contains a tab still parses.
 	 *
 	 * @param string $line Raw line (trailing newline tolerated).
-	 * @return array|null array('path'=>string,'size'=>int,'mtime'=>int) or null if malformed.
+	 * @return array|null array('path'=>string,'size'=>int,'mtime'=>int,'kind'=>'file'|'dir') or null if malformed.
 	 */
 	public static function parseLine( $line ) {
 		$line = rtrim( $line, "\r\n" );
 		if ( '' === $line ) {
 			return null;
 		}
-		$p2 = strrpos( $line, "\t" );
-		if ( false === $p2 ) {
+		$p_kind = strrpos( $line, "\t" );
+		if ( false === $p_kind ) {
 			return null;
 		}
-		$mtime = substr( $line, $p2 + 1 );
-		$rest  = substr( $line, 0, $p2 );
+		$tail = substr( $line, $p_kind + 1 );
+		if ( 'd' === $tail ) {
+			$rest = substr( $line, 0, $p_kind );
+			$p2   = strrpos( $rest, "\t" );
+			if ( false === $p2 ) {
+				return null;
+			}
+			$mtime = substr( $rest, $p2 + 1 );
+			$rest  = substr( $rest, 0, $p2 );
+			$p1    = strrpos( $rest, "\t" );
+			if ( false === $p1 ) {
+				return null;
+			}
+			$size = substr( $rest, $p1 + 1 );
+			$path = substr( $rest, 0, $p1 );
+			if ( '' === $path || '0' !== $size || ! ctype_digit( $mtime ) ) {
+				return null;
+			}
+			return array(
+				'path'  => $path,
+				'size'  => 0,
+				'mtime' => (int) $mtime,
+				'kind'  => 'dir',
+			);
+		}
+		$mtime = $tail;
+		$rest  = substr( $line, 0, $p_kind );
 		$p1    = strrpos( $rest, "\t" );
 		if ( false === $p1 ) {
 			return null;
@@ -276,6 +318,7 @@ class CopyManifest {
 			'path'  => $path,
 			'size'  => (int) $size,
 			'mtime' => (int) $mtime,
+			'kind'  => 'file',
 		);
 	}
 

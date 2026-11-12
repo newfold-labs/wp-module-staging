@@ -862,6 +862,111 @@ class StagingContentCopyWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCa
 	}
 
 	/**
+	 * A failed job withdraws THIS job's publication on the cross-version compat channel so an immediate
+	 * retry is not refused until LOCK_TTL expires.
+	 *
+	 * @return void
+	 */
+	public function test_fail_withdraws_its_own_compat_channel() {
+		$this->set_up_fixture_tree();
+
+		StagingWPUnitTest::$exec_responses = array(
+			$this->verb_response( 'Content deploy setup complete.' ),
+			array(
+				'output' => array( '{"status":"error","message":"Preparing the WordPress core failed."}' ),
+				'status' => 0,
+			),
+		);
+
+		$controller = new ContentCopyController( $this->staging );
+		$result     = $controller->advance();
+		$this->assertSame( 'running', $result['status'] );
+
+		$token  = $this->read_lock()['token'];
+		$option = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+		update_option( $option, 'active:' . time() . ':' . $token );
+		update_option( '_transient_timeout_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT, time() + 1800 );
+
+		$result = array(
+			'status' => 'running',
+			'phase'  => '',
+		);
+		$guard  = 0;
+		while ( 'running' === $result['status'] && ContentCopyController::PHASE_CORE !== $result['phase'] && $guard < 100 ) {
+			$result = $controller->advance();
+			++$guard;
+		}
+		$this->plant_lock( $token, 0, 0 );
+		$result = $controller->advance();
+		$this->assertSame( 'error', $result['status'] );
+
+		$this->assertFalse(
+			get_option( $option ),
+			'A failed job must withdraw its own compat-channel publication so a retry is not refused.'
+		);
+	}
+
+	/**
+	 * Deploys are driven from staging (whose $wpdb->prefix differs from production's), while lib/.staging
+	 * publishes nfd_staging_lock on production's options table. Withdraw must clear production's table.
+	 *
+	 * @return void
+	 */
+	public function test_withdraw_clears_production_options_table_when_staging_prefix_differs() {
+		global $wpdb;
+
+		$this->set_up_fixture_tree();
+		$prod_prefix = 'nfd_prod_test_';
+		$prod_table  = $prod_prefix . 'options';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( "CREATE TABLE IF NOT EXISTS `{$prod_table}` LIKE `{$wpdb->options}`" );
+
+		try {
+			$config                      = get_option( 'staging_config', array() );
+			$config['production_prefix'] = $prod_prefix;
+			update_option( 'staging_config', $config );
+
+			$token       = 'crossprefixtoken1234567890abcdef';
+			$option_name = '_transient_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+			$timeout_key = '_transient_timeout_' . ContentCopyController::COMPAT_CHANNEL_TRANSIENT;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->insert(
+				$prod_table,
+				array(
+					'option_name'  => $option_name,
+					'option_value' => 'active:' . time() . ':' . $token,
+					'autoload'     => 'no',
+				)
+			);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->insert(
+				$prod_table,
+				array(
+					'option_name'  => $timeout_key,
+					'option_value' => (string) ( time() + 1800 ),
+					'autoload'     => 'no',
+				)
+			);
+
+			$this->staging->withdrawCompatLockPublication( $token );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$remaining = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT option_value FROM `{$prod_table}` WHERE option_name = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$option_name
+				)
+			);
+			$this->assertNull( $remaining, 'Production options table row must be deleted even when staging uses a different prefix.' );
+		} finally {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->query( "DROP TABLE IF EXISTS `{$prod_table}`" );
+		}
+	}
+
+	/**
 	 * A restart must NOT withdraw a publication carrying another operation's token: clearing a live
 	 * clone's or destroy's mutex announcement would let this deploy run against trees it is still moving.
 	 *

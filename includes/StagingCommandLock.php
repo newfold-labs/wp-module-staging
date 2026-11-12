@@ -51,6 +51,15 @@ namespace NewfoldLabs\WP\Module\Staging;
 class StagingCommandLock {
 
 	/**
+	 * Staging content-lock protocol version (file mutex, stepped deploy, compat channel).
+	 *
+	 * Bump when lib/.staging and PHP disagree on lock semantics; version_handshake compares this
+	 * across installs, not the brand plugin release number. Keep in sync with
+	 * STAGING_CONTENT_LOCK_PROTOCOL in lib/.staging.
+	 */
+	const CONTENT_LOCK_PROTOCOL = 1;
+
+	/**
 	 * Seconds after the last refresh that a lock is treated as possibly abandoned. Must stay in step
 	 * with LOCK_TTL in lib/.staging.
 	 */

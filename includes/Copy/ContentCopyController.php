@@ -338,32 +338,16 @@ class ContentCopyController {
 	 * and refuses every verb, blocking the retry the user just asked for for up to half an hour.
 	 * Clearing our own prior publication on restart closes that window.
 	 *
-	 * Cleared by DB option, not delete_transient(): lib/.staging sets this transient with the object
-	 * cache drop-in skipped, so it is always database backed, and legacy_lock_held reads it the same
-	 * way. A delete_transient() from a request with a persistent object cache would clear only the
-	 * cache copy and leave the row the script actually reads. Guarded by token so a concurrent
-	 * operation's publication is never touched.
+	 * Cleared directly on production's options table via $wpdb (bypassing staging's prefix and any
+	 * persistent object cache, matching lib/.staging's legacy_lock_announce). Guarded by token so a
+	 * concurrent operation's publication is never touched.
 	 *
 	 * @param string $token This job's lock token (the one being discarded).
 	 *
 	 * @return void
 	 */
 	private function withdrawCompatChannel( $token ) {
-		if ( '' === $token ) {
-			return;
-		}
-
-		$value = get_option( '_transient_' . self::COMPAT_CHANNEL_TRANSIENT );
-		if ( ! is_string( $value ) ) {
-			return;
-		}
-
-		// active:<ts>:<token>
-		$parts = explode( ':', $value );
-		if ( count( $parts ) >= 3 && 'active' === $parts[0] && hash_equals( (string) $parts[2], $token ) ) {
-			delete_option( '_transient_' . self::COMPAT_CHANNEL_TRANSIENT );
-			delete_option( '_transient_timeout_' . self::COMPAT_CHANNEL_TRANSIENT );
-		}
+		$this->staging->withdrawCompatLockPublication( $token );
 	}
 
 	/**
@@ -799,6 +783,7 @@ class ContentCopyController {
 		 * or one close enough to the TTL that lib/.staging may concurrently decide it is abandoned.
 		 */
 		$this->lock()->releaseIfOurs( $this->jobToken( $state ) );
+		$this->withdrawCompatChannel( $this->jobToken( $state ) );
 
 		$this->staging->recordDeployResult(
 			array(

@@ -225,12 +225,14 @@ class CopyEngine {
 			return $this->result( 'error', __( 'Could not read the copy manifest.', 'wp-module-staging' ) );
 		}
 
-		$offset       = (int) $cp->get( 'manifest_offset' );
-		$current_file = (string) $cp->get( 'current_file' );
-		$file_offset  = (int) $cp->get( 'file_offset' );
-		$files_done   = (int) $cp->get( 'files_done' );
-		$bytes_done   = (int) $cp->get( 'bytes_done' );
-		$retries      = (int) $cp->get( 'retries' );
+		$offset           = (int) $cp->get( 'manifest_offset' );
+		$current_file     = (string) $cp->get( 'current_file' );
+		$file_offset      = (int) $cp->get( 'file_offset' );
+		$file_resnapshots = (int) $cp->get( 'file_resnapshots' );
+		$files_done       = (int) $cp->get( 'files_done' );
+		$bytes_done       = (int) $cp->get( 'bytes_done' );
+		$retries          = (int) $cp->get( 'retries' );
+		$res              = null;
 
 		// Deadline is checked at the END of each iteration, so a burst always processes at least one
 		// entry (and FileCopier always moves at least one chunk), guaranteeing forward progress.
@@ -269,19 +271,35 @@ class CopyEngine {
 				return $this->result( 'error', __( 'The copy manifest is corrupt; cannot continue safely.', 'wp-module-staging' ) );
 			}
 
-			$rel  = $entry['path'];
-			$src  = $this->config['source_root'] . '/' . $rel;
-			$dest = $this->config['dest_root'] . '/' . $this->withSuffix( $rel );
-			$cand = null !== $this->config['link_dest_root'] ? $this->config['link_dest_root'] . '/' . $rel : null;
-			$foff = ( $rel === $current_file ) ? $file_offset : 0;
-			$res  = FileCopier::copyOne( $src, $dest, $entry['size'], $entry['mtime'], $cand, $foff, $deadline, $this->config['source_root'] );
+			$rel    = $entry['path'];
+			$is_dir = isset( $entry['kind'] ) && 'dir' === $entry['kind'];
+			$src    = $this->config['source_root'] . '/' . $rel;
+			$dest   = $this->config['dest_root'] . '/' . $this->withSuffix( $rel );
+			$cand   = null !== $this->config['link_dest_root'] ? $this->config['link_dest_root'] . '/' . $rel : null;
+			$foff   = ( $rel === $current_file ) ? $file_offset : 0;
+			$resnap = ( $rel === $current_file ) ? $file_resnapshots : 0;
+			$size   = (int) $entry['size'];
+			$mtime  = (int) $entry['mtime'];
+			if ( $rel === $current_file ) {
+				$snap_size = (int) $cp->get( 'file_size' );
+				if ( $snap_size > 0 ) {
+					$size  = $snap_size;
+					$mtime = (int) $cp->get( 'file_mtime' );
+				}
+			}
+			if ( $is_dir ) {
+				$res = FileCopier::ensureDirectory( $src, $dest, $mtime, $this->config['source_root'] );
+			} else {
+				$res = FileCopier::copyOne( $src, $dest, $size, $mtime, $cand, $foff, $deadline, $this->config['source_root'], $resnap );
+			}
 
 			if ( FileCopier::RESULT_PARTIAL === $res ) {
-				$current_file = $rel;
-				$file_offset  = $foff;
+				$current_file     = $rel;
+				$file_offset      = $foff;
+				$file_resnapshots = $resnap;
 				// bytes_done counts only COMPLETED files; the in-flight offset is added at display time
 				// (CopyCheckpoint::progress), so it is not double-counted across resumes of this file.
-				$offset       = $line_start; // Re-read this line next burst.
+				$offset = $line_start; // Re-read this line next burst.
 				break;
 			}
 
@@ -291,12 +309,15 @@ class CopyEngine {
 				if ( $retries >= self::MAX_RETRIES ) {
 					$cp->set(
 						array(
-							'manifest_offset' => $offset,
-							'current_file'    => $rel,
-							'file_offset'     => 0,
-							'files_done'      => $files_done,
-							'bytes_done'      => $bytes_done,
-							'retries'         => $retries,
+							'manifest_offset'  => $offset,
+							'current_file'     => $rel,
+							'file_offset'      => 0,
+							'file_size'        => 0,
+							'file_mtime'       => 0,
+							'file_resnapshots' => 0,
+							'files_done'       => $files_done,
+							'bytes_done'       => $bytes_done,
+							'retries'          => $retries,
 						)
 					);
 					return $this->result(
@@ -309,15 +330,19 @@ class CopyEngine {
 			}
 
 			// DONE or SKIP: advance past this entry. A DONE file is fully copied now (whether or not it
-			// resumed mid-file), so count its whole size once.
-			if ( FileCopier::RESULT_DONE === $res ) {
-				$bytes_done += (int) $entry['size'];
+			// resumed mid-file), so count its whole size once. Directory markers are not counted in
+			// files_total, so do not count them in files_done either.
+			if ( ! $is_dir ) {
+				if ( FileCopier::RESULT_DONE === $res ) {
+					$bytes_done += (int) $size;
+				}
+				++$files_done;
 			}
-			++$files_done;
-			$current_file = '';
-			$file_offset  = 0;
-			$retries      = 0;
-			$offset       = $line_end;
+			$current_file     = '';
+			$file_offset      = 0;
+			$file_resnapshots = 0;
+			$retries          = 0;
+			$offset           = $line_end;
 
 			if ( microtime( true ) >= $deadline ) {
 				break;
@@ -326,14 +351,26 @@ class CopyEngine {
 
 		fclose( $handle );
 
+		$snapshot_size        = 0;
+		$snapshot_mtime       = 0;
+		$snapshot_resnapshots = 0;
+		if ( FileCopier::RESULT_PARTIAL === $res && '' !== $current_file ) {
+			$snapshot_size        = (int) $size;
+			$snapshot_mtime       = (int) $mtime;
+			$snapshot_resnapshots = (int) $file_resnapshots;
+		}
+
 		$cp->set(
 			array(
-				'manifest_offset' => $offset,
-				'current_file'    => $current_file,
-				'file_offset'     => $file_offset,
-				'files_done'      => $files_done,
-				'bytes_done'      => $bytes_done,
-				'retries'         => $retries,
+				'manifest_offset'  => $offset,
+				'current_file'     => $current_file,
+				'file_offset'      => $file_offset,
+				'file_size'        => $snapshot_size,
+				'file_mtime'       => $snapshot_mtime,
+				'file_resnapshots' => $snapshot_resnapshots,
+				'files_done'       => $files_done,
+				'bytes_done'       => $bytes_done,
+				'retries'          => $retries,
 			)
 		);
 

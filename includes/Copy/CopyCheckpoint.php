@@ -92,12 +92,19 @@ class CopyCheckpoint {
 			// so a single file larger than one budget resumes mid-file instead of restarting.
 			'current_file'    => '',
 			'file_offset'     => 0,
+			// When the source changed after enumeration, FileCopier re-snapshots size + mtime; these fields
+			// persist that snapshot across bursts so multi-chunk resume does not compare against the stale
+			// manifest on every advance (which would reset offset to 0 forever). file_resnapshots bounds
+			// full restarts when a file keeps growing across bursts (e.g. an active debug.log).
+			'file_size'        => 0,
+			'file_mtime'       => 0,
+			'file_resnapshots' => 0,
 			// Progress + accounting.
-			'files_done'      => 0,
-			'bytes_done'      => 0,
-			'files_total'     => 0,
-			'bytes_total'     => 0,
-			'retries'         => 0,
+			'files_done'       => 0,
+			'bytes_done'       => 0,
+			'files_total'      => 0,
+			'bytes_total'      => 0,
+			'retries'          => 0,
 		);
 	}
 

@@ -308,17 +308,21 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 	 */
 	public function test_filecopier_skip_vanished_and_resnapshot_changed() {
 		$off = 0;
+		$sz  = 5;
+		$mt  = 123;
 		$this->assertSame(
 			FileCopier::RESULT_SKIP,
-			FileCopier::copyOne( "{$this->root}/nope", "{$this->root}/s4dst", 5, 123, null, $off, microtime( true ) + 5, "{$this->root}" ),
+			FileCopier::copyOne( "{$this->root}/nope", "{$this->root}/s4dst", $sz, $mt, null, $off, microtime( true ) + 5, "{$this->root}" ),
 			'missing source (parent + root present) returns SKIP'
 		);
 
 		$this->putf( "{$this->root}/s6/src.bin", '12345' );
 		$off = 0;
+		$sz  = 99;
+		$mt  = 123;
 		$this->assertSame(
 			FileCopier::RESULT_DONE,
-			FileCopier::copyOne( "{$this->root}/s6/src.bin", "{$this->root}/s6/dst.bin", 99, 123, null, $off, microtime( true ) + 5, "{$this->root}/s6" ),
+			FileCopier::copyOne( "{$this->root}/s6/src.bin", "{$this->root}/s6/dst.bin", $sz, $mt, null, $off, microtime( true ) + 5, "{$this->root}/s6" ),
 			'changed source re-snapshots and completes'
 		);
 		$this->assertSame( '12345', (string) @file_get_contents( "{$this->root}/s6/dst.bin" ), 'dest has the real current content' );
@@ -331,9 +335,11 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 	 */
 	public function test_filecopier_vanished_source_missing_tree_fails_closed() {
 		$off = 0;
+		$sz  = 5;
+		$mt  = 123;
 		$this->assertSame(
 			FileCopier::RESULT_ERROR,
-			FileCopier::copyOne( "{$this->root}/gone/wp-content/uploads/x.txt", "{$this->root}/s7dst", 5, 123, null, $off, microtime( true ) + 5, "{$this->root}/gone/wp-content" ),
+			FileCopier::copyOne( "{$this->root}/gone/wp-content/uploads/x.txt", "{$this->root}/s7dst", $sz, $mt, null, $off, microtime( true ) + 5, "{$this->root}/gone/wp-content" ),
 			'vanished source + MISSING content root returns ERROR'
 		);
 
@@ -341,7 +347,7 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 		$off = 0;
 		$this->assertSame(
 			FileCopier::RESULT_ERROR,
-			FileCopier::copyOne( "{$this->root}/s7/wp-content/uploads/gone/x.txt", "{$this->root}/s7dst2", 5, 123, null, $off, microtime( true ) + 5, "{$this->root}/s7/wp-content" ),
+			FileCopier::copyOne( "{$this->root}/s7/wp-content/uploads/gone/x.txt", "{$this->root}/s7dst2", $sz, $mt, null, $off, microtime( true ) + 5, "{$this->root}/s7/wp-content" ),
 			'vanished source + MISSING parent subtree (root present) returns ERROR'
 		);
 	}
@@ -455,8 +461,10 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 		$this->putf( "$base/staging.txt", 'STAGING-NEW-CONTENT' );
 		touch( "$base/staging.txt", 123 );
 
-		$off = 0;
-		$res = FileCopier::copyOne( "$base/staging.txt", $destlink, strlen( 'STAGING-NEW-CONTENT' ), 123, null, $off, microtime( true ) + 5, $base );
+		$off      = 0;
+		$s1_size  = strlen( 'STAGING-NEW-CONTENT' );
+		$s1_mtime = 123;
+		$res      = FileCopier::copyOne( "$base/staging.txt", $destlink, $s1_size, $s1_mtime, null, $off, microtime( true ) + 5, $base );
 
 		$this->assertSame( FileCopier::RESULT_DONE, $res, 'copy completes' );
 		$this->assertSame( 'STAGING-NEW-CONTENT', file_get_contents( $destlink ), 'dest got staging content' );
@@ -525,11 +533,12 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 		touch( "$prod/uploads/same.txt", $stale_mtime );
 		touch( "$src/uploads/same.txt", $stale_mtime );
 
-		$off = 0;
-		$res = FileCopier::copyOne(
+		$off       = 0;
+		$same_size = 4;
+		$res       = FileCopier::copyOne(
 			"$src/uploads/same.txt",
 			"$prod/uploads-new/same.txt",
-			4,
+			$same_size,
 			$stale_mtime,
 			"$prod/uploads/same.txt",
 			$off,
@@ -595,5 +604,52 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 		$r = $this->drive( $this->engine( $src, $dst, $job ) );
 		@chmod( "$src/uploads/locked", 0755 );
 		$this->assertSame( 'error', $r['status'], 'not-searchable dir -> job errors (fail closed, subtree not dropped)' );
+	}
+
+	/**
+	 * Empty subdirectories on staging are listed in the manifest and recreated on the destination,
+	 * without inflating files_done above files_total.
+	 *
+	 * @return void
+	 */
+	public function test_empty_subdirectory_is_copied() {
+		$src = "{$this->root}/ed/wp-content";
+		$dst = "{$this->root}/ed/staging/wp-content";
+		$job = "{$this->root}/ed/job";
+		mkdir( "$src/uploads/empty/nested", 0777, true );
+		$this->putf( "$src/uploads/one.txt", '1' );
+
+		$r = $this->drive( $this->engine( $src, $dst, $job, '', null, 10.0 ) );
+		$this->assertSame( 'success', $r['status'], 'job completes' );
+		$this->assertDirectoryExists( "$dst/uploads/empty/nested", 'empty nested dir exists on dest' );
+		$this->assertSame( 1, $r['progress']['files_done'], 'directory markers do not inflate files_done' );
+		$this->assertSame( 1, $r['progress']['files_total'], 'files_total counts regular files only' );
+	}
+
+	/**
+	 * Byte-copied files inherit source permission bits and read-only source dirs keep owner rwx on dest.
+	 *
+	 * @return void
+	 */
+	public function test_byte_copy_preserves_file_mode() {
+		$src = "{$this->root}/pm/wp-content";
+		$dst = "{$this->root}/pm/staging/wp-content";
+		$job = "{$this->root}/pm/job";
+		mkdir( "$src/uploads/rodir", 0777, true );
+		$this->putf( "$src/uploads/exec.sh", "#!/bin/sh\n" );
+		$this->putf( "$src/uploads/rodir/a.txt", 'A' );
+		$this->putf( "$src/uploads/rodir/b.txt", 'B' );
+		@chmod( "$src/uploads/exec.sh", 0700 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPress.PHP.NoSilencedErrors.Discouraged
+		@chmod( "$src/uploads/rodir", 0555 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPress.PHP.NoSilencedErrors.Discouraged
+
+		try {
+			$r = $this->drive( $this->engine( $src, $dst, $job, '', null, 10.0 ) );
+			$this->assertSame( 'success', $r['status'], 'copy completes including 0555 source dir' );
+			$this->assertSame( 0700, fileperms( "$dst/uploads/exec.sh" ) & 0777, 'dest file keeps 0700' );
+			$this->assertFileExists( "$dst/uploads/rodir/b.txt", 'second file inside 0555 dir copied' );
+			$this->assertSame( 0755, fileperms( "$dst/uploads/rodir" ) & 0777, 'dest dir keeps owner rwx (0700)' );
+		} finally {
+			@chmod( "$src/uploads/rodir", 0755 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPress.PHP.NoSilencedErrors.Discouraged
+		}
 	}
 }
