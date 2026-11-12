@@ -234,7 +234,8 @@ class StagingCopyEngineWPUnitTest extends \lucatume\WPBrowser\TestCase\WPTestCas
 		$this->assertSame( 'success', $r['status'], 'large flat dir completes' );
 		$this->assertSame( $this->snap( $src ), $this->snap( $dst ), 'nothing dropped' );
 		$manifest_lines = count( array_filter( explode( "\n", (string) @file_get_contents( "$job/manifest.list" ) ), 'strlen' ) );
-		$this->assertSame( 60, $manifest_lines, 'exactly one manifest entry per file (no unbounded re-append)' );
+		// 60 file entries plus 1 directory marker for the walked uploads root.
+		$this->assertSame( 61, $manifest_lines, 'one manifest entry per file + root dir marker (no unbounded re-append)' );
 		$this->assertGreaterThan( 60, $bursts, 'per-entry bursts, not one whole-dir burst' );
 	}
 
