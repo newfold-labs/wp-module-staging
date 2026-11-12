@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-11-04T08:31:09+00:00\n"
+"PO-Revision-Date: 2026-11-12T16:57:00+00:00\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Language: fr_FR\n"
@@ -20,7 +20,11 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: includes/Staging.php:1443
+#: includes/Staging.php:1654
+msgid "A content deploy is already in progress. Wait for it to finish before running another staging operation."
+msgstr "Un déploiement de contenu est déjà en cours. Attendez qu’il se termine avant de lancer une autre opération de staging."
+
+#: includes/Staging.php:1795
 msgid "A deployment is currently in progress. Please wait for it to finish."
 msgstr "Un déploiement est en cours. Veuillez attendre qu’il se termine."
 
@@ -56,7 +60,7 @@ msgstr "Cloner vers la pré-production"
 msgid "Cloned to Staging"
 msgstr "Cloné en pré-production"
 
-#: includes/Staging.php:370
+#: includes/Staging.php:498
 msgid "Cloning can only be done from the production environment."
 msgstr "Le clonage ne peut se faire qu'à partir de l'environnement de production."
 
@@ -76,6 +80,54 @@ msgstr "Confirmer la suppression"
 msgid "Confirm Deployment"
 msgstr "Confirmer le déploiement"
 
+#: includes/Copy/ContentCopyController.php:438
+msgid "Content deploy setup failed."
+msgstr "La configuration du déploiement de contenu a échoué."
+
+#: includes/Copy/CopyEngine.php:200
+msgid "Copy manifest is incomplete; cannot continue."
+msgstr "Le manifeste de copie est incomplet ; impossible de continuer."
+
+#: includes/Copy/ContentCopyController.php:519
+msgid "Copying content files failed."
+msgstr "La copie des fichiers de contenu a échoué."
+
+#: includes/Copy/ContentCopyController.php:239
+msgid "Could not create the content copy job directory."
+msgstr "Impossible de créer le répertoire de tâches de copie de contenu."
+
+#: includes/Copy/CopyEngine.php:115
+msgid "Could not create the copy job directory."
+msgstr "Impossible de créer le répertoire de copie."
+
+#: includes/Copy/CopyEngine.php:169
+msgid "Could not create the copy manifest."
+msgstr "Impossible de créer le manifeste de copie."
+
+#: includes/Copy/CopyEngine.php:179
+msgid "Could not enumerate the files to copy."
+msgstr "Impossible d’énumérer les fichiers à copier."
+
+#: includes/Copy/ContentCopyController.php:249
+msgid "Could not open the content copy lock."
+msgstr "Impossible d’ouvrir le verrou de copie de contenu."
+
+#: includes/Copy/CopyEngine.php:121
+msgid "Could not open the copy lock."
+msgstr "Impossible d’ouvrir le verrou de copie."
+
+#: includes/Copy/CopyEngine.php:225
+msgid "Could not read the copy manifest."
+msgstr "Je n’ai pas pu lire le manifeste de copie."
+
+#: includes/Copy/CopyEngine.php:252
+msgid "Could not read the whole copy manifest; cannot continue safely."
+msgstr "Impossible de lire l’intégralité du manifeste de copies ; impossible de continuer en toute sécurité."
+
+#: includes/Copy/CopyEngine.php:166 includes/Copy/CopyEngine.php:192 includes/Copy/CopyEngine.php:206
+msgid "Could not write the copy cursor."
+msgstr "Je n’ai pas pu écrire le curseur de copie."
+
 #: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr "Créer un site de pré-production"
@@ -92,7 +144,7 @@ msgstr "Créer un site de pré-production, cela devrait prendre environ une minu
 msgid "Currently editing"
 msgstr "En cours d'édition"
 
-#: includes/Staging.php:719
+#: includes/Staging.php:1046
 msgid "Database deployed successfully."
 msgstr "La base de données a été déployée avec succès."
 
@@ -140,19 +192,19 @@ msgstr "Déployé"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Déploiement de la pré-production vers la production, cela devrait prendre environ une minute."
 
-#: includes/Staging.php:723
+#: includes/Staging.php:1050
 msgid "Deployment completed successfully."
 msgstr "Déploiement terminé avec succès."
 
-#: includes/Staging.php:677
+#: includes/Staging.php:1004
 msgid "Deployment failed. Check the staging log for details."
 msgstr "Déploiement échoué. Consultez le journal de staging pour plus de détails."
 
-#: includes/Staging.php:763 includes/Staging.php:781 includes/Staging.php:810 includes/Staging.php:839 includes/Staging.php:1426 includes/Staging.php:1437
+#: includes/Copy/ContentCopyController.php:813 includes/Staging.php:1090 includes/Staging.php:1108 includes/Staging.php:1137 includes/Staging.php:1166 includes/Staging.php:1778 includes/Staging.php:1789
 msgid "Deployment in progress. This may take several minutes."
 msgstr "Déploiement en cours. Cela peut prendre plusieurs minutes."
 
-#: includes/Staging.php:1495
+#: includes/Staging.php:1853
 msgid "Don't have capabilities to access this page"
 msgstr "Je n’ai pas la possibilité d’accéder à cette page"
 
@@ -164,21 +216,31 @@ msgstr "Erreur"
 msgid "Error: "
 msgstr "Erreur : "
 
-#: includes/Staging.php:720
+#. translators: %s: file path.
+#: includes/Copy/CopyEngine.php:326
+#, php-format
+msgid "Failed to copy %s after repeated attempts."
+msgstr "Échec à copier les pourcentages après plusieurs tentatives."
+
+#: includes/Staging.php:1047
 msgid "Files and Database deployed successfully."
 msgstr "Fichiers et base de données déployés avec succès."
 
-#: includes/Staging.php:718
+#: includes/Copy/ContentCopyController.php:832 includes/Staging.php:1045
 msgid "Files deployed successfully."
 msgstr "Les fichiers ont été déployés avec succès."
 
-#: includes/Staging.php:1394
+#: includes/Staging.php:1746
 msgid "Filesystem credentials required."
 msgstr "Identifiants du système de fichiers requis."
 
 #: views/staging-log.php:24
 msgid "Filter by date (YYYY-MM-DD):"
 msgstr "Filtrez par date (AAAAAA-MM-DD) :"
+
+#: includes/Copy/ContentCopyController.php:621
+msgid "Finalizing the content deploy failed."
+msgstr "La finalisation du déploiement du contenu a échoué."
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
@@ -189,7 +251,7 @@ msgid "Invalid action"
 msgstr "Action invalide"
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:1372
+#: includes/Staging.php:1724
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Caractère invalide (%s) dans la commande."
@@ -198,7 +260,7 @@ msgstr "Caractère invalide (%s) dans la commande."
 msgid "Invalid deploy type"
 msgstr "Type de déploiement invalide"
 
-#: includes/Staging.php:1305
+#: includes/Staging.php:671 includes/Staging.php:1635
 msgid "Invalid staging CLI command."
 msgstr "Commande CLI de pré-production invalide."
 
@@ -222,9 +284,13 @@ msgstr "Chargement de l'environnement de pré-production maintenant."
 msgid "Log"
 msgstr "Rapport"
 
-#: includes/Staging.php:1481 views/staging-log.php:11
+#: includes/Staging.php:1839 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Phase de journal"
+
+#: includes/Staging.php:684
+msgid "Missing or invalid staging lock token."
+msgstr "Jeton de verrouillage de staging manquant ou invalide."
 
 #: views/staging-log.php:132 views/staging-log.php:134
 msgid "Next"
@@ -241,6 +307,10 @@ msgstr "Aucune sous-commande fournie"
 #: build/staging/bundle.js:1
 msgid "Not currently editing"
 msgstr "Pas d'édition pour le moment"
+
+#: includes/Copy/ContentCopyController.php:555
+msgid "Preparing the WordPress core for deploy failed."
+msgstr "La préparation du noyau WordPress pour le déploiement a échoué."
 
 #: views/staging-log.php:63 views/staging-log.php:65
 msgid "Prev"
@@ -274,7 +344,7 @@ msgstr "Réinitialisation"
 msgid "Save"
 msgstr "Sauvegarder"
 
-#: includes/Staging.php:1131
+#: includes/Staging.php:1458
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Quelque chose a mal tourné, n’hésitez pas à contacter notre support."
 
@@ -311,11 +381,11 @@ msgstr "Site de pré-production"
 msgid "Staging URL:"
 msgstr "URL de mise en scène :"
 
-#: includes/Staging.php:1596
+#: includes/Staging.php:1954
 msgid "Staging configuration was automatically repaired."
 msgstr "La configuration des étapes a été automatiquement réparée."
 
-#: includes/Staging.php:411
+#: includes/Staging.php:539
 msgid "Staging environment already exists!"
 msgstr "L'environnement de pré-production existe déjà !"
 
@@ -335,7 +405,7 @@ msgstr "Passer à la production"
 msgid "Switch to Staging"
 msgstr "Passer à la pré-production"
 
-#: includes/Staging.php:1187
+#: includes/Staging.php:1514
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Passez à un environnement dans lequel vous êtes déjà, vous ne pouvez pas."
 
@@ -351,11 +421,23 @@ msgstr "Passage à l'environnement de production, cela devrait prendre environ u
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Passage à l'environnement de pré-production, cela devrait prendre environ une minute."
 
-#: includes/Staging.php:1126
+#: includes/Copy/CopyEngine.php:271
+msgid "The copy manifest is corrupt; cannot continue safely."
+msgstr "Le manifeste de copie est corrompu ; il ne peut pas continuer en toute sécurité."
+
+#: includes/Copy/ContentCopyController.php:492
+msgid "The deploy lost its lock to another staging operation and was stopped before changing production. Start the deploy again."
+msgstr "Le déploiement a perdu son verrouillage lors d’une autre opération de mise en scène et a été arrêté avant de changer la production. Relancer le déploiement."
+
+#: includes/Copy/ContentCopyController.php:267
+msgid "The deploy was abandoned and timed out. Start it again."
+msgstr "Le déploiement a été abandonné et expiré. Redémarrez."
+
+#: includes/Staging.php:1453
 msgid "The deployment is still running. Please wait and check again shortly."
 msgstr "Le déploiement est toujours en cours. Veuillez patienter et vérifier à nouveau sous peu."
 
-#: includes/Staging.php:772
+#: includes/Staging.php:1099
 msgid "The deployment stopped before it completed. Please try again."
 msgstr "Le déploiement s’est arrêté avant de s’achever. Veuillez réessayer."
 
@@ -401,7 +483,7 @@ msgstr "Le plugin « %s » n’est pas compatible avec PHP 8 car il utilise crea
 msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
 msgstr "Le plugin ou thème « %1$s » entre en conflit avec « %2$s » (impossible de redéclarer). Désactivez ou supprimez l’un d’eux, puis réessayez."
 
-#: includes/Staging.php:1141
+#: includes/Staging.php:1468
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr "L’opération de mise en scène n’a pas été terminée, veuillez contacter notre support."
 
@@ -443,33 +525,37 @@ msgstr "Ceci va écraser tout ce qui est en cours de pré-production et le mettr
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "Ceci supprimera définitivement le site de pré-production. Êtes-vous sûr de vouloir continuer ? Vous pouvez recréer un autre site de pré-production à tout moment, mais toutes les modifications spécifiques que vous avez apportées à ce site de pré-production seront perdues."
 
-#: includes/Staging.php:521
+#: includes/Staging.php:839
 msgid "Unable to create the deployment lock directory."
 msgstr "Impossible de créer le répertoire de verrouillage de déploiement."
 
-#: includes/Staging.php:1381
+#: includes/Staging.php:1733
 msgid "Unable to execute script (disabled_function)."
 msgstr "Impossible d'exécuter le script (désactivé_function)."
 
-#: includes/Staging.php:1405
+#: includes/Staging.php:1757
 msgid "Unable to execute script (permission error)."
 msgstr "Impossible d'exécuter le script (erreur de permission)."
 
-#: includes/Staging.php:1398
+#: includes/Staging.php:1750
 msgid "Unable to initialize WP Filesystem."
 msgstr "Impossible d’initialiser le système de fichiers WP."
 
-#: includes/Staging.php:529
+#: includes/Staging.php:847
 msgid "Unable to open the deployment lock file."
 msgstr "Impossible d’ouvrir le fichier de verrouillage de déploiement."
 
-#: includes/Staging.php:881
+#: includes/Staging.php:1208
 msgid "Unable to start the deployment process."
 msgstr "Impossible de lancer le processus de déploiement."
 
-#: includes/Staging.php:1456
+#: includes/Staging.php:1808
 msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr "Impossible de stocker le jeton d’authentification de staging. Un cache d’objets persistant peut être désynchronisé avec la base de données, ou la base de données n’accepte pas les écritures."
+
+#: includes/Staging.php:644
+msgid "Unsupported content copy type."
+msgstr "Type de texte de contenu non supporté."
 
 #: includes/StagingBootstrapCheck.php:358
 msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
@@ -483,6 +569,6 @@ msgstr "Travaillant..."
 msgid "You don't have a staging site yet."
 msgstr "Vous n'avez pas encore de site de pré-production."
 
-#: includes/Staging.php:1165
+#: includes/Staging.php:1492
 msgid "You must switch to the production environment before destroying staging."
 msgstr "Vous devez passer à l'environnement de production avant de supprimer l'environnement de pré-production."

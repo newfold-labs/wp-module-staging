@@ -4,7 +4,7 @@ msgstr ""
 "Project-Id-Version: newfold-labswp-module-staging\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-19T11:37:53+00:00\n"
-"PO-Revision-Date: 2026-11-04T08:31:09+00:00\n"
+"PO-Revision-Date: 2026-11-12T16:57:00+00:00\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Language: nl_NL\n"
@@ -20,7 +20,11 @@ msgstr ""
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
 
-#: includes/Staging.php:1443
+#: includes/Staging.php:1654
+msgid "A content deploy is already in progress. Wait for it to finish before running another staging operation."
+msgstr "Een content-deploy is al in uitvoering. Wacht tot deze klaar is voordat je een nieuwe staging-operatie uitvoert."
+
+#: includes/Staging.php:1795
 msgid "A deployment is currently in progress. Please wait for it to finish."
 msgstr "Er is momenteel een uitzending gaande. Wacht alstublieft tot deze is afgerond."
 
@@ -56,7 +60,7 @@ msgstr "Kopieer naar testomgeving"
 msgid "Cloned to Staging"
 msgstr "Gekopieerd naar testomgeving"
 
-#: includes/Staging.php:370
+#: includes/Staging.php:498
 msgid "Cloning can only be done from the production environment."
 msgstr "Klonen kan alleen worden gedaan vanuit de productieomgeving."
 
@@ -76,6 +80,54 @@ msgstr "Verwijderen bevestigen"
 msgid "Confirm Deployment"
 msgstr "Bevestig implementatie"
 
+#: includes/Copy/ContentCopyController.php:438
+msgid "Content deploy setup failed."
+msgstr "Content deploy setup mislukte."
+
+#: includes/Copy/CopyEngine.php:200
+msgid "Copy manifest is incomplete; cannot continue."
+msgstr "Kopie van het manifest is onvolledig; kan niet doorgaan."
+
+#: includes/Copy/ContentCopyController.php:519
+msgid "Copying content files failed."
+msgstr "Het kopiëren van inhoudsbestanden mislukte."
+
+#: includes/Copy/ContentCopyController.php:239
+msgid "Could not create the content copy job directory."
+msgstr "Ik kon de contentcopy-takendirectory niet aanmaken."
+
+#: includes/Copy/CopyEngine.php:115
+msgid "Could not create the copy job directory."
+msgstr "Kon de kopieer-job directory niet aanmaken."
+
+#: includes/Copy/CopyEngine.php:169
+msgid "Could not create the copy manifest."
+msgstr "Kon het kopieermanifest niet maken."
+
+#: includes/Copy/CopyEngine.php:179
+msgid "Could not enumerate the files to copy."
+msgstr "Kon de bestanden niet opsommen om te kopiëren."
+
+#: includes/Copy/ContentCopyController.php:249
+msgid "Could not open the content copy lock."
+msgstr "Kon de content copy lock niet openen."
+
+#: includes/Copy/CopyEngine.php:121
+msgid "Could not open the copy lock."
+msgstr "Kon het kopieerslot niet openen."
+
+#: includes/Copy/CopyEngine.php:225
+msgid "Could not read the copy manifest."
+msgstr "Kon het exemplaar niet lezen."
+
+#: includes/Copy/CopyEngine.php:252
+msgid "Could not read the whole copy manifest; cannot continue safely."
+msgstr "Kon het volledige exemplaar van het manifest niet lezen; kan niet veilig doorgaan."
+
+#: includes/Copy/CopyEngine.php:166 includes/Copy/CopyEngine.php:192 includes/Copy/CopyEngine.php:206
+msgid "Could not write the copy cursor."
+msgstr "Kon de kopieercursor niet schrijven."
+
 #: build/staging/bundle.js:1
 msgid "Create staging site"
 msgstr "Testomgeving aanmaken"
@@ -92,7 +144,7 @@ msgstr "Testomgeving wordt aangemaakt, dit duurt ongeveer een minuut."
 msgid "Currently editing"
 msgstr "Momenteel bewerken"
 
-#: includes/Staging.php:719
+#: includes/Staging.php:1046
 msgid "Database deployed successfully."
 msgstr "Database succesvol uitgerold."
 
@@ -140,19 +192,19 @@ msgstr "Geïmplementeerd"
 msgid "Deploying from staging to production, this should take about a minute."
 msgstr "Testomgeving wordt overgezet naar productie, dit duurt ongeveer een minuut."
 
-#: includes/Staging.php:723
+#: includes/Staging.php:1050
 msgid "Deployment completed successfully."
 msgstr "Inzet succesvol voltooid."
 
-#: includes/Staging.php:677
+#: includes/Staging.php:1004
 msgid "Deployment failed. Check the staging log for details."
 msgstr "Deployment mislukt. Controleer het stagelogboek voor details."
 
-#: includes/Staging.php:763 includes/Staging.php:781 includes/Staging.php:810 includes/Staging.php:839 includes/Staging.php:1426 includes/Staging.php:1437
+#: includes/Copy/ContentCopyController.php:813 includes/Staging.php:1090 includes/Staging.php:1108 includes/Staging.php:1137 includes/Staging.php:1166 includes/Staging.php:1778 includes/Staging.php:1789
 msgid "Deployment in progress. This may take several minutes."
 msgstr "Inzet in uitvoering. Dit kan enkele minuten duren."
 
-#: includes/Staging.php:1495
+#: includes/Staging.php:1853
 msgid "Don't have capabilities to access this page"
 msgstr "Ik heb geen mogelijkheden om deze pagina te openen"
 
@@ -164,21 +216,31 @@ msgstr "Foutmelding"
 msgid "Error: "
 msgstr "Fout: "
 
-#: includes/Staging.php:720
+#. translators: %s: file path.
+#: includes/Copy/CopyEngine.php:326
+#, php-format
+msgid "Failed to copy %s after repeated attempts."
+msgstr "Na herhaalde pogingen is het niet gelukt om %s te kopiëren."
+
+#: includes/Staging.php:1047
 msgid "Files and Database deployed successfully."
 msgstr "Bestanden en database succesvol uitgerold."
 
-#: includes/Staging.php:718
+#: includes/Copy/ContentCopyController.php:832 includes/Staging.php:1045
 msgid "Files deployed successfully."
 msgstr "Bestanden succesvol gedeployeerd."
 
-#: includes/Staging.php:1394
+#: includes/Staging.php:1746
 msgid "Filesystem credentials required."
 msgstr "Bestandssysteemgegevens vereist."
 
 #: views/staging-log.php:24
 msgid "Filter by date (YYYY-MM-DD):"
 msgstr "Filter op datum (JJJJ-MM-DD):"
+
+#: includes/Copy/ContentCopyController.php:621
+msgid "Finalizing the content deploy failed."
+msgstr "Het afronden van de content-uitrol mislukte."
 
 #: includes/StagingCLI.php:96
 msgid "Invalid JSON response"
@@ -189,7 +251,7 @@ msgid "Invalid action"
 msgstr "Ongeldige actie"
 
 #. translators: Invalid character that was entered
-#: includes/Staging.php:1372
+#: includes/Staging.php:1724
 #, php-format
 msgid "Invalid character (%s) in command."
 msgstr "Ongeldig teken (%s) in command."
@@ -198,7 +260,7 @@ msgstr "Ongeldig teken (%s) in command."
 msgid "Invalid deploy type"
 msgstr "Ongeldig implementatietype"
 
-#: includes/Staging.php:1305
+#: includes/Staging.php:671 includes/Staging.php:1635
 msgid "Invalid staging CLI command."
 msgstr "Ongeldig testomgeving CLI commando."
 
@@ -222,9 +284,13 @@ msgstr "De testomgeving wordt nu geladen."
 msgid "Log"
 msgstr "Log"
 
-#: includes/Staging.php:1481 views/staging-log.php:11
+#: includes/Staging.php:1839 views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Logstamopstelling"
+
+#: includes/Staging.php:684
+msgid "Missing or invalid staging lock token."
+msgstr "Ontbrekend of ongeldig staging-locktoken."
 
 #: views/staging-log.php:132 views/staging-log.php:134
 msgid "Next"
@@ -241,6 +307,10 @@ msgstr "Geen subopdracht opgegeven"
 #: build/staging/bundle.js:1
 msgid "Not currently editing"
 msgstr "Momenteel niet bewerkt"
+
+#: includes/Copy/ContentCopyController.php:555
+msgid "Preparing the WordPress core for deploy failed."
+msgstr "Het voorbereiden van de WordPress-kern voor implementatie mislukte."
 
 #: views/staging-log.php:63 views/staging-log.php:65
 msgid "Prev"
@@ -274,7 +344,7 @@ msgstr "Terugstellen"
 msgid "Save"
 msgstr "Redden"
 
-#: includes/Staging.php:1131
+#: includes/Staging.php:1458
 msgid "Something gone wrong, please get in touch with our support."
 msgstr "Als er iets mis is gegaan, neem dan contact op met onze support."
 
@@ -311,11 +381,11 @@ msgstr "Testomgeving"
 msgid "Staging URL:"
 msgstr "Staging-URL:"
 
-#: includes/Staging.php:1596
+#: includes/Staging.php:1954
 msgid "Staging configuration was automatically repaired."
 msgstr "De stagingconfiguratie werd automatisch gerepareerd."
 
-#: includes/Staging.php:411
+#: includes/Staging.php:539
 msgid "Staging environment already exists!"
 msgstr "Testomgeving bestaat al!"
 
@@ -335,7 +405,7 @@ msgstr "Overschakelen naar productie"
 msgid "Switch to Staging"
 msgstr "Overschakelen naar testomgeving"
 
-#: includes/Staging.php:1187
+#: includes/Staging.php:1514
 msgid "Switch to an environment you are already in, you cannot."
 msgstr "Schakel over naar een omgeving waar je al in bent, dat kan je niet."
 
@@ -351,11 +421,23 @@ msgstr "De omschakeling naar de productieomgeving zou ongeveer een minuut moeten
 msgid "Switching to the staging environment, this should take about a minute."
 msgstr "Er wordt overgeschakeld naar de testomgeving, dit duurt ongeveer een minuut."
 
-#: includes/Staging.php:1126
+#: includes/Copy/CopyEngine.php:271
+msgid "The copy manifest is corrupt; cannot continue safely."
+msgstr "Het kopiemanifest is corrupt; kan niet veilig doorgaan."
+
+#: includes/Copy/ContentCopyController.php:492
+msgid "The deploy lost its lock to another staging operation and was stopped before changing production. Start the deploy again."
+msgstr "De deploy verloor zijn lock aan een andere staging-operatie en werd gestopt voordat de productie kon veranderen. Start de deploy opnieuw."
+
+#: includes/Copy/ContentCopyController.php:267
+msgid "The deploy was abandoned and timed out. Start it again."
+msgstr "De inzet werd afgebroken en getimed. Begin opnieuw."
+
+#: includes/Staging.php:1453
 msgid "The deployment is still running. Please wait and check again shortly."
 msgstr "De uitrol loopt nog steeds. Wacht alstublieft en controleer binnenkort opnieuw."
 
-#: includes/Staging.php:772
+#: includes/Staging.php:1099
 msgid "The deployment stopped before it completed. Please try again."
 msgstr "De uitrol stopte voordat deze voltooid was. Probeer het alsjeblieft opnieuw."
 
@@ -401,7 +483,7 @@ msgstr "De plugin \"%s\" is niet compatibel met PHP 8 omdat hij create_function(
 msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
 msgstr "De plugin of het thema \"%1$s\" conflicteert met \"%2$s\" (Kan niet opnieuw declareren). Deactiveer of verwijder er één en probeer het opnieuw."
 
-#: includes/Staging.php:1141
+#: includes/Staging.php:1468
 msgid "The staging operation did not complete, please get in touch with our support."
 msgstr "De staging is niet voltooid, neem contact op met onze support."
 
@@ -443,33 +525,37 @@ msgstr "Dit zal alles in de testomgeving overschrijven en bijwerken naar een exa
 msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
 msgstr "Dit zal de testomgeving permanent verwijderen. Weet u zeker dat u wilt doorgaan? U kunt op elk moment een nieuwe testomgeving aanmaken, maar alle wijzigingen die u heeft aangebracht in deze testomgeving gaan verloren."
 
-#: includes/Staging.php:521
+#: includes/Staging.php:839
 msgid "Unable to create the deployment lock directory."
 msgstr "Kan de deployment lock-map niet aanmaken."
 
-#: includes/Staging.php:1381
+#: includes/Staging.php:1733
 msgid "Unable to execute script (disabled_function)."
 msgstr "Kan script niet uitvoeren (uitgeschakeld_functie)."
 
-#: includes/Staging.php:1405
+#: includes/Staging.php:1757
 msgid "Unable to execute script (permission error)."
 msgstr "Kan script niet uitvoeren (toestemmingsfout)."
 
-#: includes/Staging.php:1398
+#: includes/Staging.php:1750
 msgid "Unable to initialize WP Filesystem."
 msgstr "WP Filesystem kan niet initialiseren."
 
-#: includes/Staging.php:529
+#: includes/Staging.php:847
 msgid "Unable to open the deployment lock file."
 msgstr "Het deployment lock-bestand kan niet worden geopend."
 
-#: includes/Staging.php:881
+#: includes/Staging.php:1208
 msgid "Unable to start the deployment process."
 msgstr "Het uitrolproces kan niet starten."
 
-#: includes/Staging.php:1456
+#: includes/Staging.php:1808
 msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
 msgstr "Het staging-authenticatietoken kan niet worden opgeslagen. Een persistent objectcache kan niet synchroon lopen met de database, of de database accepteert geen schrijfopdrachten."
+
+#: includes/Staging.php:644
+msgid "Unsupported content copy type."
+msgstr "Niet ondersteund type voor inhoudskopie."
 
 #: includes/StagingBootstrapCheck.php:358
 msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
@@ -483,6 +569,6 @@ msgstr "Werkend..."
 msgid "You don't have a staging site yet."
 msgstr "U heeft nog geen testomgeving."
 
-#: includes/Staging.php:1165
+#: includes/Staging.php:1492
 msgid "You must switch to the production environment before destroying staging."
 msgstr "U moet naar de productieomgeving overschakelen voordat u de testomgeving verwijdert."
