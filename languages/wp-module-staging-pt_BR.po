@@ -1,99 +1,79 @@
-#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://github.com/newfold-labs/wp-module-staging/issues\n"
-"POT-Creation-Date: 2025-02-13T09:55:55+00:00\n"
-"PO-Revision-Date: 2026-11-12T16:57:00+00:00\n"
 "Last-Translator: Carlos Rodriguez <carlos.rodriguez@newfold.com>\n"
 "Language-Team: Brazilian Portuguese <ldpbr-translation@lists.sourceforge.net>\n"
-"Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-02-13T09:55:55+00:00\n"
+"PO-Revision-Date: 2026-11-13T05:08:52+00:00\n"
+"Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Domain: wp-module-staging\n"
 "X-Generator: WP-CLI 2.11.0\n"
-
-#: includes/Staging.php:1654
-msgid "A content deploy is already in progress. Wait for it to finish before running another staging operation."
-msgstr "Uma implantação de conteúdo já está em andamento. Espere o fim antes de rodar outra operação de staging."
-
-#: includes/Staging.php:1795
-msgid "A deployment is currently in progress. Please wait for it to finish."
-msgstr "Uma implantação está em andamento. Por favor, aguarde o término."
-
-#: includes/StagingBootstrapCheck.php:347
-msgid "A plugin has a code conflict (Cannot redeclare). Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr "Um plugin tem um conflito de código (Não é possível redeclarar). Desative plugins de terceiros e mude para um tema padrão como o Twenty Twenty-Five, então tente novamente."
-
-#: includes/StagingBootstrapCheck.php:279
-msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr "Um plugin ou tema não é compatível com PHP 8 porque usa create_function(), que foi removido. Desative plugins de terceiros e mude para um tema padrão como Twenty Twenty-Five, então tente novamente."
-
-#: build/staging/bundle.js:1
-msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
-msgstr "Um site de testes é uma cópia do seu site ao vivo, oferecendo um ambiente seguro para experimentar, testar atualizações e implantar quando estiver pronto."
-
-#: build/staging/bundle.js:1
-msgid "An unknown error has occurred."
-msgstr "Ocorreu um erro desconhecido."
-
-#: build/staging/bundle.js:1
-msgid "Cancel"
-msgstr "Cancelar"
-
-#: build/staging/bundle.js:1
-msgid "Clone"
-msgstr "Clonar"
-
-#: build/staging/bundle.js:1
-msgid "Clone to staging"
-msgstr "Clonar para testes"
-
-#: build/staging/bundle.js:1
-msgid "Cloned to Staging"
-msgstr "Clonado para o ambiente de testes"
-
-#: includes/Staging.php:498
-msgid "Cloning can only be done from the production environment."
-msgstr "A clonagem só pode ser feita a partir do ambiente de produção."
-
-#: build/staging/bundle.js:1
-msgid "Cloning production to staging, this should take about a minute."
-msgstr "Clonando o ambiente de produção para o ambiente de testes. Isso deve levar cerca de um minuto."
-
-#: build/staging/bundle.js:1
-msgid "Confirm Clone Action"
-msgstr "Confirmar Ação de Clonagem"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Delete"
-msgstr "Confirmar Exclusão"
-
-#: build/staging/bundle.js:1
-msgid "Confirm Deployment"
-msgstr "Confirmar Implantação"
-
-#: includes/Copy/ContentCopyController.php:438
-msgid "Content deploy setup failed."
-msgstr "A configuração do Content Deploy falhou."
-
-#: includes/Copy/CopyEngine.php:200
-msgid "Copy manifest is incomplete; cannot continue."
-msgstr "O manifesto de cópia está incompleto; não pode continuar."
-
-#: includes/Copy/ContentCopyController.php:519
-msgid "Copying content files failed."
-msgstr "Copiar arquivos de conteúdo falhou."
 
 #: includes/Copy/ContentCopyController.php:239
 msgid "Could not create the content copy job directory."
 msgstr "Não foi possível criar o diretório de tarefas de copiar conteúdo."
 
+#: includes/Copy/ContentCopyController.php:249
+msgid "Could not open the content copy lock."
+msgstr "Não consegui abrir o bloqueio de cópia de conteúdo."
+
+#: includes/Copy/ContentCopyController.php:267
+msgid "The deploy was abandoned and timed out. Start it again."
+msgstr "O desdobramento foi abandonado e com tempo de expiração. Inicie novamente."
+
+#: includes/Copy/ContentCopyController.php:438
+msgid "Content deploy setup failed."
+msgstr "A configuração do Content Deploy falhou."
+
+#: includes/Copy/ContentCopyController.php:492
+msgid "The deploy lost its lock to another staging operation and was stopped before changing production. Start the deploy again."
+msgstr "O desdobramento perdeu o travamento para outra operação de preparação e foi interrompido antes de mudar a produção. Iniciar o desdobramento novamente."
+
+#: includes/Copy/ContentCopyController.php:519
+msgid "Copying content files failed."
+msgstr "Copiar arquivos de conteúdo falhou."
+
+#: includes/Copy/ContentCopyController.php:555
+msgid "Preparing the WordPress core for deploy failed."
+msgstr "A preparação do núcleo do WordPress para implantação falhou."
+
+#: includes/Copy/ContentCopyController.php:621
+msgid "Finalizing the content deploy failed."
+msgstr "A finalização da implantação do conteúdo falhou."
+
+#: includes/Copy/ContentCopyController.php:813
+#: includes/Staging.php:1090
+#: includes/Staging.php:1108
+#: includes/Staging.php:1137
+#: includes/Staging.php:1166
+#: includes/Staging.php:1778
+#: includes/Staging.php:1789
+msgid "Deployment in progress. This may take several minutes."
+msgstr "Implantação em andamento. Isso pode levar vários minutos."
+
+#: includes/Copy/ContentCopyController.php:832
+#: includes/Staging.php:1045
+msgid "Files deployed successfully."
+msgstr "Arquivos foram distribuídos com sucesso."
+
 #: includes/Copy/CopyEngine.php:115
 msgid "Could not create the copy job directory."
 msgstr "Não foi possível criar o diretório de tarefas de cópia."
+
+#: includes/Copy/CopyEngine.php:121
+msgid "Could not open the copy lock."
+msgstr "Não consegui abrir o bloqueio de cópia."
+
+#: includes/Copy/CopyEngine.php:166
+#: includes/Copy/CopyEngine.php:192
+#: includes/Copy/CopyEngine.php:206
+msgid "Could not write the copy cursor."
+msgstr "Não consegui escrever o cursor de texto."
 
 #: includes/Copy/CopyEngine.php:169
 msgid "Could not create the copy manifest."
@@ -103,13 +83,9 @@ msgstr "Não foi possível criar o manifesto de cópia."
 msgid "Could not enumerate the files to copy."
 msgstr "Não foi possível enumerar os arquivos para copiar."
 
-#: includes/Copy/ContentCopyController.php:249
-msgid "Could not open the content copy lock."
-msgstr "Não consegui abrir o bloqueio de cópia de conteúdo."
-
-#: includes/Copy/CopyEngine.php:121
-msgid "Could not open the copy lock."
-msgstr "Não consegui abrir o bloqueio de cópia."
+#: includes/Copy/CopyEngine.php:200
+msgid "Copy manifest is incomplete; cannot continue."
+msgstr "O manifesto de cópia está incompleto; não pode continuar."
 
 #: includes/Copy/CopyEngine.php:225
 msgid "Could not read the copy manifest."
@@ -119,97 +95,9 @@ msgstr "Não consegui ler o manifesto de cópias."
 msgid "Could not read the whole copy manifest; cannot continue safely."
 msgstr "Não consegui ler todo o manifesto de cópias; não consigo continuar com segurança."
 
-#: includes/Copy/CopyEngine.php:166 includes/Copy/CopyEngine.php:192 includes/Copy/CopyEngine.php:206
-msgid "Could not write the copy cursor."
-msgstr "Não consegui escrever o cursor de texto."
-
-#: build/staging/bundle.js:1
-msgid "Create staging site"
-msgstr "Criar site de testes"
-
-#: build/staging/bundle.js:1
-msgid "Created"
-msgstr "Criado"
-
-#: build/staging/bundle.js:1
-msgid "Creating a staging site, this should take about a minute."
-msgstr "Criando um site de testes. Isso deve levar cerca de um minuto."
-
-#: build/staging/bundle.js:1
-msgid "Currently editing"
-msgstr "Editando no momento"
-
-#: includes/Staging.php:1046
-msgid "Database deployed successfully."
-msgstr "Banco de dados implantado com sucesso."
-
-#: build/staging/bundle.js:1
-msgid "Delete"
-msgstr "Excluir"
-
-#: build/staging/bundle.js:1
-msgid "Delete Staging Site"
-msgstr "Excluir Site de Testes"
-
-#: build/staging/bundle.js:1
-msgid "Deleted Staging"
-msgstr "Site de testes excluído"
-
-#: build/staging/bundle.js:1
-msgid "Deleting the staging site, this should take about a minute."
-msgstr "Excluindo o site de testes. Isso deve levar cerca de um minuto."
-
-#: build/staging/bundle.js:1
-msgid "Deploy"
-msgstr "Implantar"
-
-#: build/staging/bundle.js:1
-msgid "Deploy Site"
-msgstr "Implantar Site"
-
-#: build/staging/bundle.js:1
-msgid "Deploy all changes"
-msgstr "Implantar todas as alterações"
-
-#: build/staging/bundle.js:1
-msgid "Deploy database only"
-msgstr "Implantar apenas o banco de dados"
-
-#: build/staging/bundle.js:1
-msgid "Deploy files only"
-msgstr "Implantar apenas os arquivos"
-
-#: build/staging/bundle.js:1
-msgid "Deployed"
-msgstr "Implantado"
-
-#: build/staging/bundle.js:1
-msgid "Deploying from staging to production, this should take about a minute."
-msgstr "Implantando do ambiente de testes para o de produção. Isso deve levar cerca de um minuto."
-
-#: includes/Staging.php:1050
-msgid "Deployment completed successfully."
-msgstr "Implantação concluída com sucesso."
-
-#: includes/Staging.php:1004
-msgid "Deployment failed. Check the staging log for details."
-msgstr "Implantação falhada. Confira o registro de staging para detalhes."
-
-#: includes/Copy/ContentCopyController.php:813 includes/Staging.php:1090 includes/Staging.php:1108 includes/Staging.php:1137 includes/Staging.php:1166 includes/Staging.php:1778 includes/Staging.php:1789
-msgid "Deployment in progress. This may take several minutes."
-msgstr "Implantação em andamento. Isso pode levar vários minutos."
-
-#: includes/Staging.php:1853
-msgid "Don't have capabilities to access this page"
-msgstr "Não tenho capacidade para acessar esta página"
-
-#: build/staging/bundle.js:1
-msgid "Error"
-msgstr "Erro"
-
-#: includes/StagingCLI.php:239
-msgid "Error: "
-msgstr "Erro: "
+#: includes/Copy/CopyEngine.php:271
+msgid "The copy manifest is corrupt; cannot continue safely."
+msgstr "O manifesto de cópias está corrompido; não pode continuar com segurança."
 
 #. translators: %s: file path.
 #: includes/Copy/CopyEngine.php:326
@@ -217,33 +105,82 @@ msgstr "Erro: "
 msgid "Failed to copy %s after repeated attempts."
 msgstr "Falhei em copiar as porcentagens após várias tentativas."
 
+#: includes/Staging.php:498
+msgid "Cloning can only be done from the production environment."
+msgstr "A clonagem só pode ser feita a partir do ambiente de produção."
+
+#: includes/Staging.php:539
+msgid "Staging environment already exists!"
+msgstr "O ambiente de testes já existe!"
+
+#: includes/Staging.php:644
+msgid "Unsupported content copy type."
+msgstr "Tipo de texto de conteúdo não suportado."
+
+#: includes/Staging.php:671
+#: includes/Staging.php:1635
+msgid "Invalid staging CLI command."
+msgstr "Comando CLI de testes inválido."
+
+#: includes/Staging.php:684
+msgid "Missing or invalid staging lock token."
+msgstr "Token de bloqueio de staging faltando ou inválido."
+
+#: includes/Staging.php:839
+msgid "Unable to create the deployment lock directory."
+msgstr "Não foi possível criar o diretório de bloqueio de implantação."
+
+#: includes/Staging.php:847
+msgid "Unable to open the deployment lock file."
+msgstr "Não foi possível abrir o arquivo de bloqueio de implantação."
+
+#: includes/Staging.php:1004
+msgid "Deployment failed. Check the staging log for details."
+msgstr "Implantação falhada. Confira o registro de staging para detalhes."
+
+#: includes/Staging.php:1046
+msgid "Database deployed successfully."
+msgstr "Banco de dados implantado com sucesso."
+
 #: includes/Staging.php:1047
 msgid "Files and Database deployed successfully."
 msgstr "Arquivos e Banco de Dados foram implantados com sucesso."
 
-#: includes/Copy/ContentCopyController.php:832 includes/Staging.php:1045
-msgid "Files deployed successfully."
-msgstr "Arquivos foram distribuídos com sucesso."
+#: includes/Staging.php:1050
+msgid "Deployment completed successfully."
+msgstr "Implantação concluída com sucesso."
 
-#: includes/Staging.php:1746
-msgid "Filesystem credentials required."
-msgstr "Credenciais do sistema de arquivos necessárias."
+#: includes/Staging.php:1099
+msgid "The deployment stopped before it completed. Please try again."
+msgstr "A implantação parou antes de ser concluída. Por favor, tente novamente."
 
-#: views/staging-log.php:24
-msgid "Filter by date (YYYY-MM-DD):"
-msgstr "Filtre por data (YYY-MM-DD):"
+#: includes/Staging.php:1208
+msgid "Unable to start the deployment process."
+msgstr "Não foi possível iniciar o processo de implantação."
 
-#: includes/Copy/ContentCopyController.php:621
-msgid "Finalizing the content deploy failed."
-msgstr "A finalização da implantação do conteúdo falhou."
+#: includes/Staging.php:1453
+msgid "The deployment is still running. Please wait and check again shortly."
+msgstr "A implantação ainda está em andamento. Por favor, aguarde e verifique novamente em breve."
 
-#: includes/StagingCLI.php:96
-msgid "Invalid JSON response"
-msgstr "Resposta JSON inválida"
+#: includes/Staging.php:1458
+msgid "Something gone wrong, please get in touch with our support."
+msgstr "Algo deu errado, por favor, entre em contato com nosso suporte."
 
-#: includes/StagingCLI.php:84
-msgid "Invalid action"
-msgstr "Ação inválida"
+#: includes/Staging.php:1468
+msgid "The staging operation did not complete, please get in touch with our support."
+msgstr "A operação de preparação não foi concluída, por favor, entre em contato com nosso suporte."
+
+#: includes/Staging.php:1492
+msgid "You must switch to the production environment before destroying staging."
+msgstr "Você deve mudar para o ambiente de produção antes de excluir o ambiente de testes."
+
+#: includes/Staging.php:1514
+msgid "Switch to an environment you are already in, you cannot."
+msgstr "Você não pode mudar para um ambiente no qual já está."
+
+#: includes/Staging.php:1654
+msgid "A content deploy is already in progress. Wait for it to finish before running another staging operation."
+msgstr "Uma implantação de conteúdo já está em andamento. Espere o fim antes de rodar outra operação de staging."
 
 #. translators: Invalid character that was entered
 #: includes/Staging.php:1724
@@ -251,220 +188,58 @@ msgstr "Ação inválida"
 msgid "Invalid character (%s) in command."
 msgstr "Caractere inválido (%s) no comando."
 
-#: includes/StagingCLI.php:67
-msgid "Invalid deploy type"
-msgstr "Tipo de implantação inválido"
+#: includes/Staging.php:1733
+msgid "Unable to execute script (disabled_function)."
+msgstr "Não foi possível executar o script (função desabilitada)."
 
-#: includes/Staging.php:671 includes/Staging.php:1635
-msgid "Invalid staging CLI command."
-msgstr "Comando CLI de testes inválido."
+#: includes/Staging.php:1746
+msgid "Filesystem credentials required."
+msgstr "Credenciais do sistema de arquivos necessárias."
 
-#: includes/StagingCLI.php:39
-msgid "Invalid user."
-msgstr "Usuário inválido."
+#: includes/Staging.php:1750
+msgid "Unable to initialize WP Filesystem."
+msgstr "Não é possível inicializar o WP Filesystem."
 
-#: views/staging-log.php:26
-msgid "Items per page:"
-msgstr "Itens por página:"
+#: includes/Staging.php:1757
+msgid "Unable to execute script (permission error)."
+msgstr "Não foi possível executar o script (erro de permissão)."
 
-#: build/staging/bundle.js:1
-msgid "Loading the production environment now."
-msgstr "Carregando o ambiente de produção agora."
+#: includes/Staging.php:1795
+msgid "A deployment is currently in progress. Please wait for it to finish."
+msgstr "Uma implantação está em andamento. Por favor, aguarde o término."
 
-#: build/staging/bundle.js:1
-msgid "Loading the staging environment now."
-msgstr "Carregando o ambiente de testes agora."
+#: includes/Staging.php:1808
+msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
+msgstr "Não é possível armazenar o token de autenticação de staging. Um cache de objetos persistente pode estar fora de sincronia com o banco de dados, ou o banco de dados não está aceitando escritas."
 
-#: views/staging-log.php:39
-msgid "Log"
-msgstr "Tora"
-
-#: includes/Staging.php:1839 views/staging-log.php:11
+#: includes/Staging.php:1839
+#: views/staging-log.php:11
 msgid "Log Staging"
 msgstr "Estágio de Tronco"
 
-#: includes/Staging.php:684
-msgid "Missing or invalid staging lock token."
-msgstr "Token de bloqueio de staging faltando ou inválido."
-
-#: views/staging-log.php:132 views/staging-log.php:134
-msgid "Next"
-msgstr "Próximo"
-
-#: views/staging-log.php:140
-msgid "No log found for selected date."
-msgstr "Nenhum registro encontrado para a data selecionada."
-
-#: includes/StagingCLI.php:19
-msgid "No sub-command provided"
-msgstr "Nenhum subcomando fornecido"
-
-#: build/staging/bundle.js:1
-msgid "Not currently editing"
-msgstr "Não está editando no momento"
-
-#: includes/Copy/ContentCopyController.php:555
-msgid "Preparing the WordPress core for deploy failed."
-msgstr "A preparação do núcleo do WordPress para implantação falhou."
-
-#: views/staging-log.php:63 views/staging-log.php:65
-msgid "Prev"
-msgstr "Prev"
-
-#: build/staging/bundle.js:1
-msgid "Proceed"
-msgstr "Prosseguir"
-
-#: views/staging-log.php:14
-msgid "Production DIR:"
-msgstr "Diretor de Produção:"
-
-#: build/staging/bundle.js:1
-msgid "Production Site"
-msgstr "Site de Produção"
-
-#: views/staging-log.php:15
-msgid "Production URL:"
-msgstr "URL de produção:"
-
-#: includes/StagingCLI.php:288
-msgid "Provided $data wasn't valid array or JSON string."
-msgstr "Os dados fornecidos não eram um array válido ou uma string JSON."
-
-#: views/staging-log.php:34
-msgid "Reset"
-msgstr "Repor"
-
-#: views/staging-log.php:32
-msgid "Save"
-msgstr "Salvar"
-
-#: includes/Staging.php:1458
-msgid "Something gone wrong, please get in touch with our support."
-msgstr "Algo deu errado, por favor, entre em contato com nosso suporte."
-
-#: includes/StagingMenu.php:71 includes/StagingMenu.php:72
-msgid "Staging"
-msgstr "Preparo"
-
-#: includes/StagingMenu.php:33
-msgctxt "Menu item text"
-msgid "Staging"
-msgstr "Testes"
-
-#: includes/StagingMenu.php:55
-msgid "Staging Actions"
-msgstr "Ações de Testes"
-
-#: build/staging/bundle.js:1
-msgid "Staging Created"
-msgstr "Ambiente de testes criado"
-
-#: views/staging-log.php:16
-msgid "Staging DIR:"
-msgstr "Montagem do DIR:"
-
-#: includes/StagingMenu.php:53
-msgid "Staging Environment"
-msgstr "Ambiente de Testes"
-
-#: build/staging/bundle.js:1
-msgid "Staging Site"
-msgstr "Site de Testes"
-
-#: views/staging-log.php:17
-msgid "Staging URL:"
-msgstr "URL de staging:"
+#: includes/Staging.php:1853
+msgid "Don't have capabilities to access this page"
+msgstr "Não tenho capacidade para acessar esta página"
 
 #: includes/Staging.php:1954
 msgid "Staging configuration was automatically repaired."
 msgstr "A configuração de estágios foi reparada automaticamente."
 
-#: includes/Staging.php:539
-msgid "Staging environment already exists!"
-msgstr "O ambiente de testes já existe!"
+#: includes/StagingBootstrapCheck.php:279
+msgid "A plugin or theme is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "Um plugin ou tema não é compatível com PHP 8 porque usa create_function(), que foi removido. Desative plugins de terceiros e mude para um tema padrão como Twenty Twenty-Five, então tente novamente."
 
-#: views/staging-log.php:18
-msgid "Staging environment:"
-msgstr "Ambiente de preparação:"
-
-#: build/staging/bundle.js:1
-msgid "Switch"
-msgstr "Mudar"
-
-#: build/staging/bundle.js:1
-msgid "Switch to Production"
-msgstr "Mudar para Produção"
-
-#: build/staging/bundle.js:1
-msgid "Switch to Staging"
-msgstr "Mudar para Testes"
-
-#: includes/Staging.php:1514
-msgid "Switch to an environment you are already in, you cannot."
-msgstr "Você não pode mudar para um ambiente no qual já está."
-
-#: build/staging/bundle.js:1
-msgid "Switching"
-msgstr "Mudando"
-
-#: build/staging/bundle.js:1
-msgid "Switching to the production environment, this should take about a minute."
-msgstr "Mudando para o ambiente de produção. Isso deve levar cerca de um minuto."
-
-#: build/staging/bundle.js:1
-msgid "Switching to the staging environment, this should take about a minute."
-msgstr "Mudando para o ambiente de testes. Isso deve levar cerca de um minuto."
-
-#: includes/Copy/CopyEngine.php:271
-msgid "The copy manifest is corrupt; cannot continue safely."
-msgstr "O manifesto de cópias está corrompido; não pode continuar com segurança."
-
-#: includes/Copy/ContentCopyController.php:492
-msgid "The deploy lost its lock to another staging operation and was stopped before changing production. Start the deploy again."
-msgstr "O desdobramento perdeu o travamento para outra operação de preparação e foi interrompido antes de mudar a produção. Iniciar o desdobramento novamente."
-
-#: includes/Copy/ContentCopyController.php:267
-msgid "The deploy was abandoned and timed out. Start it again."
-msgstr "O desdobramento foi abandonado e com tempo de expiração. Inicie novamente."
-
-#: includes/Staging.php:1453
-msgid "The deployment is still running. Please wait and check again shortly."
-msgstr "A implantação ainda está em andamento. Por favor, aguarde e verifique novamente em breve."
-
-#: includes/Staging.php:1099
-msgid "The deployment stopped before it completed. Please try again."
-msgstr "A implantação parou antes de ser concluída. Por favor, tente novamente."
-
-#. translators: %s: must-use plugin directory or file name.
-#: includes/StagingBootstrapCheck.php:374
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:287
 #, php-format
-msgid "The must-use plugin \"%s\" caused a fatal error while loading WordPress. Remove it from mu-plugins, then try again."
-msgstr "O plugin obrigatório \"%s\" causou um erro fatal ao carregar o WordPress. Remova do múltiplo plugins e tente novamente."
-
-#. translators: %s: must-use plugin directory or file name.
-#: includes/StagingBootstrapCheck.php:334
-#, php-format
-msgid "The must-use plugin \"%s\" has a code conflict (Cannot redeclare). Remove it from mu-plugins, then try again."
-msgstr "O plugin obrigatório \"%s\" tem um conflito de código (Não é possível redeclarar). Remova do mu-plugins e tente novamente."
+msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
+msgstr "O tema \"%s\" não é compatível com PHP 8 porque usa create_function(), que foi removido. Desabilite-o e tente novamente."
 
 #. translators: %s: must-use plugin directory or file name.
 #: includes/StagingBootstrapCheck.php:295
 #, php-format
 msgid "The must-use plugin \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Remove it from mu-plugins, then try again."
 msgstr "O plugin indispensável \"%s\" não é compatível com PHP 8 porque usa create_function(), que foi removido. Remova dos múltiplos plugins e tente novamente."
-
-#. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:381
-#, php-format
-msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr "O plugin \"%s\" causou um erro fatal ao carregar o WordPress. Desative-o, ou desative plugins de terceiros e mude para um tema padrão como Twenty Twenty-Five, então tente novamente."
-
-#. translators: %s: plugin directory name.
-#: includes/StagingBootstrapCheck.php:342
-#, php-format
-msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
-msgstr "O plugin \"%s\" tem um conflito de código (Não é possível redeclarar). Desative e tente novamente."
 
 #. translators: %s: plugin directory name.
 #: includes/StagingBootstrapCheck.php:302
@@ -478,9 +253,31 @@ msgstr "O plugin \"%s\" não é compatível com PHP 8 porque usa create_function
 msgid "The plugin or theme \"%1$s\" conflicts with \"%2$s\" (Cannot redeclare). Deactivate or remove one of them, then try again."
 msgstr "O plugin ou tema \"%1$s\" entra em conflito com \"%2$s\" (Não é possível redeclarar). Desative ou remova um deles, então tente novamente."
 
-#: includes/Staging.php:1468
-msgid "The staging operation did not complete, please get in touch with our support."
-msgstr "A operação de preparação não foi concluída, por favor, entre em contato com nosso suporte."
+#. translators: %s: theme directory name.
+#: includes/StagingBootstrapCheck.php:326
+#, php-format
+msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr "O tema \"%s\" tem um conflito de código (Não é possível redeclarar). Desative e tente novamente."
+
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:334
+#, php-format
+msgid "The must-use plugin \"%s\" has a code conflict (Cannot redeclare). Remove it from mu-plugins, then try again."
+msgstr "O plugin obrigatório \"%s\" tem um conflito de código (Não é possível redeclarar). Remova do mu-plugins e tente novamente."
+
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:342
+#, php-format
+msgid "The plugin \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
+msgstr "O plugin \"%s\" tem um conflito de código (Não é possível redeclarar). Desative e tente novamente."
+
+#: includes/StagingBootstrapCheck.php:347
+msgid "A plugin has a code conflict (Cannot redeclare). Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "Um plugin tem um conflito de código (Não é possível redeclarar). Desative plugins de terceiros e mude para um tema padrão como o Twenty Twenty-Five, então tente novamente."
+
+#: includes/StagingBootstrapCheck.php:358
+msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "O WordPress não conseguiu iniciar por causa de um erro fatal em um plugin ou tema. Desative plugins de terceiros e mude para um tema padrão como o Twenty Twenty-Five, então tente novamente."
 
 #. translators: %s: theme directory name.
 #: includes/StagingBootstrapCheck.php:366
@@ -488,82 +285,298 @@ msgstr "A operação de preparação não foi concluída, por favor, entre em co
 msgid "The theme \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
 msgstr "O tema \"%s\" causou um erro fatal ao carregar o WordPress. Desative ou desative plugins de terceiros e mude para um tema padrão como Twenty Twenty-Five, então tente novamente."
 
-#. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:326
+#. translators: %s: must-use plugin directory or file name.
+#: includes/StagingBootstrapCheck.php:374
 #, php-format
-msgid "The theme \"%s\" has a code conflict (Cannot redeclare). Deactivate it, then try again."
-msgstr "O tema \"%s\" tem um conflito de código (Não é possível redeclarar). Desative e tente novamente."
+msgid "The must-use plugin \"%s\" caused a fatal error while loading WordPress. Remove it from mu-plugins, then try again."
+msgstr "O plugin obrigatório \"%s\" causou um erro fatal ao carregar o WordPress. Remova do múltiplo plugins e tente novamente."
 
-#. translators: %s: theme directory name.
-#: includes/StagingBootstrapCheck.php:287
+#. translators: %s: plugin directory name.
+#: includes/StagingBootstrapCheck.php:381
 #, php-format
-msgid "The theme \"%s\" is not compatible with PHP 8 because it uses create_function(), which was removed. Deactivate it, then try again."
-msgstr "O tema \"%s\" não é compatível com PHP 8 porque usa create_function(), que foi removido. Desabilite-o e tente novamente."
+msgid "The plugin \"%s\" caused a fatal error while loading WordPress. Deactivate it, or deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
+msgstr "O plugin \"%s\" causou um erro fatal ao carregar o WordPress. Desative-o, ou desative plugins de terceiros e mude para um tema padrão como Twenty Twenty-Five, então tente novamente."
+
+#: includes/StagingCLI.php:19
+msgid "No sub-command provided"
+msgstr "Nenhum subcomando fornecido"
+
+#: includes/StagingCLI.php:39
+msgid "Invalid user."
+msgstr "Usuário inválido."
+
+#: includes/StagingCLI.php:67
+msgid "Invalid deploy type"
+msgstr "Tipo de implantação inválido"
+
+#: includes/StagingCLI.php:84
+msgid "Invalid action"
+msgstr "Ação inválida"
+
+#: includes/StagingCLI.php:96
+msgid "Invalid JSON response"
+msgstr "Resposta JSON inválida"
+
+#: includes/StagingCLI.php:239
+msgid "Error: "
+msgstr "Erro: "
+
+#: includes/StagingCLI.php:288
+msgid "Provided $data wasn't valid array or JSON string."
+msgstr "Os dados fornecidos não eram um array válido ou uma string JSON."
+
+#: includes/StagingMenu.php:33
+msgctxt "Menu item text"
+msgid "Staging"
+msgstr "Testes"
+
+#: includes/StagingMenu.php:53
+msgid "Staging Environment"
+msgstr "Ambiente de Testes"
+
+#: includes/StagingMenu.php:55
+msgid "Staging Actions"
+msgstr "Ações de Testes"
+
+#: includes/StagingMenu.php:71
+#: includes/StagingMenu.php:72
+msgid "Staging"
+msgstr "Preparo"
+
+#: views/staging-log.php:14
+msgid "Production DIR:"
+msgstr "Diretor de Produção:"
+
+#: views/staging-log.php:15
+msgid "Production URL:"
+msgstr "URL de produção:"
+
+#: views/staging-log.php:16
+msgid "Staging DIR:"
+msgstr "Montagem do DIR:"
+
+#: views/staging-log.php:17
+msgid "Staging URL:"
+msgstr "URL de staging:"
+
+#: views/staging-log.php:18
+msgid "Staging environment:"
+msgstr "Ambiente de preparação:"
+
+#: views/staging-log.php:24
+msgid "Filter by date (YYYY-MM-DD):"
+msgstr "Filtre por data (YYY-MM-DD):"
+
+#: views/staging-log.php:26
+msgid "Items per page:"
+msgstr "Itens por página:"
+
+#: views/staging-log.php:32
+msgid "Save"
+msgstr "Salvar"
+
+#: views/staging-log.php:34
+msgid "Reset"
+msgstr "Repor"
+
+#: views/staging-log.php:39
+msgid "Log"
+msgstr "Tora"
+
+#: views/staging-log.php:63
+#: views/staging-log.php:65
+msgid "Prev"
+msgstr "Prev"
+
+#: views/staging-log.php:132
+#: views/staging-log.php:134
+msgid "Next"
+msgstr "Próximo"
+
+#: views/staging-log.php:140
+msgid "No log found for selected date."
+msgstr "Nenhum registro encontrado para a data selecionada."
 
 #: build/staging/bundle.js:1
-msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
-msgstr "Isso implantará o ambiente de testes na produção e substituirá o site de produção atual. Tem certeza de que deseja continuar?"
+msgid "Production Site"
+msgstr "Site de Produção"
 
 #: build/staging/bundle.js:1
-msgid "This will navigate you to the production environment"
-msgstr "Isso o levará para o ambiente de produção"
+msgid "Currently editing"
+msgstr "Editando no momento"
 
 #: build/staging/bundle.js:1
-msgid "This will navigate you to the staging environment"
-msgstr "Isso o levará para o ambiente de testes"
+msgid "Not currently editing"
+msgstr "Não está editando no momento"
+
+#: build/staging/bundle.js:1
+msgid "Clone"
+msgstr "Clonar"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Clone Action"
+msgstr "Confirmar Ação de Clonagem"
 
 #: build/staging/bundle.js:1
 msgid "This will overwrite anything in staging and update it to an exact clone of the current production site. Are you sure you want to proceed?"
 msgstr "Isso substituirá tudo no ambiente de testes e o atualizará como uma cópia exata do site de produção atual. Tem certeza de que deseja continuar?"
 
 #: build/staging/bundle.js:1
-msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
-msgstr "Isso excluirá permanentemente o site de testes. Tem certeza de que deseja continuar? Você pode recriar outro site de testes a qualquer momento, mas quaisquer alterações específicas feitas neste site serão perdidas."
-
-#: includes/Staging.php:839
-msgid "Unable to create the deployment lock directory."
-msgstr "Não foi possível criar o diretório de bloqueio de implantação."
-
-#: includes/Staging.php:1733
-msgid "Unable to execute script (disabled_function)."
-msgstr "Não foi possível executar o script (função desabilitada)."
-
-#: includes/Staging.php:1757
-msgid "Unable to execute script (permission error)."
-msgstr "Não foi possível executar o script (erro de permissão)."
-
-#: includes/Staging.php:1750
-msgid "Unable to initialize WP Filesystem."
-msgstr "Não é possível inicializar o WP Filesystem."
-
-#: includes/Staging.php:847
-msgid "Unable to open the deployment lock file."
-msgstr "Não foi possível abrir o arquivo de bloqueio de implantação."
-
-#: includes/Staging.php:1208
-msgid "Unable to start the deployment process."
-msgstr "Não foi possível iniciar o processo de implantação."
-
-#: includes/Staging.php:1808
-msgid "Unable to store the staging authentication token. A persistent object cache may be out of sync with the database, or the database is not accepting writes."
-msgstr "Não é possível armazenar o token de autenticação de staging. Um cache de objetos persistente pode estar fora de sincronia com o banco de dados, ou o banco de dados não está aceitando escritas."
-
-#: includes/Staging.php:644
-msgid "Unsupported content copy type."
-msgstr "Tipo de texto de conteúdo não suportado."
-
-#: includes/StagingBootstrapCheck.php:358
-msgid "WordPress could not start because of a fatal error in a plugin or theme. Deactivate third-party plugins and switch to a default theme such as Twenty Twenty-Five, then try again."
-msgstr "O WordPress não conseguiu iniciar por causa de um erro fatal em um plugin ou tema. Desative plugins de terceiros e mude para um tema padrão como o Twenty Twenty-Five, então tente novamente."
+msgid "Clone to staging"
+msgstr "Clonar para testes"
 
 #: build/staging/bundle.js:1
-msgid "Working…"
-msgstr "Trabalhando..."
+msgid "Staging Site"
+msgstr "Site de Testes"
 
 #: build/staging/bundle.js:1
 msgid "You don't have a staging site yet."
 msgstr "Você ainda não tem um site de testes."
 
-#: includes/Staging.php:1492
-msgid "You must switch to the production environment before destroying staging."
-msgstr "Você deve mudar para o ambiente de produção antes de excluir o ambiente de testes."
+#: build/staging/bundle.js:1
+msgid "Create staging site"
+msgstr "Criar site de testes"
+
+#: build/staging/bundle.js:1
+msgid "Delete Staging Site"
+msgstr "Excluir Site de Testes"
+
+#: build/staging/bundle.js:1
+msgid "This will permanently delete staging site. Are you sure you want to proceed? You can recreate another staging site at any time, but any specific changes you've made to this staging site will be lost."
+msgstr "Isso excluirá permanentemente o site de testes. Tem certeza de que deseja continuar? Você pode recriar outro site de testes a qualquer momento, mas quaisquer alterações específicas feitas neste site serão perdidas."
+
+#: build/staging/bundle.js:1
+msgid "Deleted Staging"
+msgstr "Site de testes excluído"
+
+#: build/staging/bundle.js:1
+msgid "Deleting the staging site, this should take about a minute."
+msgstr "Excluindo o site de testes. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: build/staging/bundle.js:1
+msgid "Cloned to Staging"
+msgstr "Clonado para o ambiente de testes"
+
+#: build/staging/bundle.js:1
+msgid "Cloning production to staging, this should take about a minute."
+msgstr "Clonando o ambiente de produção para o ambiente de testes. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Staging Created"
+msgstr "Ambiente de testes criado"
+
+#: build/staging/bundle.js:1
+msgid "Creating a staging site, this should take about a minute."
+msgstr "Criando um site de testes. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Created"
+msgstr "Criado"
+
+#: build/staging/bundle.js:1
+msgid "Delete"
+msgstr "Excluir"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Delete"
+msgstr "Confirmar Exclusão"
+
+#: build/staging/bundle.js:1
+msgid "Deploy"
+msgstr "Implantar"
+
+#: build/staging/bundle.js:1
+msgid "Deploy all changes"
+msgstr "Implantar todas as alterações"
+
+#: build/staging/bundle.js:1
+msgid "Confirm Deployment"
+msgstr "Confirmar Implantação"
+
+#: build/staging/bundle.js:1
+msgid "Deploy database only"
+msgstr "Implantar apenas o banco de dados"
+
+#: build/staging/bundle.js:1
+msgid "This will deploy staging to production and overwrite current production site. Are you sure you want to proceed?"
+msgstr "Isso implantará o ambiente de testes na produção e substituirá o site de produção atual. Tem certeza de que deseja continuar?"
+
+#: build/staging/bundle.js:1
+msgid "Deploy files only"
+msgstr "Implantar apenas os arquivos"
+
+#: build/staging/bundle.js:1
+msgid "Deployed"
+msgstr "Implantado"
+
+#: build/staging/bundle.js:1
+msgid "Deploying from staging to production, this should take about a minute."
+msgstr "Implantando do ambiente de testes para o de produção. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Deploy Site"
+msgstr "Implantar Site"
+
+#: build/staging/bundle.js:1
+msgid "Error"
+msgstr "Erro"
+
+#: build/staging/bundle.js:1
+msgid "A staging site is a duplicate of your live site, offering a secure environment to experiment, test updates, and deploy when ready."
+msgstr "Um site de testes é uma cópia do seu site ao vivo, oferecendo um ambiente seguro para experimentar, testar atualizações e implantar quando estiver pronto."
+
+#: build/staging/bundle.js:1
+msgid "Proceed"
+msgstr "Prosseguir"
+
+#: build/staging/bundle.js:1
+msgid "Switch"
+msgstr "Mudar"
+
+#: build/staging/bundle.js:1
+msgid "Switch to Production"
+msgstr "Mudar para Produção"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the production environment"
+msgstr "Isso o levará para o ambiente de produção"
+
+#: build/staging/bundle.js:1
+msgid "Loading the production environment now."
+msgstr "Carregando o ambiente de produção agora."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the production environment, this should take about a minute."
+msgstr "Mudando para o ambiente de produção. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Switch to Staging"
+msgstr "Mudar para Testes"
+
+#: build/staging/bundle.js:1
+msgid "This will navigate you to the staging environment"
+msgstr "Isso o levará para o ambiente de testes"
+
+#: build/staging/bundle.js:1
+msgid "Loading the staging environment now."
+msgstr "Carregando o ambiente de testes agora."
+
+#: build/staging/bundle.js:1
+msgid "Switching to the staging environment, this should take about a minute."
+msgstr "Mudando para o ambiente de testes. Isso deve levar cerca de um minuto."
+
+#: build/staging/bundle.js:1
+msgid "Switching"
+msgstr "Mudando"
+
+#: build/staging/bundle.js:1
+msgid "An unknown error has occurred."
+msgstr "Ocorreu um erro desconhecido."
+
+#: build/staging/bundle.js:1
+msgid "Working…"
+msgstr "Trabalhando..."
