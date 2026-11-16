@@ -108,7 +108,7 @@ msgstr "Das Kopiermanifest ist beschädigt; kann nicht sicher fortgesetzt werden
 #: includes/Copy/CopyEngine.php:326
 #, php-format
 msgid "Failed to copy %s after repeated attempts."
-msgstr "Nach wiederholten Versuchen konnte ich keine % kopieren."
+msgstr "%s konnte nach wiederholten Versuchen nicht kopiert werden."
 
 #: includes/Staging.php:498
 msgid "Cloning can only be done from the production environment."
@@ -378,7 +378,7 @@ msgstr "Artikel pro Seite:"
 
 #: views/staging-log.php:32
 msgid "Save"
-msgstr "Retten"
+msgstr "Speichern"
 
 #: views/staging-log.php:34
 msgid "Reset"
