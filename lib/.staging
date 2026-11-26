@@ -1047,6 +1047,23 @@ copy_staging_config_option() {
   return 0
 }
 
+# Constraint names already in the shared database (production + staging). Used to seed FK
+# uniquification so imports never reuse a name that production already owns.
+_nfd_reserved_constraint_names() {
+  local wp_path="$1"
+  local out rc
+  [ -n "$wp_path" ] || return 0
+  set +e
+  out=$(wp db query "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA=DATABASE() AND CONSTRAINT_NAME IS NOT NULL AND CONSTRAINT_NAME != '';" \
+    --skip-column-names --path="$wp_path" --skip-themes --skip-plugins --quiet 2>/dev/null)
+  rc=$?
+  set -e
+  if [ $rc -ne 0 ] || [ -z "$out" ]; then
+    return 0
+  fi
+  printf '%s\n' "$out"
+}
+
 # Normalize foreign-key constraint names in a SQL dump file.
 # MySQL limits identifiers to 64 characters and requires schema-wide FK name uniqueness.
 # Prefix rewrites during staging create/clone/deploy can produce names that exceed the
@@ -1054,24 +1071,34 @@ copy_staging_config_option() {
 # ... suffixes for any collisions (case-insensitive, scoped to the file being processed).
 # An optional name prefix (e.g. staging_ or prod_) avoids collisions with FK names already
 # present in the target schema when production and staging tables share one database.
-# Only FOREIGN KEY constraints are rewritten; UNIQUE/PRIMARY/CHECK symbols are left alone.
-# Args: $1 = SQL file path, $2 = log step label, $3 = optional FK name prefix (default none).
+# UNIQUE and CHECK constraint names share MySQL's schema-wide namespace with foreign keys.
+# mysqldump often splits ADD CONSTRAINT and FOREIGN KEY across lines; the file is read whole
+# and whitespace between the name and the constraint type may include newlines.
+# Args: $1 = SQL file path, $2 = log step label, $3 = optional FK name prefix (default none),
+#       $4 = optional wp path to reserve names already in the shared database.
 # Returns 0 on success, 1 on failure.
 normalize_fk_names() {
   local sql_file="$1"
   local log_step="$2"
   local name_prefix="${3:-}"
-  local tmp_err
+  local wp_path="${4:-}"
+  local tmp_err reserved
   tmp_err=$(mktemp)
+  reserved=$(_nfd_reserved_constraint_names "$wp_path")
 
   set +e
-  NFD_FK_PREFIX="$name_prefix" perl -i -pe '
+  NFD_FK_PREFIX="$name_prefix" NFD_EXISTING_CONSTRAINTS="$reserved" perl -0777 -i -pe '
     BEGIN {
       our %seen = ();
       our $prefix = $ENV{NFD_FK_PREFIX} // "";
       our $max_len = 64;
+      for my $line (split /\n/, $ENV{NFD_EXISTING_CONSTRAINTS} // "") {
+        my $c = $line;
+        $c =~ s/^\s+|\s+$//g;
+        $seen{lc $c} = 1 if length $c;
+      }
     }
-    s/\bCONSTRAINT\s+(?:`([^`]+)`|([A-Za-z0-9_]+))(?=\s+FOREIGN\s+KEY)/do {
+    s/\bCONSTRAINT\s+(?:`([^`]+)`|([A-Za-z0-9_]+))(?=\s*(?:FOREIGN\s+KEY|UNIQUE(?:\s+KEY)?|CHECK)\b)/do {
       my $base = defined $1 ? $1 : $2;
       if ($prefix ne "" && $base !~ m#^\Q$prefix\E#i) {
         $base = $prefix . $base;
@@ -1091,10 +1118,10 @@ normalize_fk_names() {
       "CONSTRAINT `$name`";
     }/gei
   ' "$sql_file" 2>"$tmp_err"
-  local status=$?
+  local fk_status=$?
   set -e
 
-  if [ $status -ne 0 ]; then
+  if [ $fk_status -ne 0 ]; then
     if [ -s "$tmp_err" ]; then
       while IFS= read -r line; do
         log "ERROR" "$log_step" "$line"
@@ -3097,7 +3124,7 @@ create() {
   fi
 
   log "INFO" "create:update_prefix_sql" "Normalizing/uniquifying constraint names for staging"
-  if ! normalize_fk_names "$STAGING_DIR/.export-sql" "create:update_prefix_sql" "staging_"; then
+  if ! normalize_fk_names "$STAGING_DIR/.export-sql" "create:update_prefix_sql" "staging_" "$PRODUCTION_DIR"; then
     log "ERROR" "create:update_prefix_sql" "Unable to normalize constraint names."
     delete_temp_staging 2 "Unable to normalize constraint names."
   fi
@@ -3442,7 +3469,7 @@ clone() {
   fi
 
   log "INFO" "clone:normalize_constraint" "Normalizing/uniquifying constraint names for staging"
-  if ! normalize_fk_names "$STAGING_DIR/.export-sql" "clone:normalize_constraint" "staging_"; then
+  if ! normalize_fk_names "$STAGING_DIR/.export-sql" "clone:normalize_constraint" "staging_" "$PRODUCTION_DIR"; then
     log "ERROR" "clone:normalize_constraint" "Unable to normalize constraint names."
     delete_temp_staging 2 "Unable to normalize constraint names."
   fi
@@ -3802,7 +3829,7 @@ deploy_db() {
     fi
 
     log "INFO" "deploy_db" "Normalizing/uniquifying constraint names for production"
-    if ! normalize_fk_names "$STAGING_DIR/.export-sql" "deploy_db" "prod_"; then
+    if ! normalize_fk_names "$STAGING_DIR/.export-sql" "deploy_db" "prod_" "$PRODUCTION_DIR"; then
       fail_and_exit "Unable to normalize constraint names."
     fi
 
