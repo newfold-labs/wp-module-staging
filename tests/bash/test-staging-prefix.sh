@@ -214,6 +214,59 @@ newfk="$(grep -oE 'CONSTRAINT `[^`]+`' "$DUMP3" | head -n1 | sed -E 's/CONSTRAIN
 assert_le "constraint name truncated to <= 64 (got ${#newfk})" "${#newfk}" 64
 rm -f "$DUMP3"
 
+echo "== normalize_fk_names: UNIQUE + FOREIGN KEY name collision (shared schema namespace) =="
+DUMP4="$(mktemp)"
+cat > "$DUMP4" <<EOF
+CREATE TABLE \`${prod}mec_a\` (
+  \`id\` int,
+  CONSTRAINT \`mec_booking_id\` UNIQUE (\`id\`)
+) ENGINE=InnoDB;
+CREATE TABLE \`${prod}mec_b\` (
+  \`id\` int,
+  CONSTRAINT \`mec_booking_id\` FOREIGN KEY (\`id\`) REFERENCES \`${prod}mec_a\` (\`id\`)
+) ENGINE=InnoDB;
+EOF
+mec_tables="${prod}mec_a,${prod}mec_b"
+if ! rewrite_dump_prefixes "$DUMP4" "$prod" "$stg" "staging_" 1 "$mec_tables"; then
+  no "mec collision rewrite" "rewrite_dump_prefixes returned non-zero"
+fi
+if ! normalize_fk_names "$DUMP4" "test" "staging_"; then
+  no "mec collision normalize" "normalize_fk_names returned non-zero"
+else
+  ok "mec collision normalize returns success"
+fi
+mec_constraints="$(grep -oE 'CONSTRAINT `[^`]+`' "$DUMP4" | sed -E 's/CONSTRAINT `([^`]+)`/\1/' | sort)"
+mec_first="$(echo "$mec_constraints" | sed -n '1p')"
+mec_second="$(echo "$mec_constraints" | sed -n '2p')"
+if [ -n "$mec_first" ] && [ -n "$mec_second" ] && [ "$mec_first" != "$mec_second" ]; then
+  ok "UNIQUE and FOREIGN KEY constraint names differ after normalize"
+else
+  no "UNIQUE and FOREIGN KEY constraint names differ after normalize" "got: $mec_constraints"
+fi
+rm -f "$DUMP4"
+
+echo "== normalize_fk_names: multiline ALTER ADD CONSTRAINT (mysqldump) =="
+DUMP5="$(mktemp)"
+cat > "$DUMP5" <<EOF
+ALTER TABLE \`${stg}mec_x\` ADD CONSTRAINT \`mec_booking_id\`
+  FOREIGN KEY (\`booking_id\`) REFERENCES \`${stg}mec_y\` (\`id\`);
+ALTER TABLE \`${stg}mec_z\` ADD CONSTRAINT \`staging_mec_booking_id\`
+  FOREIGN KEY (\`bid\`) REFERENCES \`${stg}mec_y\` (\`id\`);
+EOF
+if normalize_fk_names "$DUMP5" "test" "staging_"; then
+  ok "multiline ALTER normalize returns success"
+else
+  no "multiline ALTER normalize returns success" "returned non-zero"
+fi
+ml_constraints="$(grep -oE 'CONSTRAINT `[^`]+`' "$DUMP5" | sed -E 's/CONSTRAINT `([^`]+)`/\1/' | sort -u)"
+ml_count="$(echo "$ml_constraints" | grep -c . || true)"
+if [ "$ml_count" -ge 2 ] && [ "$(echo "$ml_constraints" | wc -l | tr -d ' ')" -eq 2 ]; then
+  ok "multiline ALTER produces two distinct constraint names"
+else
+  no "multiline ALTER produces two distinct constraint names" "got: $ml_constraints"
+fi
+rm -f "$DUMP5"
+
 echo "== rename branch selection: exact keys for new prefix, broad match for legacy (PRESS0-4144 #1) =="
 # Stub wp to capture the SQL each rename function emits, instead of hitting a database. Defined after
 # the source above so it overrides the script's own wp() wrapper. The rename functions only need it
